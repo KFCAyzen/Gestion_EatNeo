@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import type { MenuItem } from './types'
 import { images } from './imagesFallback'
+import ImageWithFallback from './ImageWithFallback'
 
 type Props = {
   items: MenuItem[];
@@ -189,7 +190,7 @@ const MenuPage: React.FC<Props> = ({
                   }}
                   style={{ cursor: 'pointer' }}
                 >
-                  {item.image && <img src={item.image} alt={item.nom} />}
+                  {item.image && <ImageWithFallback src={item.image} alt={item.nom} />}
                   <h3 title={item.nom}>{truncateName(item.nom)}</h3>
                   <p>
                     {Array.isArray(item.prix)
@@ -217,7 +218,7 @@ const MenuPage: React.FC<Props> = ({
           ></div>
           <div className="modal">
             <h2>{selectedItem.nom}</h2>
-            {selectedItem.image && <img src={selectedItem.image} alt={selectedItem.nom} />}
+            {selectedItem.image && <ImageWithFallback src={selectedItem.image} alt={selectedItem.nom} />}
             <p><strong>Description :</strong> {selectedItem.description}</p>
 
             {Array.isArray(selectedItem.prix) ? (

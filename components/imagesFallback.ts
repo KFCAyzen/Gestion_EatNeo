@@ -29,7 +29,7 @@ const commandesActif = '/icons8-checklist-50.png';
 const commandes = '/icons8-checklist-50 (1).png';
 const backArrow = '/icons8-arrière-50.png';
 
-const STORAGE_BASE = 'https://firebasestorage.googleapis.com/v0/b/menu-resto-ph.firebasestorage.app/o/images%2F';
+const STORAGE_BASE = 'https://firebasestorage.googleapis.com/v0/b/menu-et-gestion-stock-ea-14886.firebasestorage.app/o/images%2F';
 
 function getImageUrl(filename: string, fallback?: string): string {
   return fallback || `${STORAGE_BASE}${encodeURIComponent(filename)}?alt=media`;
