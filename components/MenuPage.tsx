@@ -144,9 +144,9 @@ const MenuPage: React.FC<Props> = ({
             style={{
               padding: '6px 10px',
               borderRadius: '15px',
-              border: selectedCategory === cat ? 'none' : '1px solid #7d3837',
-              backgroundColor: selectedCategory === cat ? '#7d3837' : '#fff',
-              color: selectedCategory === cat ? 'white' : '#7d3837',
+              border: selectedCategory === cat ? 'none' : '1px solid #2e7d32',
+              backgroundColor: selectedCategory === cat ? '#2e7d32' : '#fff',
+              color: selectedCategory === cat ? 'white' : '#2e7d32',
               cursor: 'pointer',
               whiteSpace: 'nowrap',
               flexShrink: 0,
@@ -266,7 +266,7 @@ const MenuPage: React.FC<Props> = ({
                 }}
                 disabled={Array.isArray(selectedItem.prix) && !selectedPrice} // bouton désactivé si aucune option sélectionnée
                 style={{
-                  backgroundColor: Array.isArray(selectedItem.prix) && !selectedPrice ? '#7d383780' : '#7d3837',
+                  backgroundColor: Array.isArray(selectedItem.prix) && !selectedPrice ? '#2e7d3280' : '#2e7d32',
                   cursor: Array.isArray(selectedItem.prix) && !selectedPrice ? 'not-allowed' : 'pointer'
                 }}
               >
@@ -287,7 +287,7 @@ const MenuPage: React.FC<Props> = ({
         </div>
         <div className="mail">
           <img src={images.mail} alt="" />
-          <p>paulinahotel@yahoo.com</p>
+          <p>eatneo@yahoo.com</p>
         </div>
         <div className="loc">
           <img src={images.loc} alt="" />
@@ -313,7 +313,7 @@ const MenuPage: React.FC<Props> = ({
             <p>WhatsApp</p>
           </div>
         </div>
-        <footer>Copyright Paulina Hôtel 2025 all rights reserved</footer>
+        <footer>Copyright Eat Neo 2025 all rights reserved</footer>
       </section>
     </div>
   );
