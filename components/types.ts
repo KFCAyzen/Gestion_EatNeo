@@ -908,7 +908,7 @@ export const drinksItems: MenuItem[] = [
     id: 75,
     nom: "Spécial Pamplemousse",
     prix: "1000 FCFA",
-    image: images.spécilaPamplemousse,
+    image: images.spécialPamplemousse,
     catégorie: ["Boissons Gazeuse"],
     filtre: ["Boissons Gazeuse"],
   },
