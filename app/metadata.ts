@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'PAULINA HÔTEL',
+  title: 'EAT NEO',
   description: 'Restaurant et bar - Commandez en ligne',
 }

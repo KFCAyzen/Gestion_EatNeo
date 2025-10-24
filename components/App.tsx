@@ -92,7 +92,7 @@ export default function AppContent() {
       <div className="title">
         <div className="title-left">
           <Image src="/logo.jpg" alt="PH" width={50} height={50} />
-          <h1>PAULINA HÔTEL</h1>
+          <h1>EAT NEO</h1>
         </div>
         <div className="title-right">
           {pathname === '/admin' ? (
