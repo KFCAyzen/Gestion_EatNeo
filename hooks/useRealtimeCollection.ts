@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { db } from '@/components/firebase'
-import { collection, getDocs } from 'firebase/firestore'
+import { collection, onSnapshot } from 'firebase/firestore'
 import type { MenuItem } from '@/components/types'
 
 export function useRealtimeCollection(collectionName: string) {
@@ -9,21 +9,12 @@ export function useRealtimeCollection(collectionName: string) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
+    console.log(`Setting up listener for collection: ${collectionName}`);
     
-    async function fetchData() {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Set a timeout to stop loading after 3 seconds
-        timeoutId = setTimeout(() => {
-          setLoading(false);
-          setError('Timeout - utilisation des données locales');
-        }, 3000);
-        
-        const snapshot = await getDocs(collection(db, collectionName));
-        clearTimeout(timeoutId);
+    const unsubscribe = onSnapshot(
+      collection(db, collectionName),
+      (snapshot) => {
+        console.log(`Received ${snapshot.docs.length} documents from ${collectionName}`);
         
         const docs = snapshot.docs.map((docSnap) => {
           const data = docSnap.data() as any;
@@ -38,20 +29,21 @@ export function useRealtimeCollection(collectionName: string) {
             masque: data.masque ?? false,
           } as MenuItem;
         });
+        
         setItems(docs);
         setLoading(false);
-      } catch (err) {
-        clearTimeout(timeoutId);
-        console.error(err);
-        setError("Erreur de chargement - utilisation des données locales");
+        setError(null);
+      },
+      (err) => {
+        console.error(`Error listening to ${collectionName}:`, err);
+        setError(`Erreur de chargement: ${err.message}`);
         setLoading(false);
       }
-    }
-    
-    fetchData();
+    );
     
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
+      console.log(`Cleaning up listener for ${collectionName}`);
+      unsubscribe();
     };
   }, [collectionName]);
 

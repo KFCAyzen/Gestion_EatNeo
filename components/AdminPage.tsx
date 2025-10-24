@@ -546,8 +546,15 @@ export default function AdminPage() {
         </button>
       </div>
 
+      {/* Debug info */}
+      <div style={{ padding: '10px', backgroundColor: '#f5f5f5', margin: '10px 0', borderRadius: '4px' }}>
+        <p><strong>Debug:</strong> Plats: {plats.length} items | Boissons: {boissons.length} items</p>
+        {plats.length === 0 && <p style={{ color: 'orange' }}>Aucun plat trouvé dans Firestore</p>}
+        {boissons.length === 0 && <p style={{ color: 'orange' }}>Aucune boisson trouvée dans Firestore</p>}
+      </div>
+
       {/* Liste items (uniquement contenu stocké dans Firestore) */}
-      <h2>Plats</h2>
+      <h2>Plats ({plats.length})</h2>
       <ul className="item-list">
         {plats.filter(item => 
           item.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -602,7 +609,7 @@ export default function AdminPage() {
         ))}
       </ul>
 
-      <h2>Boissons</h2>
+      <h2>Boissons ({boissons.length})</h2>
       <ul className="item-list">
         {boissons.filter(item => 
           item.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
