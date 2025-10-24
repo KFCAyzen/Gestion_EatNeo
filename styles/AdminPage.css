@@ -2,39 +2,60 @@
 .admin-container {
   padding: 30px;
   padding-bottom: 100px;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f9fafc;
-  color: #333;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
+  color: #2c3e50;
 }
 
 /* TITRES */
 .admin-container h1 {
   text-align: center;
-  font-size: 28px;
-  margin-bottom: 30px;
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 40px;
   color: #2c3e50;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background: linear-gradient(135deg, #FF6B35, #F7931E);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .admin-container h2 {
-  font-size: 22px;
-  margin: 20px 0;
-  color: #34495e;
-  border-left: 4px solid #2e7d32;
-  padding-left: 10px;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 30px 0 20px 0;
+  color: #2c3e50;
+  border-left: 4px solid #FF6B35;
+  padding-left: 15px;
+  position: relative;
+}
+
+.admin-container h2::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  width: 50px;
+  height: 2px;
+  background: linear-gradient(90deg, #FF6B35, #F7931E);
 }
 
 /* ====== FORMULAIRE ====== */
 .admin-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
   margin-bottom: 40px;
-  padding: 20px;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  padding: 30px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .form-row {
@@ -77,8 +98,9 @@
 .form-input:focus,
 .form-select:focus,
 .form-textarea:focus {
-  border-color: #2e7d32;
-  box-shadow: 0 0 5px rgba(46, 125, 50, 0.4);
+  border-color: #FF6B35;
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+  transform: translateY(-1px);
 }
 
 .form-textarea {
@@ -117,8 +139,8 @@
 }
 
 .price-input:focus {
-  border-color: #2e7d32;
-  box-shadow: 0 0 3px rgba(46, 125, 50, 0.3);
+  border-color: #FF6B35;
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
 }
 
 .remove-btn {
@@ -142,37 +164,41 @@
 }
 
 .add-price-btn {
-  background: linear-gradient(135deg, #2e7d32, #1b5e20);
+  background: linear-gradient(135deg, #FF6B35, #F7931E);
   color: white;
   border: none;
-  padding: 12px 16px;
+  padding: 12px 20px;
   border-radius: 8px;
   cursor: pointer;
-  font-weight: bold;
+  font-weight: 600;
   transition: all 0.3s ease;
   align-self: flex-start;
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
 }
 
 .add-price-btn:hover {
-  background: linear-gradient(135deg, #1b5e20, #0d4e14);
+  background: linear-gradient(135deg, #F7931E, #FF6B35);
   transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
 }
 
 .admin-form button[type="submit"] {
-  background: linear-gradient(135deg, #2e7d32, #1b5e20);
+  background: linear-gradient(135deg, #FF6B35, #F7931E);
   color: white;
-  font-weight: bold;
+  font-weight: 600;
   cursor: pointer;
   border: none;
-  padding: 15px;
-  border-radius: 8px;
+  padding: 16px 24px;
+  border-radius: 12px;
   font-size: 16px;
-  transition: transform 0.2s ease, background 0.3s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
 }
 
 .admin-form button[type="submit"]:hover {
-  background: linear-gradient(135deg, #1b5e20, #0d4e14);
+  background: linear-gradient(135deg, #F7931E, #FF6B35);
   transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
 }
 
 .admin-form button[type="submit"]:disabled {
@@ -198,30 +224,34 @@
   gap: 20px;
   list-style: none;
   padding: 0;
+  margin-top: 20px;
 }
 
 .item-card {
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: 15px;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  transition: transform 0.2s ease, box-shadow 0.3s ease;
+  gap: 20px;
+  padding: 20px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
   flex-wrap: wrap;
 }
 
 .item-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.15);
 }
 
 .item-img {
   width: 80px;
   height: 80px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .item-info {
@@ -379,8 +409,8 @@
 }
 
 .search-input:focus {
-  border-color: #2e7d32;
-  box-shadow: 0 0 8px rgba(46, 125, 50, 0.2);
+  border-color: #FF6B35;
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
 }
 
 .search-input::placeholder {
@@ -390,49 +420,129 @@
 /* ====== ONGLETS ====== */
 .admin-tabs {
   margin-bottom: 2rem;
-  border-bottom: 1px solid #ddd;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 8px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
 
 .admin-tab-btn {
-  padding: 0.75rem 1rem;
+  padding: 12px 20px;
   border: none;
   background: transparent;
-  color: #2e7d32;
+  color: #666;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  font-size: 0.9rem;
+  font-size: 14px;
+  font-weight: 500;
   min-width: fit-content;
   flex: 1 1 auto;
   transition: all 0.3s ease;
+  border-radius: 8px;
+  position: relative;
 }
 
 .admin-tab-btn.active {
-  background: #2e7d32;
+  background: linear-gradient(135deg, #FF6B35, #F7931E);
   color: white;
-  border-bottom-color: #2e7d32;
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+  transform: translateY(-1px);
 }
 
 .admin-tab-link {
-  padding: 0.75rem 1rem;
+  padding: 12px 20px;
   border: none;
   background: transparent;
-  color: #2e7d32;
+  color: #666;
   cursor: pointer;
   text-decoration: none;
   display: flex;
   align-items: center;
-  font-size: 0.9rem;
+  font-size: 14px;
+  font-weight: 500;
   min-width: fit-content;
   flex: 1 1 auto;
   justify-content: center;
   transition: all 0.3s ease;
+  border-radius: 8px;
 }
 
 .admin-tab-link:hover {
-  background: #f5f5f5;
+  background: rgba(255, 107, 53, 0.1);
+  color: #FF6B35;
+}
+
+/* ====== SECTION STOCK ====== */
+.stock-section {
+  padding: 20px 0;
+}
+
+.stock-stats {
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+}
+
+.stock-actions {
+  margin-bottom: 30px;
+}
+
+.stock-actions button {
+  transition: all 0.3s ease;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.stock-actions button:hover {
+  transform: translateY(-2px);
+}
+
+/* ====== HISTORIQUE ====== */
+.historique-section {
+  padding: 20px 0;
+}
+
+.historique-section h2 {
+  color: #2c3e50;
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 30px;
+  border-left: 4px solid #FF6B35;
+  padding-left: 15px;
+}
+
+.historique-stats {
+  margin-bottom: 30px;
+}
+
+.historique-stats .stat-card {
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.historique-stats .stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.historique-list > div {
+  transition: all 0.3s ease;
+}
+
+.historique-list > div:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15) !important;
 }
 
 /* ====== COMMANDES ====== */
@@ -609,4 +719,128 @@
     width: 100px;
     height: 100px;
   }
+}
+
+/* ====== CARTES DE STOCK PROFESSIONNELLES ====== */
+.stock-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stock-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.15) !important;
+}
+
+.stock-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #FF6B35, #F7931E);
+  border-radius: 16px 16px 0 0;
+}
+
+/* Animation pour les boutons de stock */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.stock-card button:active {
+  animation: pulse 0.2s ease-in-out;
+}
+
+/* Effet de focus amélioré pour les inputs */
+.stock-card input[type="number"]:focus {
+  outline: none;
+  border-color: #FF6B35 !important;
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1) !important;
+  transform: scale(1.02);
+}
+
+/* Badge de statut avec animation */
+.stock-card .status-badge {
+  animation: fadeInDown 0.5s ease-out;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive pour les cartes de stock */
+@media (max-width: 768px) {
+  .stock-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  
+  .stock-card {
+    padding: 20px !important;
+  }
+  
+  .stock-card h4 {
+    font-size: 16px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .stock-card {
+    padding: 16px !important;
+  }
+  
+  .stock-card .stock-controls {
+    padding: 12px !important;
+  }
+  
+  .stock-card button {
+    width: 32px !important;
+    height: 32px !important;
+  }
+}
+
+/* ====== SPINNER ANIMATION ====== */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Spinner dans les boutons */
+.admin-form button[type="submit"] .spinner {
+  border-color: rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+}
+
+/* Loading states */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loading-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  text-align: center;
+  min-width: 200px;
 }
