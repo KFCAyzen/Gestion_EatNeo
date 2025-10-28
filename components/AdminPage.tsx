@@ -7,6 +7,10 @@ import { ref, deleteObject } from "firebase/storage";
 import { uploadImageFromBrowser } from "./upLoadFirebase";
 import type { MenuItem } from "./types";
 import { useRealtimeCollection } from '@/hooks/useRealtimeCollection'
+import { useNotifications } from '../hooks/useNotifications';
+import { useActivityLogger } from '../hooks/useActivityLogger';
+import { Toast } from './Toast';
+import { Modal } from './Modal';
 import '@/styles/AdminPage.css'
 import { menuItems, drinksItems } from "./types";
 import { images } from "./imagesFallback";
@@ -66,14 +70,14 @@ const EyeOffIcon = () => (
 );
 
 const PlusIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-    <path d="M12 5V19M5 12H19" stroke="#4CAF50" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+    <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 
 const MinusIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-    <path d="M5 12H19" stroke="#F44336" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+    <path d="M5 12H19" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 
@@ -128,36 +132,30 @@ const AdminIcon = ({ active = false }: { active?: boolean }) => (
 
 // Composant Spinner personnalisé
 const Spinner = ({ size = 40, color = "#FF6B35" }: { size?: number; color?: string }) => (
-  <div style={{
-    display: 'inline-block',
-    width: size,
-    height: size,
-    border: `3px solid rgba(255, 107, 53, 0.2)`,
-    borderTop: `3px solid ${color}`,
-    borderRadius: '50%',
-    animation: 'spin 1s linear infinite'
-  }} />
+  <div 
+    className={`spinner ${color === 'white' ? 'white' : ''}`}
+    style={{ width: `${size}px`, height: `${size}px` }}
+  />
 );
 
 // Spinner avec texte
 const LoadingSpinner = ({ text = "Chargement...", size = 40 }: { text?: string; size?: number }) => (
-  <div style={{
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '16px',
-    padding: '40px 20px'
-  }}>
+  <div className="loading-spinner-container">
     <Spinner size={size} />
-    <span style={{
-      color: '#666',
-      fontSize: '14px',
-      fontWeight: '500'
-    }}>
+    <span className="loading-spinner-text">
       {text}
     </span>
   </div>
 );
+
+interface Ingredient {
+  id: string;
+  nom: string;
+  quantite: number;
+  unite: string; // kg, L, pièces, etc.
+  prixUnitaire?: number;
+  seuilAlerte: number; // Seuil en dessous duquel on alerte
+}
 
 interface Commande {
   id: string;
@@ -193,6 +191,27 @@ export default function AdminPage() {
   const [editingCollection, setEditingCollection] = useState<"Plats" | "Boissons" | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [activeTab, setActiveTab] = useState<'menu' | 'commandes' | 'stock' | 'historique'>('menu');
+  const [stockView, setStockView] = useState<'boissons' | 'ingredients'>('boissons');
+  
+  // Système de notifications
+  const { toasts, modal, showToast, removeToast, showModal, closeModal } = useNotifications();
+  const { logActivity, logNotification } = useActivityLogger();
+  
+  // États pour la gestion des ingrédients
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [showAddIngredient, setShowAddIngredient] = useState(false);
+  const [newIngredient, setNewIngredient] = useState({
+    nom: '',
+    quantite: 0,
+    unite: 'kg',
+    seuilAlerte: 5
+  });
+  const [showAddBoisson, setShowAddBoisson] = useState(false);
+  const [newBoisson, setNewBoisson] = useState({
+    nom: '',
+    prix: '',
+    stock: 10
+  });
   const [commandes, setCommandes] = useState<Commande[]>([]);
 
   // --- Récupération temps réel des collections ---
@@ -289,6 +308,22 @@ export default function AdminPage() {
       })) as Commande[];
       
       setCommandes(commandesData);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Récupération temps réel des ingrédients
+  useEffect(() => {
+    const q = query(collection(db, 'ingredients'), orderBy('nom'));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const ingredientsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Ingredient[];
+      
+      setIngredients(ingredientsData);
     });
 
     return () => unsubscribe();
@@ -412,7 +447,7 @@ export default function AdminPage() {
         });
       }
 
-      alert(editId ? "Item modifié avec succès !" : "Item ajouté avec succès !");
+      showToast(editId ? "Item modifié avec succès !" : "Item ajouté avec succès !", 'success');
       // reset formulaire
       setNom("");
       setDescription("");
@@ -430,22 +465,30 @@ export default function AdminPage() {
 
   /* Suppression Firestore + Storage */
   const handleDelete = async (collectionName: "Plats" | "Boissons", id: string) => {
-    if (!window.confirm("Supprimer cet item ?")) return;
-    try {
-      const itemDoc = await getDoc(doc(db, collectionName, id));
-      if (itemDoc.exists()) {
-        const data = itemDoc.data();
-        if (data.image) {
-          const path = getStoragePathFromUrl(data.image);
-          if (path) await deleteObject(ref(storage, path));
+    showModal(
+      "Confirmer la suppression",
+      "Êtes-vous sûr de vouloir supprimer cet item ? Cette action est irréversible.",
+      "warning",
+      async () => {
+        try {
+          const itemDoc = await getDoc(doc(db, collectionName, id));
+          if (itemDoc.exists()) {
+            const data = itemDoc.data();
+            if (data.image) {
+              const path = getStoragePathFromUrl(data.image);
+              if (path) await deleteObject(ref(storage, path));
+            }
+          }
+          await deleteDoc(doc(db, collectionName, id));
+          showToast("Item supprimé avec succès !", 'success');
+        } catch (err) {
+          console.error(err);
+          showToast("Erreur lors de la suppression", 'error');
         }
-      }
-      await deleteDoc(doc(db, collectionName, id));
-      alert("Item supprimé !");
-    } catch (err) {
-      console.error(err);
-      alert("Erreur lors de la suppression");
-    }
+        closeModal();
+      },
+      closeModal
+    );
   };
 
   const formatPrix = (item: MenuItem) =>
@@ -472,10 +515,10 @@ export default function AdminPage() {
       await updateDoc(doc(db, 'commandes', commandeId), {
         statut: nouveauStatut
       });
-      alert('Statut mis à jour avec succès !');
+      showToast('Statut mis à jour avec succès !', 'success');
     } catch (error) {
       console.error('Erreur lors de la mise à jour:', error);
-      alert('Erreur lors de la mise à jour du statut');
+      showToast('Erreur lors de la mise à jour du statut', 'error');
     }
   };
 
@@ -510,9 +553,10 @@ export default function AdminPage() {
 
   // Gestion du stock
   const updateStock = async (collectionName: "Plats" | "Boissons", id: string, newStock: number) => {
+    const finalStock = Math.max(0, newStock);
     try {
       await updateDoc(doc(db, collectionName, id), {
-        stock: Math.max(0, newStock)
+        stock: finalStock
       });
     } catch (error) {
       console.error('Erreur lors de la mise à jour du stock:', error);
@@ -521,9 +565,9 @@ export default function AdminPage() {
   };
 
   const initializeStock = async () => {
-    if (!window.confirm('Initialiser le stock à 10 pour tous les items ?')) return;
+    if (!window.confirm('Initialiser le stock à 10 pour toutes les boissons ?')) return;
     try {
-      const collections = ['Plats', 'Boissons'];
+      const collections = ['Boissons'];
       for (const collectionName of collections) {
         const snapshot = await getDocs(collection(db, collectionName));
         for (const docSnapshot of snapshot.docs) {
@@ -542,7 +586,11 @@ export default function AdminPage() {
   // Nouvelles fonctions de gestion de stock
   const setStockValue = async (collectionName: "Plats" | "Boissons", id: string, value: string) => {
     const newStock = parseInt(value) || 0;
-    await updateStock(collectionName, id, newStock);
+    try {
+      await updateStock(collectionName, id, newStock);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du stock:', error);
+    }
   };
 
   const bulkUpdateStock = async (stockUpdates: { collection: string; id: string; stock: number }[]) => {
@@ -560,9 +608,9 @@ export default function AdminPage() {
   };
 
   const resetLowStock = async () => {
-    if (!window.confirm('Remettre à 10 tous les items avec stock faible (≤5) ?')) return;
+    if (!window.confirm('Remettre à 10 toutes les boissons avec stock faible (≤5) ?')) return;
     try {
-      const collections = ['Plats', 'Boissons'];
+      const collections = ['Boissons'];
       let updated = 0;
       
       for (const collectionName of collections) {
@@ -577,7 +625,7 @@ export default function AdminPage() {
           }
         }
       }
-      alert(`${updated} items avec stock faible ont été remis à 10 !`);
+      alert(`${updated} boissons avec stock faible ont été remises à 10 !`);
     } catch (error) {
       console.error('Erreur lors de la remise à niveau:', error);
       alert('Erreur lors de la remise à niveau du stock');
@@ -585,20 +633,34 @@ export default function AdminPage() {
   };
 
   const exportStockReport = () => {
-    const allItems = [...plats, ...boissons];
-    const lowStockItems = allItems.filter(item => (item.stock || 0) <= 5);
-    const outOfStockItems = allItems.filter(item => (item.stock || 0) === 0);
+    const allItems = [...boissons];
+    const lowStockItems = boissons.filter(item => (item.stock || 0) <= 5);
+    const outOfStockItems = boissons.filter(item => (item.stock || 0) === 0);
+    const lowIngredients = ingredients.filter(ing => ing.quantite <= ing.seuilAlerte);
     
     const report = {
       date: new Date().toLocaleString('fr-FR'),
-      totalItems: allItems.length,
-      lowStock: lowStockItems.length,
-      outOfStock: outOfStockItems.length,
-      items: allItems.map(item => ({
-        nom: item.nom,
-        stock: item.stock || 0,
-        status: (item.stock || 0) === 0 ? 'Rupture' : (item.stock || 0) <= 5 ? 'Stock faible' : 'OK'
-      }))
+      boissons: {
+        total: boissons.length,
+        lowStock: boissons.filter(item => (item.stock || 0) <= 5).length,
+        outOfStock: boissons.filter(item => (item.stock || 0) === 0).length,
+        items: boissons.map(item => ({
+          nom: item.nom,
+          stock: item.stock || 0,
+          status: (item.stock || 0) === 0 ? 'Rupture' : (item.stock || 0) <= 5 ? 'Stock faible' : 'OK'
+        }))
+      },
+      ingredients: {
+        total: ingredients.length,
+        lowStock: lowIngredients.length,
+        items: ingredients.map(ing => ({
+          nom: ing.nom,
+          quantite: ing.quantite,
+          unite: ing.unite,
+          seuilAlerte: ing.seuilAlerte,
+          status: ing.quantite <= ing.seuilAlerte ? 'Stock faible' : 'OK'
+        }))
+      }
     };
     
     const dataStr = JSON.stringify(report, null, 2);
@@ -611,24 +673,105 @@ export default function AdminPage() {
     URL.revokeObjectURL(url);
   };
 
+  // Initialiser les ingrédients de base
+  const initializeBaseIngredients = async () => {
+    const baseIngredients = [
+      { nom: 'Riz', quantite: 10, unite: 'kg', seuilAlerte: 2 },
+      { nom: 'Poulet', quantite: 5, unite: 'kg', seuilAlerte: 1 },
+      { nom: 'Poisson', quantite: 3, unite: 'kg', seuilAlerte: 1 },
+      { nom: 'Oignons', quantite: 2, unite: 'kg', seuilAlerte: 1 },
+      { nom: 'Tomates', quantite: 3, unite: 'kg', seuilAlerte: 1 },
+      { nom: 'Pommes de terre', quantite: 5, unite: 'kg', seuilAlerte: 2 },
+      { nom: 'Plantains', quantite: 20, unite: 'pièces', seuilAlerte: 5 },
+      { nom: 'Viande', quantite: 4, unite: 'kg', seuilAlerte: 1 },
+      { nom: 'Arachides', quantite: 2, unite: 'kg', seuilAlerte: 1 },
+      { nom: 'Spaghetti', quantite: 3, unite: 'kg', seuilAlerte: 1 },
+      { nom: 'Sel', quantite: 1, unite: 'kg', seuilAlerte: 0.5 }
+    ];
+    
+    try {
+      for (const ingredient of baseIngredients) {
+        await addDoc(collection(db, 'ingredients'), ingredient);
+      }
+      alert('Ingrédients de base ajoutés avec succès !');
+    } catch (error) {
+      console.error('Erreur:', error);
+      alert('Erreur lors de l\'ajout des ingrédients');
+    }
+  };
+
+  // Gestion des boissons
+  const addBoisson = async () => {
+    if (!newBoisson.nom.trim()) return alert('Nom requis');
+    if (!newBoisson.prix.trim()) return alert('Prix requis');
+    
+    try {
+      await addDoc(collection(db, 'Boissons'), {
+        nom: newBoisson.nom,
+        prix: newBoisson.prix,
+        stock: newBoisson.stock,
+        masque: false,
+        catégorie: ['Boissons'],
+        filtre: ['Boissons']
+      });
+      
+      setNewBoisson({ nom: '', prix: '', stock: 10 });
+      setShowAddBoisson(false);
+      alert('Boisson ajoutée avec succès !');
+    } catch (error) {
+      console.error('Erreur:', error);
+      alert('Erreur lors de l\'ajout');
+    }
+  };
+
+  // Gestion des ingrédients
+  const addIngredient = async () => {
+    if (!newIngredient.nom.trim()) return alert('Nom requis');
+    
+    try {
+      await addDoc(collection(db, 'ingredients'), {
+        nom: newIngredient.nom,
+        quantite: newIngredient.quantite,
+        unite: newIngredient.unite,
+        seuilAlerte: newIngredient.seuilAlerte
+      });
+      
+      setNewIngredient({ nom: '', quantite: 0, unite: 'kg', seuilAlerte: 5 });
+      setShowAddIngredient(false);
+      alert('Ingrédient ajouté avec succès !');
+    } catch (error) {
+      console.error('Erreur:', error);
+      alert('Erreur lors de l\'ajout');
+    }
+  };
+
+  const updateIngredientStock = async (id: string, newQuantite: number) => {
+    try {
+      await updateDoc(doc(db, 'ingredients', id), {
+        quantite: Math.max(0, newQuantite)
+      });
+    } catch (error) {
+      console.error('Erreur:', error);
+      alert('Erreur lors de la mise à jour');
+    }
+  };
+
+  const deleteIngredient = async (id: string) => {
+    if (!window.confirm('Supprimer cet ingrédient ?')) return;
+    
+    try {
+      await deleteDoc(doc(db, 'ingredients', id));
+      alert('Ingrédient supprimé !');
+    } catch (error) {
+      console.error('Erreur:', error);
+      alert('Erreur lors de la suppression');
+    }
+  };
+
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
-      }}>
-        <div style={{
-          background: 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: '20px',
-          padding: '40px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          textAlign: 'center'
-        }}>
+      <div className="loading-container">
+        <div className="loading-card">
           <LoadingSpinner text="Initialisation du back-office..." size={50} />
         </div>
       </div>
@@ -643,32 +786,28 @@ export default function AdminPage() {
       <div className="admin-tabs">
         <button 
           onClick={() => setActiveTab('menu')}
-          className={`admin-tab-btn ${activeTab === 'menu' ? 'active' : ''}`}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          className={`admin-tab-btn ${activeTab === 'menu' ? 'active' : ''} admin-tab-btn-flex`}
         >
           <MenuIcon active={activeTab === 'menu'} />
           <span>Gestion du Menu</span>
         </button>
         <button 
           onClick={() => setActiveTab('commandes')}
-          className={`admin-tab-btn ${activeTab === 'commandes' ? 'active' : ''}`}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          className={`admin-tab-btn ${activeTab === 'commandes' ? 'active' : ''} admin-tab-btn-flex`}
         >
           <OrdersIcon active={activeTab === 'commandes'} />
           <span>Commandes ({commandes.filter(c => c.statut !== 'livree').length})</span>
         </button>
         <button 
           onClick={() => setActiveTab('stock')}
-          className={`admin-tab-btn ${activeTab === 'stock' ? 'active' : ''}`}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          className={`admin-tab-btn ${activeTab === 'stock' ? 'active' : ''} admin-tab-btn-flex`}
         >
           <StockIcon active={activeTab === 'stock'} />
           <span>Stock</span>
         </button>
         <button 
           onClick={() => setActiveTab('historique')}
-          className={`admin-tab-btn ${activeTab === 'historique' ? 'active' : ''}`}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          className={`admin-tab-btn ${activeTab === 'historique' ? 'active' : ''} admin-tab-btn-flex`}
         >
           <HistoryIcon active={activeTab === 'historique'} />
           <span>Historique</span>
@@ -723,18 +862,7 @@ export default function AdminPage() {
                 onChange={e => updatePriceOption(idx, "value", e.target.value)}
                 className="price-input"
               />
-              <button type="button" onClick={() => removePriceOption(idx)} className="remove-btn" style={{
-                width: '32px',
-                height: '32px',
-                backgroundColor: '#f44336',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
+              <button type="button" onClick={() => removePriceOption(idx)} className="remove-price-btn">
                 <MinusIcon />
               </button>
             </div>
@@ -773,114 +901,71 @@ export default function AdminPage() {
         </div>
 
         <div
-          className={`drop-zone ${uploading ? "active" : ""}`}
+          className={`drop-zone-container ${uploading ? "uploading" : ""}`}
           onDrop={handleDrop}
           onDragOver={e => e.preventDefault()}
           onClick={() => document.getElementById("fileInput")?.click()}
-          style={{
-            border: '2px dashed #ddd',
-            borderRadius: '8px',
-            padding: '40px 20px',
-            textAlign: 'center',
-            cursor: 'pointer',
-            backgroundColor: uploading ? '#f5f5f5' : 'white',
-            transition: 'all 0.3s ease',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '10px'
-          }}
         >
           <UploadIcon />
           {uploading && <Spinner size={20} />}
-          <span style={{ color: '#666', fontSize: '14px' }}>
+          <span className="drop-zone-text">
             {uploading ? "Upload en cours..." : "Glissez-déposez une image ou cliquez"}
           </span>
           <input
             type="file"
             id="fileInput"
             accept="image/*"
-            style={{ display: "none" }}
+            className="file-input-hidden"
             onChange={handleFileSelect}
           />
         </div>
 
         {imageUrl && (
-          <div className="preview">
-            <img src={imageUrl} alt="Aperçu" className="item-img" />
+          <div className="preview-container">
+            <img src={imageUrl} alt="Aperçu" className="preview-image" />
           </div>
         )}
-        {error && <p style={{ color: "#e53935" }}>{error}</p>}
+        {error && <p className="error-text">{error}</p>}
 
-        <button type="submit" disabled={uploading} style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '8px'
-        }}>
+        <button type="submit" disabled={uploading} className="submit-button">
           {uploading && <Spinner size={16} color="white" />}
           {uploading ? "Upload..." : editId ? "Modifier" : "Ajouter"}
         </button>
       </form>
 
       {/* Barre de recherche */}
-      <div className="search-section" style={{ marginBottom: '20px' }}>
-        <div style={{ position: 'relative', display: 'inline-block', width: '300px' }}>
-          <SearchIcon />
+      <div className="search-section-container">
+        <div className="search-wrapper">
           <input
             type="search"
             placeholder="Rechercher un item..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="search-input"
-            style={{
-              paddingLeft: '40px',
-              width: '100%',
-              padding: '10px',
-              border: '1px solid #ddd',
-              borderRadius: '6px',
-              fontSize: '14px'
-            }}
+            className="search-input-with-icon"
           />
-          <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+          <div className="search-icon-absolute">
             <SearchIcon />
           </div>
         </div>
         <button
           onClick={migrateExistingItems}
-          style={{
-            marginLeft: '10px',
-            padding: '8px 16px',
-            backgroundColor: '#2196f3',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
+          className="action-button blue"
         >
           Mettre à jour les items
         </button>
         <button
           onClick={resetAndReuploadItems}
-          style={{
-            marginLeft: '10px',
-            padding: '8px 16px',
-            backgroundColor: '#f44336',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
+          className="action-button red"
         >
           Reset & Re-upload
         </button>
       </div>
 
       {/* Debug info */}
-      <div style={{ padding: '10px', backgroundColor: '#f5f5f5', margin: '10px 0', borderRadius: '4px' }}>
+      <div className="debug-container">
         <p><strong>Debug:</strong> Plats: {plats.length} items | Boissons: {boissons.length} items</p>
-        {plats.length === 0 && <p style={{ color: 'orange' }}>Aucun plat trouvé dans Firestore</p>}
-        {boissons.length === 0 && <p style={{ color: 'orange' }}>Aucune boisson trouvée dans Firestore</p>}
+        {plats.length === 0 && <p className="debug-text-orange">Aucun plat trouvé dans Firestore</p>}
+        {boissons.length === 0 && <p className="debug-text-orange">Aucune boisson trouvée dans Firestore</p>}
       </div>
 
       {/* Liste items (uniquement contenu stocké dans Firestore) */}
@@ -896,10 +981,10 @@ export default function AdminPage() {
               <b>{item.nom}</b> - {formatPrix(item)} <br />
               <i>Catégorie: {item.filtre?.[0]}</i>
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div className="item-actions-container">
               <button
                 type="button"
-                className="edit-btn"
+                className="edit-button"
                 onClick={() => {
                   setEditId(String(item.id));
                   setEditingCollection("Plats");
@@ -911,53 +996,20 @@ export default function AdminPage() {
                   setFiltre(item.filtre?.[0] || ""); // Charger le filtre
                   setImageUrl(item.image || "");
                 }}
-                style={{
-                  backgroundColor: '#2196f3',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 12px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
               >
                 <EditIcon />
                 Modifier
               </button>
               <button
-                className={item.masque ? "show-btn" : "hide-btn"}
+                className={`visibility-button ${item.masque ? 'show' : 'hide'}`}
                 onClick={() => toggleItemVisibility("Plats", String(item.id), item.masque || false)}
-                style={{
-                  backgroundColor: item.masque ? '#4caf50' : '#ff9800',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 12px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
               >
                 {item.masque ? <EyeIcon /> : <EyeOffIcon />}
                 {item.masque ? 'Afficher' : 'Masquer'}
               </button>
               <button
-                className="delete-btn"
+                className="delete-button"
                 onClick={() => handleDelete("Plats", String(item.id))}
-                style={{
-                  backgroundColor: '#f44336',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 12px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
               >
                 <DeleteIcon />
                 Supprimer
@@ -979,10 +1031,10 @@ export default function AdminPage() {
               <b>{item.nom}</b> - {formatPrix(item)} <br />
               <i>Catégorie: {item.filtre?.[0]}</i>
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div className="item-actions-container">
               <button
                 type="button"
-                className="edit-btn"
+                className="edit-button"
                 onClick={() => {
                   setEditId(String(item.id));
                   setEditingCollection("Boissons");
@@ -994,53 +1046,20 @@ export default function AdminPage() {
                   setFiltre(item.filtre?.[0] || ""); // Charger le filtre
                   setImageUrl(item.image || "");
                 }}
-                style={{
-                  backgroundColor: '#2196f3',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 12px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
               >
                 <EditIcon />
                 Modifier
               </button>
               <button
-                className={item.masque ? "show-btn" : "hide-btn"}
+                className={`visibility-button ${item.masque ? 'show' : 'hide'}`}
                 onClick={() => toggleItemVisibility("Boissons", String(item.id), item.masque || false)}
-                style={{
-                  backgroundColor: item.masque ? '#4caf50' : '#ff9800',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 12px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
               >
                 {item.masque ? <EyeIcon /> : <EyeOffIcon />}
                 {item.masque ? 'Afficher' : 'Masquer'}
               </button>
               <button
-                className="delete-btn"
+                className="delete-button"
                 onClick={() => handleDelete("Boissons", String(item.id))}
-                style={{
-                  backgroundColor: '#f44336',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 12px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
               >
                 <DeleteIcon />
                 Supprimer
@@ -1096,8 +1115,9 @@ export default function AdminPage() {
                       <select 
                         value={commande.statut}
                         onChange={(e) => updateCommandeStatut(commande.id, e.target.value)}
-                        className="commande-status-select"
-                        style={{ backgroundColor: getStatutColor(commande.statut) }}
+                        // className="commande-status-select"
+                        style={{ '--status-color': getStatutColor(commande.statut) } as React.CSSProperties}
+                        className="commande-status-select-dynamic"
                       >
                         <option value="en_attente">En attente</option>
                         <option value="en_preparation">En préparation</option>
@@ -1126,402 +1146,223 @@ export default function AdminPage() {
           <h2>Gestion du Stock</h2>
           
           {/* Statistiques du stock */}
-          <div className="stock-stats" style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '15px',
-            marginBottom: '20px',
-            padding: '20px',
-            backgroundColor: '#f5f5f5',
-            borderRadius: '8px'
-          }}>
-            <div className="stat-card" style={{ textAlign: 'center', padding: '15px', backgroundColor: 'white', borderRadius: '6px' }}>
-              <h4 style={{ margin: '0 0 10px 0', color: '#333' }}>Total Items</h4>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, color: '#2196f3' }}>
-                {plats.length + boissons.length}
-              </p>
-            </div>
-            <div className="stat-card" style={{ textAlign: 'center', padding: '15px', backgroundColor: 'white', borderRadius: '6px' }}>
-              <h4 style={{ margin: '0 0 10px 0', color: '#333' }}>Stock Faible</h4>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, color: '#ff9800' }}>
-                {[...plats, ...boissons].filter(item => (item.stock || 0) <= 5 && (item.stock || 0) > 0).length}
-              </p>
-            </div>
-            <div className="stat-card" style={{ textAlign: 'center', padding: '15px', backgroundColor: 'white', borderRadius: '6px' }}>
-              <h4 style={{ margin: '0 0 10px 0', color: '#333' }}>Rupture</h4>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, color: '#f44336' }}>
-                {[...plats, ...boissons].filter(item => (item.stock || 0) === 0).length}
-              </p>
-            </div>
-            <div className="stat-card" style={{ textAlign: 'center', padding: '15px', backgroundColor: 'white', borderRadius: '6px' }}>
-              <h4 style={{ margin: '0 0 10px 0', color: '#333' }}>Stock OK</h4>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, color: '#4caf50' }}>
-                {[...plats, ...boissons].filter(item => (item.stock || 0) > 5).length}
-              </p>
-            </div>
+          <div className="stock-stats-grid">
+            {stockView === 'boissons' ? (
+              <>
+                <div className="stock-stat-card">
+                  <h4 className="stock-stat-title">Total Boissons</h4>
+                  <p className="stock-stat-number blue">
+                    {boissons.length}
+                  </p>
+                </div>
+                <div className="stock-stat-card">
+                  <h4 className="stock-stat-title">Stock Faible</h4>
+                  <p className="stock-stat-number orange">
+                    {boissons.filter(item => (item.stock || 0) <= 5 && (item.stock || 0) > 0).length}
+                  </p>
+                </div>
+                <div className="stock-stat-card">
+                  <h4 className="stock-stat-title">Rupture</h4>
+                  <p className="stock-stat-number red">
+                    {boissons.filter(item => (item.stock || 0) === 0).length}
+                  </p>
+                </div>
+                <div className="stock-stat-card">
+                  <h4 className="stock-stat-title">Stock OK</h4>
+                  <p className="stock-stat-number green">
+                    {boissons.filter(item => (item.stock || 0) > 5).length}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="stock-stat-card">
+                  <h4 className="stock-stat-title">Total Ingrédients</h4>
+                  <p className="stock-stat-number blue">
+                    {ingredients.length}
+                  </p>
+                </div>
+                <div className="stock-stat-card">
+                  <h4 className="stock-stat-title">Stock Faible</h4>
+                  <p className="stock-stat-number orange">
+                    {ingredients.filter(ing => ing.quantite <= ing.seuilAlerte).length}
+                  </p>
+                </div>
+                <div className="stock-stat-card">
+                  <h4 className="stock-stat-title">Stock OK</h4>
+                  <p className="stock-stat-number green">
+                    {ingredients.filter(ing => ing.quantite > ing.seuilAlerte).length}
+                  </p>
+                </div>
+                <div className="stock-stat-card">
+                  <h4 className="stock-stat-title">Unités Totales</h4>
+                  <p className="stock-stat-number purple">
+                    {ingredients.reduce((total, ing) => total + ing.quantite, 0)}
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Sous-onglets Stock */}
+          <div className="stock-tabs-container">
+            <button
+              onClick={() => setStockView('boissons')}
+              className={`stock-tab-button ${stockView === 'boissons' ? 'active' : 'inactive'}`}
+            >
+              Boissons
+            </button>
+            <button
+              onClick={() => setStockView('ingredients')}
+              className={`stock-tab-button ${stockView === 'ingredients' ? 'active' : 'inactive'}`}
+            >
+              Ingrédients
+            </button>
           </div>
 
           {/* Actions de gestion */}
-          <div className="stock-actions" style={{
-            display: 'flex',
-            gap: '10px',
-            marginBottom: '20px',
-            flexWrap: 'wrap'
-          }}>
+          <div className="stock-actions-container">
             <button
               onClick={initializeStock}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#2e7d32',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer'
-              }}
+              className="stock-action-button green"
             >
               Initialiser tout (10)
             </button>
             <button
               onClick={resetLowStock}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#ff9800',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer'
-              }}
+              className="stock-action-button orange"
             >
               Remettre stock faible (10)
             </button>
+            {stockView === 'boissons' && (
+              <button
+                onClick={() => setShowAddBoisson(true)}
+                className="stock-action-button light-green stock-action-button-flex"
+              >
+                <PlusIcon />
+                Ajouter boisson
+              </button>
+            )}
+            {stockView === 'ingredients' && (
+              <>
+                <button
+                  onClick={() => setShowAddIngredient(true)}
+                  className="stock-action-button light-green stock-action-button-flex"
+                >
+                  <PlusIcon />
+                  Ajouter ingrédient
+                </button>
+                <button
+                  onClick={initializeBaseIngredients}
+                  className="stock-action-button blue stock-action-button-flex"
+                >
+                  Initialiser ingrédients de base
+                </button>
+              </>
+            )}
             <button
               onClick={exportStockReport}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#9c27b0',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
+              className="stock-action-button purple stock-action-button-flex"
             >
               <DownloadIcon />
               Exporter rapport
             </button>
           </div>
 
-          <h3 style={{ color: '#2c3e50', fontSize: '20px', fontWeight: '600', marginBottom: '20px' }}>Plats ({plats.length})</h3>
-          <div className="stock-grid" style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-            gap: '20px',
-            marginBottom: '40px'
-          }}>
-            {plats.map(item => {
-              const stockLevel = item.stock || 0;
-              const isOutOfStock = stockLevel === 0;
-              const isLowStock = stockLevel <= 5 && stockLevel > 0;
-              const isGoodStock = stockLevel > 5;
+          {/* Gestion des Boissons */}
+          {stockView === 'boissons' && (
+            <>
+              <h3 className="stock-section-title">Boissons ({boissons.length})</h3>
               
-              return (
-                <div key={item.id} className="stock-card" style={{
-                  background: 'rgba(255, 255, 255, 0.95)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '16px',
-                  padding: '24px',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-                  border: `2px solid ${isOutOfStock ? '#f44336' : isLowStock ? '#ff9800' : '#4caf50'}`,
-                  position: 'relative',
-                  overflow: 'hidden',
-                  transition: 'all 0.3s ease'
-                }}>
-                  {/* Badge de statut */}
-                  <div style={{
-                    position: 'absolute',
-                    top: '12px',
-                    right: '12px',
-                    padding: '6px 12px',
-                    borderRadius: '20px',
-                    fontSize: '11px',
-                    fontWeight: '600',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    backgroundColor: isOutOfStock ? '#f44336' : isLowStock ? '#ff9800' : '#4caf50',
-                    color: 'white',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-                  }}>
-                    {isOutOfStock ? 'Rupture' : isLowStock ? 'Faible' : 'OK'}
-                  </div>
-                  
-                  {/* Image et nom */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-                    {item.image && (
-                      <div style={{
-                        width: '70px',
-                        height: '70px',
-                        borderRadius: '12px',
-                        overflow: 'hidden',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-                      }}>
-                        <img 
-                          src={item.image} 
-                          alt={item.nom} 
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }} 
-                        />
-                      </div>
-                    )}
-                    <div style={{ flex: 1 }}>
-                      <h4 style={{ 
-                        margin: '0 0 8px 0', 
-                        fontSize: '18px', 
-                        fontWeight: '600',
-                        color: '#2c3e50',
-                        lineHeight: '1.3'
-                      }}>
-                        {item.nom}
-                      </h4>
-                      <p style={{
-                        margin: 0,
-                        fontSize: '14px',
-                        color: '#666',
-                        fontWeight: '500'
-                      }}>
-                        Stock actuel: <span style={{ 
-                          color: isOutOfStock ? '#f44336' : isLowStock ? '#ff9800' : '#4caf50',
-                          fontWeight: '700',
-                          fontSize: '16px'
-                        }}>{stockLevel}</span> unités
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {/* Contrôles de stock */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '16px',
-                    backgroundColor: 'rgba(248, 249, 250, 0.8)',
-                    borderRadius: '12px',
-                    border: '1px solid rgba(0,0,0,0.05)'
-                  }}>
-                    <button 
-                      onClick={() => updateStock("Plats", String(item.id), (item.stock || 0) - 1)}
-                      style={{
-                        width: '36px',
-                        height: '36px',
-                        backgroundColor: '#f44336',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 2px 8px rgba(244, 67, 54, 0.3)'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'scale(1.05)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(244, 67, 54, 0.4)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'scale(1)';
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(244, 67, 54, 0.3)';
-                      }}
-                    >
-                      <MinusIcon />
-                    </button>
-                    
+              {/* Formulaire d'ajout de boisson */}
+              {showAddBoisson && (
+                <div className="ingredient-form">
+                  <h4>Ajouter une nouvelle boisson</h4>
+                  <div className="ingredient-form-grid">
+                    <input
+                      type="text"
+                      placeholder="Nom de la boisson"
+                      value={newBoisson.nom}
+                      onChange={(e) => setNewBoisson({...newBoisson, nom: e.target.value})}
+                      className="ingredient-form-input"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Prix (ex: 500 FCFA)"
+                      value={newBoisson.prix}
+                      onChange={(e) => setNewBoisson({...newBoisson, prix: e.target.value})}
+                      className="ingredient-form-input"
+                    />
                     <input
                       type="number"
-                      value={item.stock || 0}
-                      onChange={(e) => setStockValue("Plats", String(item.id), e.target.value)}
-                      style={{
-                        flex: 1,
-                        textAlign: 'center',
-                        padding: '10px 12px',
-                        border: '2px solid #e0e0e0',
-                        borderRadius: '8px',
-                        fontSize: '16px',
-                        fontWeight: '600',
-                        color: '#2c3e50',
-                        backgroundColor: 'white',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#FF6B35';
-                        e.target.style.boxShadow = '0 0 0 3px rgba(255, 107, 53, 0.1)';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#e0e0e0';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                      min="0"
+                      placeholder="Stock initial"
+                      value={newBoisson.stock}
+                      onChange={(e) => setNewBoisson({...newBoisson, stock: Number(e.target.value)})}
+                      className="ingredient-form-input"
                     />
-                    
-                    <button 
-                      onClick={() => updateStock("Plats", String(item.id), (item.stock || 0) + 1)}
-                      style={{
-                        width: '36px',
-                        height: '36px',
-                        backgroundColor: '#4caf50',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'scale(1.05)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(76, 175, 80, 0.4)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'scale(1)';
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(76, 175, 80, 0.3)';
-                      }}
+                  </div>
+                  <div className="ingredient-form-actions">
+                    <button
+                      onClick={addBoisson}
+                      className="ingredient-btn-add"
                     >
-                      <PlusIcon />
+                      Ajouter
+                    </button>
+                    <button
+                      onClick={() => setShowAddBoisson(false)}
+                      className="ingredient-btn-cancel"
+                    >
+                      Annuler
                     </button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-
-          <h3 style={{ color: '#2c3e50', fontSize: '20px', fontWeight: '600', marginBottom: '20px' }}>Boissons ({boissons.length})</h3>
-          <div className="stock-grid" style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-            gap: '20px'
-          }}>
+              )}
+              
+              <div className="stock-grid-container">
             {boissons.map(item => {
               const stockLevel = item.stock || 0;
               const isOutOfStock = stockLevel === 0;
               const isLowStock = stockLevel <= 5 && stockLevel > 0;
-              const isGoodStock = stockLevel > 5;
               
               return (
-                <div key={item.id} className="stock-card" style={{
-                  background: 'rgba(255, 255, 255, 0.95)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '16px',
-                  padding: '24px',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-                  border: `2px solid ${isOutOfStock ? '#f44336' : isLowStock ? '#ff9800' : '#4caf50'}`,
-                  position: 'relative',
-                  overflow: 'hidden',
-                  transition: 'all 0.3s ease'
-                }}>
+                <div key={item.id} className={`stock-card-complex ${isOutOfStock ? 'out-of-stock' : isLowStock ? 'low-stock' : 'normal-stock'}`}>
                   {/* Badge de statut */}
-                  <div style={{
-                    position: 'absolute',
-                    top: '12px',
-                    right: '12px',
-                    padding: '6px 12px',
-                    borderRadius: '20px',
-                    fontSize: '11px',
-                    fontWeight: '600',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    backgroundColor: isOutOfStock ? '#f44336' : isLowStock ? '#ff9800' : '#4caf50',
-                    color: 'white',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-                  }}>
+                  <div className={`stock-badge-complex ${isOutOfStock ? 'out-of-stock' : isLowStock ? 'low-stock' : 'normal-stock'}`}>
                     {isOutOfStock ? 'Rupture' : isLowStock ? 'Faible' : 'OK'}
                   </div>
                   
                   {/* Image et nom */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+                  <div className="stock-header-complex">
                     {item.image && (
-                      <div style={{
-                        width: '70px',
-                        height: '70px',
-                        borderRadius: '12px',
-                        overflow: 'hidden',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-                      }}>
+                      <div className="stock-image-complex">
                         <img 
                           src={item.image} 
                           alt={item.nom} 
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }} 
                         />
                       </div>
                     )}
-                    <div style={{ flex: 1 }}>
-                      <h4 style={{ 
-                        margin: '0 0 8px 0', 
-                        fontSize: '18px', 
-                        fontWeight: '600',
-                        color: '#2c3e50',
-                        lineHeight: '1.3'
-                      }}>
+                    <div className="stock-info-complex">
+                      <h4 className="stock-title-complex">
                         {item.nom}
                       </h4>
-                      <p style={{
-                        margin: 0,
-                        fontSize: '14px',
-                        color: '#666',
-                        fontWeight: '500'
-                      }}>
-                        Stock actuel: <span style={{ 
-                          color: isOutOfStock ? '#f44336' : isLowStock ? '#ff9800' : '#4caf50',
-                          fontWeight: '700',
-                          fontSize: '16px'
-                        }}>{stockLevel}</span> unités
+                      <p className="stock-text-complex">
+                        Stock actuel: <span className={`stock-level-complex ${isOutOfStock ? 'out-of-stock' : isLowStock ? 'low-stock' : 'normal-stock'}`}>{stockLevel}</span> unités
                       </p>
                     </div>
                   </div>
                   
                   {/* Contrôles de stock */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '16px',
-                    backgroundColor: 'rgba(248, 249, 250, 0.8)',
-                    borderRadius: '12px',
-                    border: '1px solid rgba(0,0,0,0.05)'
-                  }}>
+                  <div className="stock-controls-complex">
                     <button 
-                      onClick={() => updateStock("Boissons", String(item.id), (item.stock || 0) - 1)}
-                      style={{
-                        width: '36px',
-                        height: '36px',
-                        backgroundColor: '#f44336',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 2px 8px rgba(244, 67, 54, 0.3)'
+                      type="button"
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const newStock = Math.max(0, (item.stock || 0) - 1);
+                        await updateStock("Boissons", String(item.id), newStock);
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'scale(1.05)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(244, 67, 54, 0.4)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'scale(1)';
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(244, 67, 54, 0.3)';
-                      }}
+                      className="stock-btn-minus-hover"
+                      title="Diminuer le stock"
                     >
                       <MinusIcon />
                     </button>
@@ -1529,64 +1370,183 @@ export default function AdminPage() {
                     <input
                       type="number"
                       value={item.stock || 0}
-                      onChange={(e) => setStockValue("Boissons", String(item.id), e.target.value)}
-                      style={{
-                        flex: 1,
-                        textAlign: 'center',
-                        padding: '10px 12px',
-                        border: '2px solid #e0e0e0',
-                        borderRadius: '8px',
-                        fontSize: '16px',
-                        fontWeight: '600',
-                        color: '#2c3e50',
-                        backgroundColor: 'white',
-                        transition: 'all 0.2s ease'
+                      onChange={async (e) => {
+                        const value = e.target.value.replace(/[^0-9]/g, '');
+                        await setStockValue("Boissons", String(item.id), value);
                       }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#FF6B35';
-                        e.target.style.boxShadow = '0 0 0 3px rgba(255, 107, 53, 0.1)';
+                      onKeyPress={(e) => {
+                        if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') {
+                          e.preventDefault();
+                        }
                       }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#e0e0e0';
-                        e.target.style.boxShadow = 'none';
-                      }}
+                      className="stock-input-complex"
                       min="0"
+                      placeholder="0"
                     />
                     
                     <button 
-                      onClick={() => updateStock("Boissons", String(item.id), (item.stock || 0) + 1)}
-                      style={{
-                        width: '36px',
-                        height: '36px',
-                        backgroundColor: '#4caf50',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)'
+                      type="button"
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const newStock = (item.stock || 0) + 1;
+                        await updateStock("Boissons", String(item.id), newStock);
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'scale(1.05)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(76, 175, 80, 0.4)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'scale(1)';
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(76, 175, 80, 0.3)';
-                      }}
+                      className="stock-btn-plus-hover"
+                      title="Augmenter le stock"
                     >
                       <PlusIcon />
                     </button>
                   </div>
+                  
+                  <button
+                    onClick={() => handleDelete("Boissons", String(item.id))}
+                    className="ingredient-btn-delete"
+                  >
+                    Supprimer
+                  </button>
                 </div>
               );
             })}
           </div>
-        </div>
+            </>
+          )}
+
+          {/* Gestion des Ingrédients */}
+      {stockView === 'ingredients' && (
+        <>
+          <h3 className="ingredients-section-title">Ingrédients ({ingredients.length})</h3>
+          
+          {/* Formulaire d'ajout d'ingrédient */}
+          {showAddIngredient && (
+            <div className="ingredient-form">
+              <h4>Ajouter un nouvel ingrédient</h4>
+              <div className="ingredient-form-grid">
+                <input
+                  type="text"
+                  placeholder="Nom de l'ingrédient"
+                  value={newIngredient.nom}
+                  onChange={(e) => setNewIngredient({...newIngredient, nom: e.target.value})}
+                  className="ingredient-form-input"
+                />
+                <input
+                  type="number"
+                  placeholder="Quantité"
+                  value={newIngredient.quantite}
+                  onChange={(e) => setNewIngredient({...newIngredient, quantite: Number(e.target.value)})}
+                  className="ingredient-form-input"
+                />
+                <select
+                  value={newIngredient.unite}
+                  onChange={(e) => setNewIngredient({...newIngredient, unite: e.target.value})}
+                  className="ingredient-form-input"
+                >
+                  <option value="kg">kg</option>
+                  <option value="L">L</option>
+                  <option value="pièces">pièces</option>
+                  <option value="g">g</option>
+                  <option value="ml">ml</option>
+                </select>
+                <input
+                  type="number"
+                  placeholder="Seuil d'alerte"
+                  value={newIngredient.seuilAlerte}
+                  onChange={(e) => setNewIngredient({...newIngredient, seuilAlerte: Number(e.target.value)})}
+                  className="ingredient-form-input"
+                />
+              </div>
+              <div className="ingredient-form-actions">
+                <button
+                  onClick={addIngredient}
+                  className="ingredient-btn-add"
+                >
+                  Ajouter
+                </button>
+                <button
+                  onClick={() => setShowAddIngredient(false)}
+                  className="ingredient-btn-cancel"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Liste des ingrédients */}
+          <div className="ingredients-grid">
+            {ingredients.map(ingredient => {
+              const isLowStock = ingredient.quantite <= ingredient.seuilAlerte;
+              
+              return (
+                <div key={ingredient.id} className={`ingredient-card ${isLowStock ? 'low-stock' : 'normal-stock'}`}>
+                  {/* Badge de statut */}
+                  <div className={`ingredient-status-badge ${isLowStock ? 'low-stock' : 'normal-stock'}`}>
+                    {isLowStock ? 'Stock Faible' : 'OK'}
+                  </div>
+                  
+                  <h4 className="ingredient-title">
+                    {ingredient.nom}
+                  </h4>
+                  
+                  <div className="ingredient-info">
+                    <p>
+                      Quantité: <span className={`ingredient-quantity ${isLowStock ? 'low-stock' : 'normal-stock'}`}>
+                        {ingredient.quantite} {ingredient.unite}
+                      </span>
+                    </p>
+                    <p>
+                      Seuil d'alerte: {ingredient.seuilAlerte} {ingredient.unite}
+                    </p>
+                  </div>
+                  
+                  {/* Contrôles */}
+                  <div className="ingredient-controls">
+                    <button
+                      onClick={() => updateIngredientStock(ingredient.id, ingredient.quantite - 1)}
+                      className="ingredient-btn-minus"
+                    >
+                      <MinusIcon />
+                    </button>
+                    
+                    <input
+                      type="number"
+                      value={ingredient.quantite}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^0-9]/g, '');
+                        updateIngredientStock(ingredient.id, Number(value) || 0);
+                      }}
+                      onKeyPress={(e) => {
+                        if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') {
+                          e.preventDefault();
+                        }
+                      }}
+                      className="ingredient-input"
+                      min="0"
+                      placeholder="0"
+                    />
+                    
+                    <button
+                      onClick={() => updateIngredientStock(ingredient.id, ingredient.quantite + 1)}
+                      className="ingredient-btn-plus"
+                    >
+                      <PlusIcon />
+                    </button>
+                  </div>
+                  
+                  <button
+                    onClick={() => deleteIngredient(ingredient.id)}
+                    className="ingredient-btn-delete"
+                  >
+                    Supprimer
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
+    </div>
+  )}
 
       {/* Contenu de l'onglet Historique */}
       {activeTab === 'historique' && (
@@ -1594,141 +1554,61 @@ export default function AdminPage() {
           <h2>Historique des Commandes</h2>
           
           {/* Statistiques de l'historique */}
-          <div className="historique-stats" style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '15px',
-            marginBottom: '30px',
-            padding: '20px',
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            borderRadius: '12px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-          }}>
-            <div className="stat-card" style={{ textAlign: 'center', padding: '15px' }}>
-              <h4 style={{ margin: '0 0 10px 0', color: '#333' }}>Total Livré</h4>
-              <p style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, color: '#4CAF50' }}>
+          <div className="historique-stats-grid">
+            <div className="historique-stat-card">
+              <h4 className="historique-stat-title">Total Livré</h4>
+              <p className="historique-stat-number green">
                 {historique.length}
               </p>
             </div>
-            <div className="stat-card" style={{ textAlign: 'center', padding: '15px' }}>
-              <h4 style={{ margin: '0 0 10px 0', color: '#333' }}>Chiffre d'Affaires</h4>
-              <p style={{ fontSize: '20px', fontWeight: 'bold', margin: 0, color: '#FF6B35' }}>
+            <div className="historique-stat-card">
+              <h4 className="historique-stat-title">Chiffre d'Affaires</h4>
+              <p className="historique-stat-number orange small">
                 {historique.reduce((total, cmd) => total + cmd.total, 0).toLocaleString('fr-FR')} FCFA
               </p>
             </div>
-            <div className="stat-card" style={{ textAlign: 'center', padding: '15px' }}>
-              <h4 style={{ margin: '0 0 10px 0', color: '#333' }}>Moyenne/Commande</h4>
-              <p style={{ fontSize: '20px', fontWeight: 'bold', margin: 0, color: '#2196F3' }}>
+            <div className="historique-stat-card">
+              <h4 className="historique-stat-title">Moyenne/Commande</h4>
+              <p className="historique-stat-number blue small">
                 {historique.length > 0 ? Math.round(historique.reduce((total, cmd) => total + cmd.total, 0) / historique.length).toLocaleString('fr-FR') : 0} FCFA
               </p>
             </div>
           </div>
 
           {historique.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '60px 20px',
-              backgroundColor: 'rgba(255, 255, 255, 0.9)',
-              borderRadius: '12px',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-            }}>
+            <div className="historique-empty-container">
               <HistoryIcon />
-              <h3 style={{ color: '#666', marginTop: '20px' }}>Aucune commande dans l'historique</h3>
-              <p style={{ color: '#999' }}>Les commandes livrées apparaitront ici</p>
+              <h3 className="historique-empty-title">Aucune commande dans l'historique</h3>
+              <p className="historique-empty-text">Les commandes livrées apparaitront ici</p>
             </div>
           ) : (
-            <div className="historique-list" style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '15px'
-            }}>
+            <div className="historique-list-container">
               {historique.map((commande) => (
-                <div key={commande.id} style={{
-                  background: 'rgba(255, 255, 255, 0.95)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  transition: 'all 0.3s ease'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '15px',
-                    flexWrap: 'wrap',
-                    gap: '10px'
-                  }}>
-                    <div>
-                      <h3 style={{
-                        margin: '0 0 5px 0',
-                        color: '#2c3e50',
-                        fontSize: '18px',
-                        fontWeight: '600'
-                      }}>
+                <div key={commande.id} className="historique-card">
+                  <div className="historique-card-header">
+                    <div className="historique-client-info">
+                      <h3>
                         {commande.clientPrenom} {commande.clientNom}
                       </h3>
-                      <p style={{
-                        margin: 0,
-                        color: '#666',
-                        fontSize: '14px'
-                      }}>
+                      <p>
                         {formatDate(commande.dateCommande)} • {commande.localisation}
                       </p>
                     </div>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '15px'
-                    }}>
-                      <span style={{
-                        padding: '6px 12px',
-                        backgroundColor: '#4CAF50',
-                        color: 'white',
-                        borderRadius: '20px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        textTransform: 'uppercase'
-                      }}>
+                    <div className="historique-card-actions">
+                      <span className="historique-status-badge">
                         Livrée
                       </span>
-                      <p style={{
-                        margin: 0,
-                        fontSize: '20px',
-                        fontWeight: '700',
-                        color: '#FF6B35'
-                      }}>
+                      <p className="historique-total-price">
                         {formatPrixCommande(commande.total)}
                       </p>
                     </div>
                   </div>
                   
-                  <div style={{
-                    padding: '15px',
-                    backgroundColor: 'rgba(248, 249, 250, 0.8)',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(0,0,0,0.05)'
-                  }}>
-                    <h4 style={{
-                      margin: '0 0 10px 0',
-                      color: '#2c3e50',
-                      fontSize: '14px',
-                      fontWeight: '600'
-                    }}>Articles commandés:</h4>
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                      gap: '8px'
-                    }}>
+                  <div className="historique-items-container">
+                    <h4 className="historique-items-title">Articles commandés:</h4>
+                    <div className="historique-items-grid">
                       {commande.items.map((item, index) => (
-                        <div key={index} style={{
-                          padding: '8px 12px',
-                          backgroundColor: 'white',
-                          borderRadius: '6px',
-                          fontSize: '13px',
-                          color: '#555'
-                        }}>
+                        <div key={index} className="historique-item">
                           <strong>{item.nom}</strong> × {item.quantité} ({item.prix})
                         </div>
                       ))}
@@ -1741,6 +1621,26 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* Notifications */}
+      {toasts.map(toast => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => removeToast(toast.id)}
+        />
+      ))}
+      
+      {modal && (
+        <Modal
+          isOpen={modal.isOpen}
+          title={modal.title}
+          message={modal.message}
+          type={modal.type}
+          onConfirm={modal.onConfirm}
+          onCancel={modal.onCancel}
+        />
+      )}
     </div>
   );
 }

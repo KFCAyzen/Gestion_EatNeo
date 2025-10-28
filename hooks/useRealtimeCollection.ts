@@ -27,6 +27,7 @@ export function useRealtimeCollection(collectionName: string) {
             catégorie: Array.isArray(data.catégorie) ? data.catégorie : [],
             filtre: Array.isArray(data.filtre) ? data.filtre : [],
             masque: data.masque ?? false,
+            stock: data.stock ?? 0,
           } as MenuItem;
         });
         
