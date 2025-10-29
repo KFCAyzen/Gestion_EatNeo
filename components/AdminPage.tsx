@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { db, storage } from "./firebase";
 import { collection, addDoc, doc, deleteDoc, getDoc, getDocs, setDoc, updateDoc, query, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
 import { ref, deleteObject } from "firebase/storage";
@@ -11,142 +11,15 @@ import { useNotifications } from '../hooks/useNotifications';
 import { useActivityLogger } from '../hooks/useActivityLogger';
 import { Toast } from './Toast';
 import { Modal } from './Modal';
+import { AdminTabs } from './AdminTabs';
+import { MenuForm } from './MenuForm';
+import { StockManagement } from './StockManagement';
+import { MouvementsStock } from './MouvementsStock';
+import { LoadingSpinner, SearchIcon, EditIcon, DeleteIcon, EyeIcon, EyeOffIcon, PlusIcon, MinusIcon, HistoryIcon } from './Icons';
 import '@/styles/AdminPage.css'
 import { menuItems, drinksItems } from "./types";
-import { images } from "./imagesFallback";
-import { useEffect } from "react";
 
-// Composants d'icônes SVG personnalisées
-const MenuIcon = ({ active = false }: { active?: boolean }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    <path d="M3 12h18M3 6h18M3 18h18" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round"/>
-  </svg>
-);
 
-const OrdersIcon = ({ active = false }: { active?: boolean }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    <path d="M9 11H15M9 15H15M17 21H7C5.89543 21 5 20.1046 5 19V5C5 3.89543 5.89543 3 7 3H12.5858C12.851 3 13.1054 3.10536 13.2929 3.29289L19.7071 9.70711C19.8946 9.89464 20 10.149 20 10.4142V19C20 20.1046 19.1046 21 18 21H17Z" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const StockIcon = ({ active = false }: { active?: boolean }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    <path d="M21 16V8C21 6.89543 20.1046 6 19 6H5C3.89543 6 3 6.89543 3 8V16C3 17.1046 3.89543 18 5 18H19C20.1046 18 21 17.1046 21 16Z" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2"/>
-    <path d="M7 10H17M7 14H13" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round"/>
-  </svg>
-);
-
-const HistoryIcon = ({ active = false }: { active?: boolean }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    <path d="M12 8V12L15 15M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const EditIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#2196F3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M18.5 2.50023C18.8978 2.1024 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.1024 21.5 2.50023C21.8978 2.89805 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.1024 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#2196F3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const DeleteIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-    <path d="M3 6H5H21M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="#F44336" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const EyeIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-    <path d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z" stroke="#4CAF50" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <circle cx="12" cy="12" r="3" stroke="#4CAF50" strokeWidth="2"/>
-  </svg>
-);
-
-const EyeOffIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-    <path d="M17.94 17.94C16.2306 19.243 14.1491 19.9649 12 20C5 20 1 12 1 12C2.24389 9.68192 3.96914 7.65663 6.06 6.06M9.9 4.24C10.5883 4.0789 11.2931 3.99836 12 4C19 4 23 12 23 12C22.393 13.1356 21.6691 14.2048 20.84 15.19M14.12 14.12C13.8454 14.4148 13.5141 14.6512 13.1462 14.8151C12.7782 14.9791 12.3809 15.0673 11.9781 15.0744C11.5753 15.0815 11.1749 15.0074 10.8016 14.8565C10.4283 14.7056 10.0887 14.4811 9.80385 14.1962C9.51900 13.9113 9.29449 13.5717 9.14359 13.1984C8.99269 12.8251 8.91855 12.4247 8.92563 12.0219C8.93271 11.6191 9.02091 11.2218 9.18488 10.8538C9.34884 10.4858 9.58525 10.1546 9.88 9.88" stroke="#FF9800" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M1 1L23 23" stroke="#FF9800" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const PlusIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const MinusIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    <path d="M5 12H19" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const SearchIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-    <circle cx="11" cy="11" r="8" stroke="#666" strokeWidth="2"/>
-    <path d="M21 21L16.65 16.65" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const UploadIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15M17 8L12 3M12 3L7 8M12 3V15" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const DownloadIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-    <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15M7 10L12 15M12 15L17 10M12 15V3" stroke="#9C27B0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-// Icônes pour la bottom bar
-const HomeIcon = ({ active = false }: { active?: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M9 22V12H15V22" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const CartIcon = ({ active = false }: { active?: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <circle cx="8" cy="21" r="1" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <circle cx="19" cy="21" r="1" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M2.05 2.05H4L6.2 12.6C6.37245 13.3923 6.76768 14.1154 7.33677 14.6846C7.90586 15.2538 8.62797 15.6423 9.42 15.8L18 16C18.7923 15.9977 19.5154 15.6023 20.0846 15.0332C20.6538 14.4641 21.0423 13.742 21.25 12.95L22 8H5.12" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const UserIcon = ({ active = false }: { active?: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <circle cx="12" cy="7" r="4" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const AdminIcon = ({ active = false }: { active?: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <path d="M12 15C16.4183 15 20 11.4183 20 7C20 2.58172 16.4183 -1 12 -1C7.58172 -1 4 2.58172 4 7C4 11.4183 7.58172 15 12 15Z" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M8.21 13.89L7 23L12 20L17 23L15.79 13.88" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-// Composant Spinner personnalisé
-const Spinner = ({ size = 40, color = "#FF6B35" }: { size?: number; color?: string }) => (
-  <div 
-    className={`spinner ${color === 'white' ? 'white' : ''}`}
-    style={{ width: `${size}px`, height: `${size}px` }}
-  />
-);
-
-// Spinner avec texte
-const LoadingSpinner = ({ text = "Chargement...", size = 40 }: { text?: string; size?: number }) => (
-  <div className="loading-spinner-container">
-    <Spinner size={size} />
-    <span className="loading-spinner-text">
-      {text}
-    </span>
-  </div>
-);
 
 interface Ingredient {
   id: string;
@@ -171,6 +44,19 @@ interface Commande {
   dateCommande: Timestamp;
   statut: 'en_attente' | 'en_preparation' | 'prete' | 'livree';
 }
+
+interface MouvementStock {
+  id: string;
+  item: string;
+  type: 'entree' | 'sortie' | 'ajustement';
+  quantite: number;
+  unite: string;
+  stockAvant: number;
+  stockApres: number;
+  description: string;
+  date: Timestamp;
+  categorie: 'boissons' | 'ingredients';
+}
 // Convertir une URL Firebase Storage → chemin interne utilisable par ref()
 function getStoragePathFromUrl(url: string) {
   const match = url.match(/o\/(.*?)\?alt=media/);
@@ -192,6 +78,11 @@ export default function AdminPage() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [activeTab, setActiveTab] = useState<'menu' | 'commandes' | 'stock' | 'historique'>('menu');
   const [stockView, setStockView] = useState<'boissons' | 'ingredients'>('boissons');
+  const [historiqueView, setHistoriqueView] = useState<'commandes' | 'mouvements'>('commandes');
+  const [periodFilter, setPeriodFilter] = useState('month');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [mouvements, setMouvements] = useState<any[]>([]);
+  const [stockSearchTerm, setStockSearchTerm] = useState('');
   
   // Système de notifications
   const { toasts, modal, showToast, removeToast, showModal, closeModal } = useNotifications();
@@ -551,13 +442,36 @@ export default function AdminPage() {
     }
   };
 
-  // Gestion du stock
+  // Gestion du stock avec enregistrement des mouvements
   const updateStock = async (collectionName: "Plats" | "Boissons", id: string, newStock: number) => {
     const finalStock = Math.max(0, newStock);
     try {
-      await updateDoc(doc(db, collectionName, id), {
-        stock: finalStock
-      });
+      // Récupérer l'ancien stock
+      const itemDoc = await getDoc(doc(db, collectionName, id));
+      if (itemDoc.exists()) {
+        const itemData = itemDoc.data();
+        const oldStock = itemData.stock || 0;
+        
+        // Mettre à jour le stock
+        await updateDoc(doc(db, collectionName, id), {
+          stock: finalStock
+        });
+        
+        // Enregistrer le mouvement si il y a un changement
+        if (oldStock !== finalStock) {
+          const difference = finalStock - oldStock;
+          await logMouvementStock({
+            item: itemData.nom,
+            type: difference > 0 ? 'entree' : 'sortie',
+            quantite: Math.abs(difference),
+            unite: 'unités',
+            stockAvant: oldStock,
+            stockApres: finalStock,
+            description: `Ajustement manuel du stock`,
+            categorie: collectionName === 'Boissons' ? 'boissons' : 'ingredients'
+          });
+        }
+      }
     } catch (error) {
       console.error('Erreur lors de la mise à jour du stock:', error);
       alert('Erreur lors de la mise à jour du stock');
@@ -633,44 +547,131 @@ export default function AdminPage() {
   };
 
   const exportStockReport = () => {
-    const allItems = [...boissons];
-    const lowStockItems = boissons.filter(item => (item.stock || 0) <= 5);
-    const outOfStockItems = boissons.filter(item => (item.stock || 0) === 0);
     const lowIngredients = ingredients.filter(ing => ing.quantite <= ing.seuilAlerte);
     
-    const report = {
-      date: new Date().toLocaleString('fr-FR'),
-      boissons: {
-        total: boissons.length,
-        lowStock: boissons.filter(item => (item.stock || 0) <= 5).length,
-        outOfStock: boissons.filter(item => (item.stock || 0) === 0).length,
-        items: boissons.map(item => ({
-          nom: item.nom,
-          stock: item.stock || 0,
-          status: (item.stock || 0) === 0 ? 'Rupture' : (item.stock || 0) <= 5 ? 'Stock faible' : 'OK'
-        }))
-      },
-      ingredients: {
-        total: ingredients.length,
-        lowStock: lowIngredients.length,
-        items: ingredients.map(ing => ({
-          nom: ing.nom,
-          quantite: ing.quantite,
-          unite: ing.unite,
-          seuilAlerte: ing.seuilAlerte,
-          status: ing.quantite <= ing.seuilAlerte ? 'Stock faible' : 'OK'
-        }))
-      }
-    };
+    const pdfContent = `
+      <html>
+        <head>
+          <title>Rapport de Stock - Eat Neo</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2e7d32; padding-bottom: 20px; }
+            .header h1 { color: #2e7d32; margin: 0; font-size: 28px; }
+            .header p { margin: 5px 0; color: #666; }
+            .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 30px 0; }
+            .stat-card { text-align: center; padding: 20px; border: 2px solid #ddd; border-radius: 8px; }
+            .stat-card h3 { margin: 0 0 10px 0; color: #2e7d32; }
+            .stat-card .number { font-size: 24px; font-weight: bold; margin: 0; }
+            .stat-card .number.green { color: #4caf50; }
+            .stat-card .number.orange { color: #ff9800; }
+            .stat-card .number.red { color: #f44336; }
+            .stat-card .number.blue { color: #2196f3; }
+            .section { margin: 30px 0; }
+            .section h2 { color: #2e7d32; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #2e7d32; color: white; font-weight: bold; }
+            .status-ok { color: #4caf50; font-weight: bold; }
+            .status-low { color: #ff9800; font-weight: bold; }
+            .status-out { color: #f44336; font-weight: bold; }
+            .footer { margin-top: 40px; text-align: center; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Eat Neo - Rapport de Stock</h1>
+            <p>Généré le: ${new Date().toLocaleString('fr-FR')}</p>
+            <p>Système de gestion des stocks</p>
+          </div>
+          
+          <div class="stats">
+            <div class="stat-card">
+              <h3>Total Boissons</h3>
+              <p class="number blue">${boissons.length}</p>
+            </div>
+            <div class="stat-card">
+              <h3>Stock Faible</h3>
+              <p class="number orange">${boissons.filter(item => (item.stock || 0) <= 5 && (item.stock || 0) > 0).length}</p>
+            </div>
+            <div class="stat-card">
+              <h3>Rupture</h3>
+              <p class="number red">${boissons.filter(item => (item.stock || 0) === 0).length}</p>
+            </div>
+            <div class="stat-card">
+              <h3>Stock OK</h3>
+              <p class="number green">${boissons.filter(item => (item.stock || 0) > 5).length}</p>
+            </div>
+          </div>
+          
+          <div class="section">
+            <h2>État des Boissons</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Article</th>
+                  <th>Stock Actuel</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${boissons.map(item => {
+                  const stock = item.stock || 0;
+                  const status = stock === 0 ? 'Rupture' : stock <= 5 ? 'Stock Faible' : 'OK';
+                  const statusClass = stock === 0 ? 'status-out' : stock <= 5 ? 'status-low' : 'status-ok';
+                  return `
+                    <tr>
+                      <td>${item.nom}</td>
+                      <td>${stock} unités</td>
+                      <td class="${statusClass}">${status}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="section">
+            <h2>État des Ingrédients</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Ingrédient</th>
+                  <th>Quantité</th>
+                  <th>Seuil d'Alerte</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${ingredients.map(ing => {
+                  const isLow = ing.quantite <= ing.seuilAlerte;
+                  const status = isLow ? 'Stock Faible' : 'OK';
+                  const statusClass = isLow ? 'status-low' : 'status-ok';
+                  return `
+                    <tr>
+                      <td>${ing.nom}</td>
+                      <td>${ing.quantite} ${ing.unite}</td>
+                      <td>${ing.seuilAlerte} ${ing.unite}</td>
+                      <td class="${statusClass}">${status}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Eat Neo - Système de gestion des stocks</p>
+          </div>
+        </body>
+      </html>
+    `;
     
-    const dataStr = JSON.stringify(report, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `rapport-stock-${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(pdfContent);
+      printWindow.document.close();
+      printWindow.print();
+    }
   };
 
   // Initialiser les ingrédients de base
@@ -747,9 +748,33 @@ export default function AdminPage() {
 
   const updateIngredientStock = async (id: string, newQuantite: number) => {
     try {
-      await updateDoc(doc(db, 'ingredients', id), {
-        quantite: Math.max(0, newQuantite)
-      });
+      // Récupérer l'ancienne quantité
+      const ingredientDoc = await getDoc(doc(db, 'ingredients', id));
+      if (ingredientDoc.exists()) {
+        const ingredientData = ingredientDoc.data();
+        const oldQuantite = ingredientData.quantite || 0;
+        const finalQuantite = Math.max(0, newQuantite);
+        
+        // Mettre à jour la quantité
+        await updateDoc(doc(db, 'ingredients', id), {
+          quantite: finalQuantite
+        });
+        
+        // Enregistrer le mouvement si il y a un changement
+        if (oldQuantite !== finalQuantite) {
+          const difference = finalQuantite - oldQuantite;
+          await logMouvementStock({
+            item: ingredientData.nom,
+            type: difference > 0 ? 'entree' : 'sortie',
+            quantite: Math.abs(difference),
+            unite: ingredientData.unite,
+            stockAvant: oldQuantite,
+            stockApres: finalQuantite,
+            description: `Ajustement manuel du stock`,
+            categorie: 'ingredients'
+          });
+        }
+      }
     } catch (error) {
       console.error('Erreur:', error);
       alert('Erreur lors de la mise à jour');
@@ -768,6 +793,280 @@ export default function AdminPage() {
     }
   };
 
+  // Fonction pour ajouter des données de test
+  const addTestData = async () => {
+    if (!window.confirm('Ajouter des données fictives de test ? Cela créera des commandes, ingrédients et mouvements de stock.')) return;
+    
+    try {
+      // Commandes fictives
+      const commandes = [
+        {
+          clientNom: "Dupont", clientPrenom: "Jean", localisation: "Table 5",
+          items: [{ nom: "Ndolé", quantité: 2, prix: "2500 FCFA" }],
+          total: 5000, statut: "livree", dateCommande: Timestamp.now()
+        },
+        {
+          clientNom: "Mballa", clientPrenom: "Marie", localisation: "Table 12",
+          items: [{ nom: "Poulet DG", quantité: 1, prix: "3000 FCFA" }],
+          total: 3000, statut: "en_preparation", dateCommande: Timestamp.now()
+        },
+        {
+          clientNom: "Nkomo", clientPrenom: "Paul", localisation: "Table 3",
+          items: [{ nom: "Koki", quantité: 1, prix: "1500 FCFA" }],
+          total: 1500, statut: "prete", dateCommande: Timestamp.now()
+        },
+        {
+          clientNom: "Fotso", clientPrenom: "Claire", localisation: "Table 8",
+          items: [{ nom: "Eru", quantité: 1, prix: "2000 FCFA" }],
+          total: 2000, statut: "en_attente", dateCommande: Timestamp.now()
+        }
+      ];
+      
+      // Ingrédients fictifs
+      const ingredients = [
+        { nom: "Riz", quantite: 15, unite: "kg", seuilAlerte: 5 },
+        { nom: "Poulet", quantite: 3, unite: "kg", seuilAlerte: 5 },
+        { nom: "Tomates", quantite: 12, unite: "kg", seuilAlerte: 4 }
+      ];
+      
+      // Mouvements fictifs
+      const mouvements = [
+        {
+          item: "Coca-Cola", type: "sortie", quantite: 5, unite: "unités",
+          stockAvant: 15, stockApres: 10, description: "Vente client",
+          categorie: "boissons", date: Timestamp.now()
+        }
+      ];
+      
+      // Ajouter les données
+      for (const cmd of commandes) {
+        await addDoc(collection(db, 'commandes'), cmd);
+      }
+      for (const ing of ingredients) {
+        await addDoc(collection(db, 'ingredients'), ing);
+      }
+      for (const mouv of mouvements) {
+        await addDoc(collection(db, 'mouvements_stock'), mouv);
+      }
+      
+      showToast('Données de test ajoutées avec succès !', 'success');
+    } catch (error) {
+      console.error('Erreur:', error);
+      showToast('Erreur lors de l\'ajout des données', 'error');
+    }
+  };
+
+  // Récupération des mouvements de stock
+  useEffect(() => {
+    const q = query(collection(db, 'mouvements_stock'), orderBy('date', 'desc'));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const mouvementsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as MouvementStock[];
+      
+      setMouvements(mouvementsData);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Enregistrer un mouvement de stock
+  const logMouvementStock = async (mouvement: Omit<MouvementStock, 'id' | 'date'>) => {
+    try {
+      await addDoc(collection(db, 'mouvements_stock'), {
+        ...mouvement,
+        date: Timestamp.now()
+      });
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement du mouvement:', error);
+    }
+  };
+
+  // Filtrer les mouvements selon la période et le type
+  const filteredMouvements = mouvements.filter(mouvement => {
+    const now = new Date();
+    const mouvementDate = mouvement.date.toDate();
+    
+    // Filtre par période
+    let periodMatch = true;
+    switch (periodFilter) {
+      case 'today':
+        periodMatch = mouvementDate.toDateString() === now.toDateString();
+        break;
+      case 'week':
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        periodMatch = mouvementDate >= weekAgo;
+        break;
+      case 'month':
+        const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        periodMatch = mouvementDate >= monthAgo;
+        break;
+      default:
+        periodMatch = true;
+    }
+    
+    // Filtre par type
+    const typeMatch = typeFilter === 'all' || mouvement.categorie === typeFilter;
+    
+    return periodMatch && typeMatch;
+  });
+
+  // Fonctions d'export et d'impression
+  const printMouvements = () => {
+    const printContent = `
+      <html>
+        <head>
+          <title>Rapport Mouvements de Stock - Eat Neo</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .stats { display: flex; justify-content: space-around; margin: 20px 0; }
+            .stat-card { text-align: center; padding: 10px; border: 1px solid #ddd; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            .entree { color: green; }
+            .sortie { color: red; }
+            .ajustement { color: orange; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Eat Neo - Rapport Mouvements de Stock</h1>
+            <p>Période: ${periodFilter} | Type: ${typeFilter}</p>
+            <p>Généré le: ${new Date().toLocaleString('fr-FR')}</p>
+          </div>
+          
+          <div class="stats">
+            <div class="stat-card">
+              <h3>Total</h3>
+              <p>${filteredMouvements.length}</p>
+            </div>
+            <div class="stat-card">
+              <h3>Entrées</h3>
+              <p>${filteredMouvements.filter(m => m.type === 'entree').length}</p>
+            </div>
+            <div class="stat-card">
+              <h3>Sorties</h3>
+              <p>${filteredMouvements.filter(m => m.type === 'sortie').length}</p>
+            </div>
+            <div class="stat-card">
+              <h3>Ajustements</h3>
+              <p>${filteredMouvements.filter(m => m.type === 'ajustement').length}</p>
+            </div>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Article</th>
+                <th>Type</th>
+                <th>Quantité</th>
+                <th>Stock Après</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredMouvements.map(m => `
+                <tr>
+                  <td>${formatDate(m.date)}</td>
+                  <td>${m.item}</td>
+                  <td class="${m.type}">${m.type}</td>
+                  <td>${m.type === 'entree' ? '+' : m.type === 'sortie' ? '-' : ''}${m.quantite} ${m.unite}</td>
+                  <td>${m.stockApres} ${m.unite}</td>
+                  <td>${m.description}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+    
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
+  const exportToExcel = () => {
+    const csvContent = [
+      ['Date', 'Article', 'Type', 'Quantité', 'Unité', 'Stock Après', 'Description'],
+      ...filteredMouvements.map(m => [
+        formatDate(m.date),
+        m.item,
+        m.type,
+        m.quantite,
+        m.unite,
+        m.stockApres,
+        m.description
+      ])
+    ].map(row => row.join(',')).join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `mouvements-stock-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
+  const exportToWord = () => {
+    const wordContent = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
+        <head>
+          <meta charset='utf-8'>
+          <title>Rapport Mouvements de Stock</title>
+        </head>
+        <body>
+          <h1 style="text-align: center;">Eat Neo - Rapport Mouvements de Stock</h1>
+          <p style="text-align: center;">Période: ${periodFilter} | Type: ${typeFilter}</p>
+          <p style="text-align: center;">Généré le: ${new Date().toLocaleString('fr-FR')}</p>
+          
+          <h2>Statistiques</h2>
+          <p>Total mouvements: ${filteredMouvements.length}</p>
+          <p>Entrées: ${filteredMouvements.filter(m => m.type === 'entree').length}</p>
+          <p>Sorties: ${filteredMouvements.filter(m => m.type === 'sortie').length}</p>
+          <p>Ajustements: ${filteredMouvements.filter(m => m.type === 'ajustement').length}</p>
+          
+          <h2>Détail des mouvements</h2>
+          <table border="1" style="border-collapse: collapse; width: 100%;">
+            <tr style="background-color: #f2f2f2;">
+              <th>Date</th>
+              <th>Article</th>
+              <th>Type</th>
+              <th>Quantité</th>
+              <th>Stock Après</th>
+              <th>Description</th>
+            </tr>
+            ${filteredMouvements.map(m => `
+              <tr>
+                <td>${formatDate(m.date)}</td>
+                <td>${m.item}</td>
+                <td>${m.type}</td>
+                <td>${m.type === 'entree' ? '+' : m.type === 'sortie' ? '-' : ''}${m.quantite} ${m.unite}</td>
+                <td>${m.stockApres} ${m.unite}</td>
+                <td>${m.description}</td>
+              </tr>
+            `).join('')}
+          </table>
+        </body>
+      </html>
+    `;
+    
+    const blob = new Blob([wordContent], { type: 'application/msword' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `mouvements-stock-${new Date().toISOString().split('T')[0]}.doc`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -783,155 +1082,35 @@ export default function AdminPage() {
       <h1>Back Office - Administration</h1>
       
       {/* Onglets */}
-      <div className="admin-tabs">
-        <button 
-          onClick={() => setActiveTab('menu')}
-          className={`admin-tab-btn ${activeTab === 'menu' ? 'active' : ''} admin-tab-btn-flex`}
-        >
-          <MenuIcon active={activeTab === 'menu'} />
-          <span>Gestion du Menu</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('commandes')}
-          className={`admin-tab-btn ${activeTab === 'commandes' ? 'active' : ''} admin-tab-btn-flex`}
-        >
-          <OrdersIcon active={activeTab === 'commandes'} />
-          <span>Commandes ({commandes.filter(c => c.statut !== 'livree').length})</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('stock')}
-          className={`admin-tab-btn ${activeTab === 'stock' ? 'active' : ''} admin-tab-btn-flex`}
-        >
-          <StockIcon active={activeTab === 'stock'} />
-          <span>Stock</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('historique')}
-          className={`admin-tab-btn ${activeTab === 'historique' ? 'active' : ''} admin-tab-btn-flex`}
-        >
-          <HistoryIcon active={activeTab === 'historique'} />
-          <span>Historique</span>
-        </button>
-      </div>
+      <AdminTabs 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        commandesCount={commandes.filter(c => c.statut !== 'livree').length}
+      />
 
       {/* Contenu de l'onglet Menu */}
       {activeTab === 'menu' && (
         <>
           {/* Formulaire ajout item */}
-          <form className="admin-form" onSubmit={handleSubmit}>
-        <div className="form-row">
-          <input
-            type="text"
-            placeholder="Nom"
-            value={nom}
-            onChange={e => setNom(e.target.value)}
-            required
-            className="form-input"
+          <MenuForm
+            nom={nom}
+            setNom={setNom}
+            description={description}
+            setDescription={setDescription}
+            prix={prix}
+            setPrix={setPrix}
+            categorie={categorie}
+            setCategorie={setCategorie}
+            filtre={filtre}
+            setFiltre={setFiltre}
+            imageUrl={imageUrl}
+            uploading={uploading}
+            error={error}
+            editId={editId}
+            onSubmit={handleSubmit}
+            onFileSelect={handleFileSelect}
+            onDrop={handleDrop}
           />
-        </div>
-        
-        <div className="form-row">
-          <textarea
-            placeholder={categorie === "boissons" ? "Description (optionnel)" : "Description"}
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-            rows={3}
-            required={categorie !== "boissons"}
-            className="form-textarea"
-          />
-        </div>
-
-        <div className="price-options-section">
-          <p className="section-title">
-            <strong>Prix :</strong>
-          </p>
-          {prix.map((opt, idx) => (
-            <div key={idx} className="price-option">
-              <input
-                type="text"
-                placeholder={prix.length >= 2 ? "Label (obligatoire)" : "Label (facultatif)"}
-                value={opt.label || ""}
-                onChange={e => updatePriceOption(idx, "label", e.target.value)}
-                className="price-input"
-                required={prix.length >= 2}
-              />
-              <input
-                type="text"
-                placeholder="Valeur"
-                value={opt.value || ""}
-                onChange={e => updatePriceOption(idx, "value", e.target.value)}
-                className="price-input"
-              />
-              <button type="button" onClick={() => removePriceOption(idx)} className="remove-price-btn">
-                <MinusIcon />
-              </button>
-            </div>
-          ))}
-          <button type="button" onClick={addPriceOption} className="add-price-btn">
-            Ajouter une option de prix
-          </button>
-        </div>
-
-        <div className="form-row-group">
-          {/* Collection (pour routage uniquement) */}
-          <div className="form-field">
-            <label className="field-label">
-              <strong>Collection :</strong>
-            </label>
-            <select value={categorie} onChange={e => setCategorie(e.target.value)} className="form-select">
-              <option value="plats">Plats</option>
-              <option value="boissons">Boissons</option>
-            </select>
-          </div>
-
-          {/* Filtre (pour organisation et affichage) */}
-          <div className="form-field">
-            <label className="field-label">
-              <strong>Catégorie/Filtre :</strong>
-            </label>
-            <input
-              type="text"
-              placeholder="Ex : Entrées, Plats principaux, Desserts..."
-              value={filtre}
-              onChange={e => setFiltre(e.target.value)}
-              required
-              className="form-input"
-            />
-          </div>
-        </div>
-
-        <div
-          className={`drop-zone-container ${uploading ? "uploading" : ""}`}
-          onDrop={handleDrop}
-          onDragOver={e => e.preventDefault()}
-          onClick={() => document.getElementById("fileInput")?.click()}
-        >
-          <UploadIcon />
-          {uploading && <Spinner size={20} />}
-          <span className="drop-zone-text">
-            {uploading ? "Upload en cours..." : "Glissez-déposez une image ou cliquez"}
-          </span>
-          <input
-            type="file"
-            id="fileInput"
-            accept="image/*"
-            className="file-input-hidden"
-            onChange={handleFileSelect}
-          />
-        </div>
-
-        {imageUrl && (
-          <div className="preview-container">
-            <img src={imageUrl} alt="Aperçu" className="preview-image" />
-          </div>
-        )}
-        {error && <p className="error-text">{error}</p>}
-
-        <button type="submit" disabled={uploading} className="submit-button">
-          {uploading && <Spinner size={16} color="white" />}
-          {uploading ? "Upload..." : editId ? "Modifier" : "Ajouter"}
-        </button>
-      </form>
 
       {/* Barre de recherche */}
       <div className="search-section-container">
@@ -1145,127 +1324,34 @@ export default function AdminPage() {
         <div className="stock-section">
           <h2>Gestion du Stock</h2>
           
-          {/* Statistiques du stock */}
-          <div className="stock-stats-grid">
-            {stockView === 'boissons' ? (
-              <>
-                <div className="stock-stat-card">
-                  <h4 className="stock-stat-title">Total Boissons</h4>
-                  <p className="stock-stat-number blue">
-                    {boissons.length}
-                  </p>
-                </div>
-                <div className="stock-stat-card">
-                  <h4 className="stock-stat-title">Stock Faible</h4>
-                  <p className="stock-stat-number orange">
-                    {boissons.filter(item => (item.stock || 0) <= 5 && (item.stock || 0) > 0).length}
-                  </p>
-                </div>
-                <div className="stock-stat-card">
-                  <h4 className="stock-stat-title">Rupture</h4>
-                  <p className="stock-stat-number red">
-                    {boissons.filter(item => (item.stock || 0) === 0).length}
-                  </p>
-                </div>
-                <div className="stock-stat-card">
-                  <h4 className="stock-stat-title">Stock OK</h4>
-                  <p className="stock-stat-number green">
-                    {boissons.filter(item => (item.stock || 0) > 5).length}
-                  </p>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="stock-stat-card">
-                  <h4 className="stock-stat-title">Total Ingrédients</h4>
-                  <p className="stock-stat-number blue">
-                    {ingredients.length}
-                  </p>
-                </div>
-                <div className="stock-stat-card">
-                  <h4 className="stock-stat-title">Stock Faible</h4>
-                  <p className="stock-stat-number orange">
-                    {ingredients.filter(ing => ing.quantite <= ing.seuilAlerte).length}
-                  </p>
-                </div>
-                <div className="stock-stat-card">
-                  <h4 className="stock-stat-title">Stock OK</h4>
-                  <p className="stock-stat-number green">
-                    {ingredients.filter(ing => ing.quantite > ing.seuilAlerte).length}
-                  </p>
-                </div>
-                <div className="stock-stat-card">
-                  <h4 className="stock-stat-title">Unités Totales</h4>
-                  <p className="stock-stat-number purple">
-                    {ingredients.reduce((total, ing) => total + ing.quantite, 0)}
-                  </p>
-                </div>
-              </>
-            )}
-          </div>
+          <StockManagement
+            stockView={stockView}
+            setStockView={setStockView}
+            stockSearchTerm={stockSearchTerm}
+            setStockSearchTerm={setStockSearchTerm}
+            onInitializeStock={initializeStock}
+            onResetLowStock={resetLowStock}
+            onAddBoisson={() => setShowAddBoisson(true)}
+            onAddIngredient={() => setShowAddIngredient(true)}
+            onInitializeBaseIngredients={initializeBaseIngredients}
+            onExportStockReport={exportStockReport}
+            boissonsCount={boissons.length}
+            lowStockCount={boissons.filter(item => (item.stock || 0) <= 5 && (item.stock || 0) > 0).length}
+            outOfStockCount={boissons.filter(item => (item.stock || 0) === 0).length}
+            okStockCount={boissons.filter(item => (item.stock || 0) > 5).length}
+            ingredientsCount={ingredients.length}
+            lowIngredientsCount={ingredients.filter(ing => ing.quantite <= ing.seuilAlerte).length}
+            okIngredientsCount={ingredients.filter(ing => ing.quantite > ing.seuilAlerte).length}
+            totalUnits={ingredients.reduce((total, ing) => total + ing.quantite, 0)}
+          />
 
-          {/* Sous-onglets Stock */}
-          <div className="stock-tabs-container">
+          {/* Bouton pour ajouter des données de test */}
+          <div className="test-data-section">
             <button
-              onClick={() => setStockView('boissons')}
-              className={`stock-tab-button ${stockView === 'boissons' ? 'active' : 'inactive'}`}
+              onClick={addTestData}
+              className="stock-action-button red"
             >
-              Boissons
-            </button>
-            <button
-              onClick={() => setStockView('ingredients')}
-              className={`stock-tab-button ${stockView === 'ingredients' ? 'active' : 'inactive'}`}
-            >
-              Ingrédients
-            </button>
-          </div>
-
-          {/* Actions de gestion */}
-          <div className="stock-actions-container">
-            <button
-              onClick={initializeStock}
-              className="stock-action-button green"
-            >
-              Initialiser tout (10)
-            </button>
-            <button
-              onClick={resetLowStock}
-              className="stock-action-button orange"
-            >
-              Remettre stock faible (10)
-            </button>
-            {stockView === 'boissons' && (
-              <button
-                onClick={() => setShowAddBoisson(true)}
-                className="stock-action-button light-green stock-action-button-flex"
-              >
-                <PlusIcon />
-                Ajouter boisson
-              </button>
-            )}
-            {stockView === 'ingredients' && (
-              <>
-                <button
-                  onClick={() => setShowAddIngredient(true)}
-                  className="stock-action-button light-green stock-action-button-flex"
-                >
-                  <PlusIcon />
-                  Ajouter ingrédient
-                </button>
-                <button
-                  onClick={initializeBaseIngredients}
-                  className="stock-action-button blue stock-action-button-flex"
-                >
-                  Initialiser ingrédients de base
-                </button>
-              </>
-            )}
-            <button
-              onClick={exportStockReport}
-              className="stock-action-button purple stock-action-button-flex"
-            >
-              <DownloadIcon />
-              Exporter rapport
+              Ajouter données de test
             </button>
           </div>
 
@@ -1319,7 +1405,9 @@ export default function AdminPage() {
               )}
               
               <div className="stock-grid-container">
-            {boissons.map(item => {
+            {boissons.filter(item => 
+              item.nom?.toLowerCase().includes(stockSearchTerm.toLowerCase())
+            ).map(item => {
               const stockLevel = item.stock || 0;
               const isOutOfStock = stockLevel === 0;
               const isLowStock = stockLevel <= 5 && stockLevel > 0;
@@ -1474,7 +1562,9 @@ export default function AdminPage() {
 
           {/* Liste des ingrédients */}
           <div className="ingredients-grid">
-            {ingredients.map(ingredient => {
+            {ingredients.filter(ingredient => 
+              ingredient.nom?.toLowerCase().includes(stockSearchTerm.toLowerCase())
+            ).map(ingredient => {
               const isLowStock = ingredient.quantite <= ingredient.seuilAlerte;
               
               return (
@@ -1551,72 +1641,108 @@ export default function AdminPage() {
       {/* Contenu de l'onglet Historique */}
       {activeTab === 'historique' && (
         <div className="historique-section">
-          <h2>Historique des Commandes</h2>
+          <h2>Historique & Rapports</h2>
           
-          {/* Statistiques de l'historique */}
-          <div className="historique-stats-grid">
-            <div className="historique-stat-card">
-              <h4 className="historique-stat-title">Total Livré</h4>
-              <p className="historique-stat-number green">
-                {historique.length}
-              </p>
-            </div>
-            <div className="historique-stat-card">
-              <h4 className="historique-stat-title">Chiffre d'Affaires</h4>
-              <p className="historique-stat-number orange small">
-                {historique.reduce((total, cmd) => total + cmd.total, 0).toLocaleString('fr-FR')} FCFA
-              </p>
-            </div>
-            <div className="historique-stat-card">
-              <h4 className="historique-stat-title">Moyenne/Commande</h4>
-              <p className="historique-stat-number blue small">
-                {historique.length > 0 ? Math.round(historique.reduce((total, cmd) => total + cmd.total, 0) / historique.length).toLocaleString('fr-FR') : 0} FCFA
-              </p>
-            </div>
+          {/* Sous-onglets Historique */}
+          <div className="historique-tabs-container">
+            <button
+              onClick={() => setHistoriqueView('commandes')}
+              className={`historique-tab-button ${historiqueView === 'commandes' ? 'active' : 'inactive'}`}
+            >
+              Commandes Livrées
+            </button>
+            <button
+              onClick={() => setHistoriqueView('mouvements')}
+              className={`historique-tab-button ${historiqueView === 'mouvements' ? 'active' : 'inactive'}`}
+            >
+              Mouvements de Stock
+            </button>
           </div>
 
-          {historique.length === 0 ? (
-            <div className="historique-empty-container">
-              <HistoryIcon />
-              <h3 className="historique-empty-title">Aucune commande dans l'historique</h3>
-              <p className="historique-empty-text">Les commandes livrées apparaitront ici</p>
-            </div>
-          ) : (
-            <div className="historique-list-container">
-              {historique.map((commande) => (
-                <div key={commande.id} className="historique-card">
-                  <div className="historique-card-header">
-                    <div className="historique-client-info">
-                      <h3>
-                        {commande.clientPrenom} {commande.clientNom}
-                      </h3>
-                      <p>
-                        {formatDate(commande.dateCommande)} • {commande.localisation}
-                      </p>
-                    </div>
-                    <div className="historique-card-actions">
-                      <span className="historique-status-badge">
-                        Livrée
-                      </span>
-                      <p className="historique-total-price">
-                        {formatPrixCommande(commande.total)}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="historique-items-container">
-                    <h4 className="historique-items-title">Articles commandés:</h4>
-                    <div className="historique-items-grid">
-                      {commande.items.map((item, index) => (
-                        <div key={index} className="historique-item">
-                          <strong>{item.nom}</strong> × {item.quantité} ({item.prix})
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+          {/* Vue Commandes */}
+          {historiqueView === 'commandes' && (
+            <>
+              {/* Statistiques de l'historique */}
+              <div className="historique-stats-grid">
+                <div className="historique-stat-card">
+                  <h4 className="historique-stat-title">Total Livré</h4>
+                  <p className="historique-stat-number green">
+                    {historique.length}
+                  </p>
                 </div>
-              ))}
-            </div>
+                <div className="historique-stat-card">
+                  <h4 className="historique-stat-title">Chiffre d'Affaires</h4>
+                  <p className="historique-stat-number orange small">
+                    {historique.reduce((total, cmd) => total + cmd.total, 0).toLocaleString('fr-FR')} FCFA
+                  </p>
+                </div>
+                <div className="historique-stat-card">
+                  <h4 className="historique-stat-title">Moyenne/Commande</h4>
+                  <p className="historique-stat-number blue small">
+                    {historique.length > 0 ? Math.round(historique.reduce((total, cmd) => total + cmd.total, 0) / historique.length).toLocaleString('fr-FR') : 0} FCFA
+                  </p>
+                </div>
+              </div>
+
+              {historique.length === 0 ? (
+                <div className="historique-empty-container">
+                  <HistoryIcon />
+                  <h3 className="historique-empty-title">Aucune commande dans l'historique</h3>
+                  <p className="historique-empty-text">Les commandes livrées apparaitront ici</p>
+                </div>
+              ) : (
+                <div className="historique-list-container">
+                  {historique.map((commande) => (
+                    <div key={commande.id} className="historique-card">
+                      <div className="historique-card-header">
+                        <div className="historique-client-info">
+                          <h3>
+                            {commande.clientPrenom} {commande.clientNom}
+                          </h3>
+                          <p>
+                            {formatDate(commande.dateCommande)} • {commande.localisation}
+                          </p>
+                        </div>
+                        <div className="historique-card-actions">
+                          <span className="historique-status-badge">
+                            Livrée
+                          </span>
+                          <p className="historique-total-price">
+                            {formatPrixCommande(commande.total)}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="historique-items-container">
+                        <h4 className="historique-items-title">Articles commandés:</h4>
+                        <div className="historique-items-grid">
+                          {commande.items.map((item, index) => (
+                            <div key={index} className="historique-item">
+                              <strong>{item.nom}</strong> × {item.quantité} ({item.prix})
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Vue Mouvements de Stock */}
+          {historiqueView === 'mouvements' && (
+            <MouvementsStock
+              periodFilter={periodFilter}
+              setPeriodFilter={setPeriodFilter}
+              typeFilter={typeFilter}
+              setTypeFilter={setTypeFilter}
+              filteredMouvements={filteredMouvements}
+              onPrintMouvements={printMouvements}
+              onExportToExcel={exportToExcel}
+              onExportToWord={exportToWord}
+              formatDate={formatDate}
+            />
           )}
         </div>
       )}

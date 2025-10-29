@@ -21,7 +21,7 @@
 
 /* ====== EN-TÊTE ====== */
 .login-header {
-  background: linear-gradient(135deg, #7d3837, #642827);
+  background: linear-gradient(135deg, #2e7d32, #1b5e20);
   color: white;
   padding: 30px;
   text-align: center;
@@ -73,18 +73,19 @@
 }
 
 .form-input:focus {
-  border-color: #7d3837;
-  box-shadow: 0 0 0 3px rgba(125, 56, 55, 0.1);
+  border-color: #2e7d32;
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
   background: #fff;
 }
 
 .form-input::placeholder {
-  color: #6c757d;
+  color: #9ca3af;
+  opacity: 0.6;
 }
 
 /* ====== BOUTONS ====== */
 .login-btn {
-  background: linear-gradient(135deg, #7d3837, #642827);
+  background: linear-gradient(135deg, #2e7d32, #1b5e20);
   color: white;
   border: none;
   border-radius: 12px;
@@ -97,28 +98,12 @@
 }
 
 .login-btn:hover {
-  background: linear-gradient(135deg, #642827, #512120);
+  background: linear-gradient(135deg, #1b5e20, #0d4715);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(125, 56, 55, 0.3);
+  box-shadow: 0 6px 20px rgba(46, 125, 50, 0.3);
 }
 
-.logout-btn {
-  background: transparent;
-  color: #6c757d;
-  border: 2px solid #e1e5e9;
-  border-radius: 12px;
-  padding: 12px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
 
-.logout-btn:hover {
-  border-color: #7d3837;
-  color: #7d3837;
-  background: rgba(125, 56, 55, 0.05);
-}
 
 /* ====== MESSAGE D'ERREUR ====== */
 .error-message {

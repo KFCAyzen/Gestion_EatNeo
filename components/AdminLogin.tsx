@@ -33,7 +33,7 @@ export default function AdminLogin() {
       <div className="login-card">
         <div className="login-header">
           <h1>Administration</h1>
-          <p>Paulina Hôtel - Back Office</p>
+          <p>Eat Neo - Back Office</p>
         </div>
         
         <form onSubmit={login} className="admin-login-form">
@@ -43,7 +43,7 @@ export default function AdminLogin() {
               id="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="admin@paulinahotel.com"
+              placeholder="exemple@gmail.com"
               type="email"
               required
               className="form-input"
