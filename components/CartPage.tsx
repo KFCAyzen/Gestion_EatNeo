@@ -7,6 +7,9 @@ import { collection, addDoc, serverTimestamp, query, where, onSnapshot } from 'f
 import { db } from './firebase'
 import '@/styles/CartPage.css'
 import { images } from './imagesFallback'
+import { useNotifications } from '../hooks/useNotifications'
+import { Toast } from './Toast'
+import { Modal } from './Modal'
 
 type Props = {
   cartItems: MenuItem[];
@@ -19,6 +22,9 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
   const [nom, setNom] = useState("");
   const [prenom, setPrenom] = useState("");
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
+  
+  // Système de notifications
+  const { toasts, modal, showToast, removeToast, showModal, closeModal } = useNotifications();
   interface Commande {
     id: string;
     items: Array<{
@@ -116,10 +122,18 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
 
   // Vider le panier
   const handleClearCart = () => {
-    if (window.confirm("Es-tu sûr de vouloir vider tout le panier ?")) {
-      setCartItems([]);
-      localStorage.removeItem("cart");
-    }
+    showModal(
+      "Vider le panier",
+      "Es-tu sûr de vouloir vider tout le panier ?",
+      "warning",
+      () => {
+        setCartItems([]);
+        localStorage.removeItem("cart");
+        showToast("Panier vidé avec succès !", 'success');
+        closeModal();
+      },
+      closeModal
+    );
   };
 
   // Calcul du total
@@ -131,12 +145,12 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
   // Commander via WhatsApp et sauvegarder dans Firebase
   const handleCommander = async () => {
     if (cartItems.length === 0) {
-      alert("Ton panier est vide.");
+      showToast("Ton panier est vide.", 'warning');
       return;
     }
 
     if (!nom.trim() || !prenom.trim()) {
-      alert("Veuillez remplir votre nom et prénom.");
+      showToast("Veuillez remplir votre nom et prénom.", 'warning');
       return;
     }
 
@@ -178,10 +192,10 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
       localStorage.removeItem("cart");
       // Ne pas vider nom/prénom pour permettre le suivi des commandes
       
-      alert("Commande envoyée avec succès !");
+      showToast("Commande envoyée avec succès !", 'success');
     } catch (error) {
       console.error("Erreur lors de l'enregistrement de la commande:", error);
-      alert("Erreur lors de l'enregistrement. La commande WhatsApp va quand même s'ouvrir.");
+      showToast("Erreur lors de l'enregistrement. La commande WhatsApp va quand même s'ouvrir.", 'error');
       
       // Envoyer quand même via WhatsApp en cas d'erreur Firebase
       const message = encodeURIComponent(
@@ -327,6 +341,27 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
             </div>
           )}
         </div>
+      )}
+      
+      {/* Notifications */}
+      {toasts.map(toast => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => removeToast(toast.id)}
+        />
+      ))}
+      
+      {modal && (
+        <Modal
+          isOpen={modal.isOpen}
+          title={modal.title}
+          message={modal.message}
+          type={modal.type}
+          onConfirm={modal.onConfirm}
+          onCancel={modal.onCancel}
+        />
       )}
     </div>
   );

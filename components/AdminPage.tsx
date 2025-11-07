@@ -83,6 +83,7 @@ export default function AdminPage() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [mouvements, setMouvements] = useState<any[]>([]);
   const [stockSearchTerm, setStockSearchTerm] = useState('');
+  const [commandesPeriodFilter, setCommandesPeriodFilter] = useState('month');
   
   // Système de notifications
   const { toasts, modal, showToast, removeToast, showModal, closeModal } = useNotifications();
@@ -598,6 +599,7 @@ export default function AdminPage() {
         <body>
           <div class="header">
             <h1>Eat Neo - Rapport de Stock</h1>
+            <p>NIU: P067500122904X | Email: eatneo@gmail.com | Tél: 696 032 113</p>
             <p>Généré le: ${new Date().toLocaleString('fr-FR')}</p>
             <p>Système de gestion des stocks</p>
           </div>
@@ -1066,6 +1068,7 @@ export default function AdminPage() {
         <body>
           <div class="header">
             <h1>Eat Neo - Rapport Mouvements de Stock</h1>
+            <p>NIU: P067500122904X | Email: eatneo@gmail.com | Tél: 696 032 113</p>
             <p>Période: ${periodFilter} | Type: ${typeFilter}</p>
             <p>Généré le: ${new Date().toLocaleString('fr-FR')}</p>
           </div>
@@ -1156,6 +1159,7 @@ export default function AdminPage() {
         </head>
         <body>
           <h1 style="text-align: center;">Eat Neo - Rapport Mouvements de Stock</h1>
+          <p style="text-align: center;">NIU: P067500122904X | Email: eatneo@gmail.com | Tél: 696 032 113</p>
           <p style="text-align: center;">Période: ${periodFilter} | Type: ${typeFilter}</p>
           <p style="text-align: center;">Généré le: ${new Date().toLocaleString('fr-FR')}</p>
           
@@ -1194,6 +1198,218 @@ export default function AdminPage() {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `mouvements-stock-${new Date().toISOString().split('T')[0]}.doc`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
+  // Filtrer les commandes livrées selon la période
+  const filteredHistorique = historique.filter(commande => {
+    const now = new Date();
+    const commandeDate = commande.dateCommande.toDate();
+    
+    switch (commandesPeriodFilter) {
+      case 'today':
+        return commandeDate.toDateString() === now.toDateString();
+      case 'week':
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        return commandeDate >= weekAgo;
+      case 'month':
+        const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        return commandeDate >= monthAgo;
+      default:
+        return true;
+    }
+  });
+
+  // Fonctions d'export pour les commandes
+  const printCommandes = () => {
+    const printContent = `
+      <html>
+        <head>
+          <title>Rapport Commandes Livrées - Eat Neo</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2e7d32; padding-bottom: 20px; }
+            .header h1 { color: #2e7d32; margin: 0; font-size: 28px; }
+            .header p { margin: 5px 0; color: #666; }
+            .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 30px 0; }
+            .stat-card { text-align: center; padding: 20px; border: 2px solid #ddd; border-radius: 8px; }
+            .stat-card h3 { margin: 0 0 10px 0; color: #2e7d32; }
+            .stat-card .number { font-size: 24px; font-weight: bold; margin: 0; }
+            .stat-card .number.green { color: #4caf50; }
+            .stat-card .number.orange { color: #ff9800; }
+            .stat-card .number.blue { color: #2196f3; }
+            .section { margin: 30px 0; }
+            .section h2 { color: #2e7d32; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #2e7d32; color: white; font-weight: bold; }
+            .footer { margin-top: 40px; text-align: center; color: #666; font-size: 12px; }
+            .total-row { background-color: #f5f5f5; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Eat Neo - Rapport Commandes Livrées</h1>
+            <p>NIU: P067500122904X | Email: eatneo@gmail.com | Tél: 696 032 113</p>
+            <p>Généré le: ${new Date().toLocaleString('fr-FR')}</p>
+            <p>Système de gestion des commandes</p>
+          </div>
+          
+          <div class="stats">
+            <div class="stat-card">
+              <h3>Total Livré</h3>
+              <p class="number green">${filteredHistorique.length}</p>
+            </div>
+            <div class="stat-card">
+              <h3>Chiffre d'Affaires</h3>
+              <p class="number orange">${filteredHistorique.reduce((total, cmd) => total + cmd.total, 0).toLocaleString('fr-FR')} FCFA</p>
+            </div>
+            <div class="stat-card">
+              <h3>Moyenne/Commande</h3>
+              <p class="number blue">${filteredHistorique.length > 0 ? Math.round(filteredHistorique.reduce((total, cmd) => total + cmd.total, 0) / filteredHistorique.length).toLocaleString('fr-FR') : 0} FCFA</p>
+            </div>
+          </div>
+          
+          <div class="section">
+            <h2>Détail des Commandes Livrées</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Client</th>
+                  <th>Localisation</th>
+                  <th>Articles</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${filteredHistorique.map(cmd => `
+                  <tr>
+                    <td>${formatDate(cmd.dateCommande)}</td>
+                    <td>${cmd.clientPrenom} ${cmd.clientNom}</td>
+                    <td>${cmd.localisation}</td>
+                    <td>${cmd.items.map(item => `${item.nom} × ${item.quantité}`).join(', ')}</td>
+                    <td>${formatPrixCommande(cmd.total)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Eat Neo - Système de gestion des commandes</p>
+          </div>
+        </body>
+      </html>
+    `;
+    
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
+  const exportCommandesToExcel = () => {
+    const csvContent = [
+      ['Date', 'Client', 'Localisation', 'Articles', 'Total'],
+      ...filteredHistorique.map(cmd => [
+        formatDate(cmd.dateCommande),
+        `${cmd.clientPrenom} ${cmd.clientNom}`,
+        cmd.localisation,
+        cmd.items.map(item => `${item.nom} × ${item.quantité}`).join(', '),
+        cmd.total
+      ])
+    ].map(row => row.join(',')).join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `commandes-livrees-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
+  const exportCommandesToWord = () => {
+    const wordContent = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
+        <head>
+          <meta charset='utf-8'>
+          <title>Rapport Commandes Livrées - Eat Neo</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2e7d32; padding-bottom: 20px; }
+            .header h1 { color: #2e7d32; margin: 0; font-size: 28px; }
+            .header p { margin: 5px 0; color: #666; }
+            .stats-section { margin: 30px 0; }
+            .stats-section h2 { color: #2e7d32; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+            .stats-list { margin: 15px 0; }
+            .stats-list p { margin: 8px 0; font-size: 16px; }
+            .section { margin: 30px 0; }
+            .section h2 { color: #2e7d32; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #2e7d32; color: white; font-weight: bold; }
+            .footer { margin-top: 40px; text-align: center; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Eat Neo - Rapport Commandes Livrées</h1>
+            <p>NIU: P067500122904X | Email: eatneo@gmail.com | Tél: 696 032 113</p>
+            <p>Période: ${commandesPeriodFilter}</p>
+            <p>Généré le: ${new Date().toLocaleString('fr-FR')}</p>
+            <p>Système de gestion des commandes</p>
+          </div>
+          
+          <div class="stats-section">
+            <h2>Statistiques de Performance</h2>
+            <div class="stats-list">
+              <p><strong>Total commandes livrées:</strong> ${filteredHistorique.length}</p>
+              <p><strong>Chiffre d'affaires total:</strong> ${filteredHistorique.reduce((total, cmd) => total + cmd.total, 0).toLocaleString('fr-FR')} FCFA</p>
+              <p><strong>Moyenne par commande:</strong> ${filteredHistorique.length > 0 ? Math.round(filteredHistorique.reduce((total, cmd) => total + cmd.total, 0) / filteredHistorique.length).toLocaleString('fr-FR') : 0} FCFA</p>
+            </div>
+          </div>
+          
+          <div class="section">
+            <h2>Détail des Commandes Livrées</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Client</th>
+                  <th>Localisation</th>
+                  <th>Articles</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${filteredHistorique.map(cmd => `
+                  <tr>
+                    <td>${formatDate(cmd.dateCommande)}</td>
+                    <td>${cmd.clientPrenom} ${cmd.clientNom}</td>
+                    <td>${cmd.localisation}</td>
+                    <td>${cmd.items.map(item => `${item.nom} × ${item.quantité}`).join(', ')}</td>
+                    <td>${formatPrixCommande(cmd.total)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} Eat Neo - Système de gestion des commandes</p>
+          </div>
+        </body>
+      </html>
+    `;
+    
+    const blob = new Blob([wordContent], { type: 'application/msword' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `commandes-livrees-${new Date().toISOString().split('T')[0]}.doc`;
     link.click();
     URL.revokeObjectURL(link.href);
   };
@@ -1785,29 +2001,58 @@ export default function AdminPage() {
           {/* Vue Commandes */}
           {historiqueView === 'commandes' && (
             <>
+              {/* Filtres et actions pour les commandes */}
+              <div className="mouvements-filters">
+                <div className="filter-group">
+                  <label>Période:</label>
+                  <select 
+                    value={commandesPeriodFilter} 
+                    onChange={(e) => setCommandesPeriodFilter(e.target.value)}
+                    className="filter-select"
+                  >
+                    <option value="today">Aujourd'hui</option>
+                    <option value="week">Cette semaine</option>
+                    <option value="month">Ce mois</option>
+                    <option value="all">Toutes</option>
+                  </select>
+                </div>
+                
+                <div className="mouvements-actions">
+                  <button onClick={printCommandes} className="action-btn print">
+                    Imprimer
+                  </button>
+                  <button onClick={exportCommandesToExcel} className="action-btn excel">
+                    Excel
+                  </button>
+                  <button onClick={exportCommandesToWord} className="action-btn word">
+                    Word
+                  </button>
+                </div>
+              </div>
+
               {/* Statistiques de l'historique */}
               <div className="historique-stats-grid">
                 <div className="historique-stat-card">
                   <h4 className="historique-stat-title">Total Livré</h4>
                   <p className="historique-stat-number green">
-                    {historique.length}
+                    {filteredHistorique.length}
                   </p>
                 </div>
                 <div className="historique-stat-card">
                   <h4 className="historique-stat-title">Chiffre d'Affaires</h4>
                   <p className="historique-stat-number orange small">
-                    {historique.reduce((total, cmd) => total + cmd.total, 0).toLocaleString('fr-FR')} FCFA
+                    {filteredHistorique.reduce((total, cmd) => total + cmd.total, 0).toLocaleString('fr-FR')} FCFA
                   </p>
                 </div>
                 <div className="historique-stat-card">
                   <h4 className="historique-stat-title">Moyenne/Commande</h4>
                   <p className="historique-stat-number blue small">
-                    {historique.length > 0 ? Math.round(historique.reduce((total, cmd) => total + cmd.total, 0) / historique.length).toLocaleString('fr-FR') : 0} FCFA
+                    {filteredHistorique.length > 0 ? Math.round(filteredHistorique.reduce((total, cmd) => total + cmd.total, 0) / filteredHistorique.length).toLocaleString('fr-FR') : 0} FCFA
                   </p>
                 </div>
               </div>
 
-              {historique.length === 0 ? (
+              {filteredHistorique.length === 0 ? (
                 <div className="historique-empty-container">
                   <HistoryIcon />
                   <h3 className="historique-empty-title">Aucune commande dans l'historique</h3>
@@ -1815,7 +2060,7 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <div className="historique-list-container">
-                  {historique.map((commande) => (
+                  {filteredHistorique.map((commande) => (
                     <div key={commande.id} className="historique-card">
                       <div className="historique-card-header">
                         <div className="historique-client-info">
