@@ -161,7 +161,6 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
       // Commande enregistrée avec succès
 
       // Envoyer via WhatsApp
-      const phoneNumber = "237657011948";
       const message = encodeURIComponent(
         `Bonjour, j'aimerais commander les articles suivants :\n\n` +
           cartItems
@@ -172,7 +171,7 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
           `\nNom : ${nom}\nPrénom : ${prenom}`
       );
 
-      window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
+      window.open(`https://wa.link/oa9ot6?text=${message}`, "_blank");
       
       // Vider le panier après commande
       setCartItems([]);
@@ -185,7 +184,6 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
       alert("Erreur lors de l'enregistrement. La commande WhatsApp va quand même s'ouvrir.");
       
       // Envoyer quand même via WhatsApp en cas d'erreur Firebase
-      const phoneNumber = "237657011948";
       const message = encodeURIComponent(
         `Bonjour, j'aimerais commander les articles suivants :\n\n` +
           cartItems
@@ -196,7 +194,7 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
           `\nNom : ${nom}\nPrénom : ${prenom}`
       );
 
-      window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
+      window.open(`https://wa.link/oa9ot6?text=${message}`, "_blank");
     }
   };
 

@@ -112,7 +112,11 @@ export default function AdminPage() {
 
   // Fonction pour supprimer et re-uploader tous les items avec le champ masque
   const resetAndReuploadItems = async () => {
-    if (!window.confirm('Supprimer et re-uploader tous les items ? Cette action est irréversible.')) return;
+    showModal(
+      "Confirmer le reset",
+      "Supprimer et re-uploader tous les items ? Cette action est irréversible.",
+      "warning",
+      async () => {
     
     try {
       // Supprimer toutes les collections
@@ -140,11 +144,16 @@ export default function AdminPage() {
         });
       }
       
-      alert('Tous les items ont été re-uploadés avec succès !');
-    } catch (error) {
-      console.error('Erreur lors du reset:', error);
-      alert('Erreur lors du reset');
-    }
+        showToast('Tous les items ont été re-uploadés avec succès !', 'success');
+        closeModal();
+      } catch (error) {
+        console.error('Erreur lors du reset:', error);
+        showToast('Erreur lors du reset', 'error');
+        closeModal();
+      }
+    },
+    closeModal
+    );
   };
 
   // Migration: ajouter les champs masque et stock aux items existants
@@ -393,10 +402,10 @@ export default function AdminPage() {
       await updateDoc(doc(db, collectionName, id), {
         masque: !currentStatus
       });
-      alert(`Item ${!currentStatus ? 'masqué' : 'affiché'} avec succès !`);
+      showToast(`Item ${!currentStatus ? 'masqué' : 'affiché'} avec succès !`, 'success');
     } catch (error) {
       console.error('Erreur lors de la mise à jour:', error);
-      alert('Erreur lors de la mise à jour');
+      showToast('Erreur lors de la mise à jour', 'error');
     }
   };
 
@@ -414,14 +423,23 @@ export default function AdminPage() {
   };
 
   const deleteCommande = async (commandeId: string) => {
-    if (!window.confirm('Supprimer cette commande ?')) return;
-    try {
-      await deleteDoc(doc(db, 'commandes', commandeId));
-      alert('Commande supprimée avec succès !');
-    } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
-      alert('Erreur lors de la suppression');
-    }
+    showModal(
+      "Supprimer la commande",
+      "Êtes-vous sûr de vouloir supprimer cette commande ?",
+      "warning",
+      async () => {
+        try {
+          await deleteDoc(doc(db, 'commandes', commandeId));
+          showToast('Commande supprimée avec succès !', 'success');
+          closeModal();
+        } catch (error) {
+          console.error('Erreur lors de la suppression:', error);
+          showToast('Erreur lors de la suppression', 'error');
+          closeModal();
+        }
+      },
+      closeModal
+    );
   };
 
   const formatDate = (timestamp: Timestamp): string => {
@@ -791,6 +809,119 @@ export default function AdminPage() {
       console.error('Erreur:', error);
       alert('Erreur lors de la suppression');
     }
+  };
+
+  // Fonction pour ajouter les nouveaux plats
+  const addNewMenuItems = async () => {
+    if (!window.confirm('Ajouter tous les nouveaux plats au menu ? Cette action ajoutera 23 nouveaux plats.')) return;
+    
+    try {
+      const newPlats = [
+        // Petit Déjeuner
+        { nom: "Spaghetti sauté simple", description: "Spaghetti sautés aux légumes frais", prix: "1000 FCFA", catégorie: ["Petit Déjeuner"], filtre: ["Petit Déjeuner"], image: "/spagetti-saute-simple.jpeg", masque: false, stock: 10 },
+        { nom: "Spaghetti sauté viande", description: "Spaghetti sautés avec morceaux de viande", prix: "1500 FCFA", catégorie: ["Petit Déjeuner"], filtre: ["Petit Déjeuner"], image: "/spagetti-saute-viande.jpeg", masque: false, stock: 10 },
+        { nom: "Crudité", description: "Assortiment de légumes frais et croquants", prix: "1000 FCFA", catégorie: ["Petit Déjeuner"], filtre: ["Petit Déjeuner"], image: "/crudité.jpeg", masque: false, stock: 10 },
+        { nom: "Salade d'avocat", description: "Salade fraîche à base d'avocat mûr", prix: "1000 FCFA", catégorie: ["Petit Déjeuner"], filtre: ["Petit Déjeuner"], image: "/salade-avocat-en-accompagnement-640x427.webp", masque: false, stock: 10 },
+        { nom: "Haricot viande", description: "Haricots mijotés avec morceaux de viande", prix: "1000 FCFA", catégorie: ["Petit Déjeuner"], filtre: ["Petit Déjeuner"], image: "/haricot-viande.jpeg", masque: false, stock: 10 },
+        
+        // Grillades
+        { nom: "Poulet grillé", description: "Poulet grillé aux épices locales", prix: "3000 FCFA", catégorie: ["Grillades"], filtre: ["Grillades"], image: "/poulet_braisé.jpeg", masque: false, stock: 10 },
+        { nom: "Porc grillé", description: "Porc grillé tendre et savoureux", prix: "3500 FCFA", catégorie: ["Grillades"], filtre: ["Grillades"], image: "/porc-grille.jpeg", masque: false, stock: 10 },
+        { nom: "Saucisse", description: "Saucisses grillées artisanales", prix: "3500 FCFA", catégorie: ["Grillades"], filtre: ["Grillades"], image: "/saucisse.jpg", masque: false, stock: 10 },
+        { nom: "Boulettes", description: "Boulettes de viande grillées", prix: "2500 FCFA", catégorie: ["Grillades"], filtre: ["Grillades"], image: "/boulettes.jpeg", masque: false, stock: 10 },
+        { nom: "Boulettes panées", description: "Boulettes de viande panées et dorées", prix: "3000 FCFA", catégorie: ["Grillades"], filtre: ["Grillades"], image: "/boulettes-pane.jpeg", masque: false, stock: 10 },
+        
+        // Déjeuner
+        { nom: "Riz sauté mbounga", description: "Riz sauté à la camerounaise", prix: "1000 FCFA", catégorie: ["Déjeuner"], filtre: ["Déjeuner"], image: "/riz-saute-mbounga.jpeg", masque: false, stock: 10 },
+        { nom: "Riz sauté viande", description: "Riz sauté avec morceaux de viande", prix: "1500 FCFA", catégorie: ["Déjeuner"], filtre: ["Déjeuner"], image: "/riz-saute-viande.webp", masque: false, stock: 10 },
+        { nom: "Poulet rôti", description: "Poulet rôti aux herbes et épices", prix: "3000 FCFA", catégorie: ["Déjeuner"], filtre: ["Déjeuner"], image: "/poulet-roti.jpeg", masque: false, stock: 10 },
+        { nom: "Poulet sauce jardinière", description: "Poulet mijoté aux légumes du jardin", prix: "3000 FCFA", catégorie: ["Déjeuner"], filtre: ["Déjeuner"], image: "/poulet-sauce-jardiniere.jpeg", masque: false, stock: 10 },
+        { nom: "Poulet sauce basquaise", description: "Poulet à la sauce basquaise épicée", prix: "3000 FCFA", catégorie: ["Déjeuner"], filtre: ["Déjeuner"], image: "/poulet-sauce-basquaise.jpeg", masque: false, stock: 10 },
+        { nom: "Porc rôti", description: "Porc rôti tendre et juteux", prix: "3500 FCFA", catégorie: ["Déjeuner"], filtre: ["Déjeuner"], image: "/porc-roti.jpeg", masque: false, stock: 10 },
+        { nom: "Porc sauce jardinière", description: "Porc mijoté aux légumes frais", prix: "3500 FCFA", catégorie: ["Déjeuner"], filtre: ["Déjeuner"], image: "/porc-sauce-basquaise.jpeg", masque: false, stock: 10 },
+        { nom: "Porc à la moutarde", description: "Porc en sauce moutarde onctueuse", prix: "3500 FCFA", catégorie: ["Déjeuner"], filtre: ["Déjeuner"], image: "/porc-a-la-moutarde.jpeg", masque: false, stock: 10 },
+        { nom: "Poisson à la sauce oignon", description: "Poisson frais en sauce aux oignons", prix: "2500 FCFA", catégorie: ["Déjeuner"], filtre: ["Déjeuner"], image: "/poisson-sauce-oignons.jpeg", masque: false, stock: 10 },
+        { nom: "Burger", description: "Burger maison avec frites", prix: "2000 FCFA", catégorie: ["Déjeuner"], filtre: ["Déjeuner"], image: "/burger.jpeg", masque: false, stock: 10 },
+        { nom: "Poisson d'eau douce à l'étouffée", description: "Poisson d'eau douce cuit à l'étouffée", prix: "3000 FCFA", catégorie: ["Déjeuner"], filtre: ["Déjeuner"], image: "/poisson-a-l'etouffee.jpeg", masque: false, stock: 10 },
+        { nom: "Gombo couscous", description: "Gombo traditionnel avec couscous", prix: "3000 FCFA", catégorie: ["Déjeuner"], filtre: ["Déjeuner"], image: "/gombo-couscous.jpeg", masque: false, stock: 10 },
+        { nom: "Légumes sautés", description: "Mélange de légumes sautés aux épices", prix: "3000 FCFA", catégorie: ["Déjeuner"], filtre: ["Déjeuner"], image: "/legumes-saute.jpeg", masque: false, stock: 10 },
+        { nom: "Mbongo machoiron", description: "Plat traditionnel camerounais au poisson", prix: "3000 FCFA", catégorie: ["Déjeuner"], filtre: ["Déjeuner"], image: "/mbongo.jpeg", masque: false, stock: 10 },
+        
+        // Accompagnements
+        { nom: "Bâton de manioc", description: "Bâton de manioc traditionnel", prix: "500 FCFA", catégorie: ["Accompagnements"], filtre: ["Accompagnements"], image: "/baton-manioc.jpg", masque: false, stock: 10 }
+      ];
+      
+      // Ajouter tous les plats
+      for (const plat of newPlats) {
+        await addDoc(collection(db, 'Plats'), plat);
+      }
+      
+      showToast(`${newPlats.length} nouveaux plats ajoutés avec succès !`, 'success');
+    } catch (error) {
+      console.error('Erreur:', error);
+      showToast('Erreur lors de l\'ajout des plats', 'error');
+    }
+  };
+
+  // Fonction pour corriger les catégories dans Firebase
+  const fixCategories = async () => {
+    showModal(
+      "Corriger les catégories",
+      'Corriger toutes les catégories "Petit déjeuné" vers "Petit Déjeuner" dans Firebase ?',
+      "info",
+      async () => {
+    
+    try {
+      const collections = ['Plats', 'Boissons'];
+      let updated = 0;
+      
+      for (const collectionName of collections) {
+        const snapshot = await getDocs(collection(db, collectionName));
+        
+        for (const docSnapshot of snapshot.docs) {
+          const data = docSnapshot.data();
+          let needsUpdate = false;
+          const updates: any = {};
+          
+          // Corriger catégorie
+          if (data.catégorie && Array.isArray(data.catégorie)) {
+            const correctedCategorie = data.catégorie.map((cat: string) => 
+              cat === 'Petit déjeuné' ? 'Petit Déjeuner' : cat
+            );
+            if (JSON.stringify(correctedCategorie) !== JSON.stringify(data.catégorie)) {
+              updates.catégorie = correctedCategorie;
+              needsUpdate = true;
+            }
+          }
+          
+          // Corriger filtre
+          if (data.filtre && Array.isArray(data.filtre)) {
+            const correctedFiltre = data.filtre.map((fil: string) => 
+              fil === 'Petit déjeuné' ? 'Petit Déjeuner' : fil
+            );
+            if (JSON.stringify(correctedFiltre) !== JSON.stringify(data.filtre)) {
+              updates.filtre = correctedFiltre;
+              needsUpdate = true;
+            }
+          }
+          
+          if (needsUpdate) {
+            await updateDoc(doc(db, collectionName, docSnapshot.id), updates);
+            updated++;
+          }
+        }
+      }
+      
+        showToast(`${updated} éléments corrigés avec succès !`, 'success');
+        closeModal();
+      } catch (error) {
+        console.error('Erreur:', error);
+        showToast('Erreur lors de la correction', 'error');
+        closeModal();
+      }
+    },
+    closeModal
+    );
   };
 
   // Fonction pour ajouter des données de test
@@ -1345,15 +1476,7 @@ export default function AdminPage() {
             totalUnits={ingredients.reduce((total, ing) => total + ing.quantite, 0)}
           />
 
-          {/* Bouton pour ajouter des données de test */}
-          <div className="test-data-section">
-            <button
-              onClick={addTestData}
-              className="stock-action-button red"
-            >
-              Ajouter données de test
-            </button>
-          </div>
+
 
           {/* Gestion des Boissons */}
           {stockView === 'boissons' && (

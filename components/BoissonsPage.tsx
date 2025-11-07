@@ -45,7 +45,7 @@ const BoissonsPage: React.FC<Props> = ({
           width: '40px',
           height: '40px',
           border: '3px solid #f3f3f3',
-          borderTop: '3px solid #7d3837',
+          borderTop: '3px solid #2e7d32',
           borderRadius: '50%',
           animation: 'spin 1s linear infinite'
         }}></div>
@@ -55,7 +55,7 @@ const BoissonsPage: React.FC<Props> = ({
             100% { transform: rotate(360deg); }
           }
         `}</style>
-        <p style={{ color: '#7d3837', fontSize: '1rem', margin: 0 }}>Chargement des boissons...</p>
+        <p style={{ color: '#2e7d32', fontSize: '1rem', margin: 0 }}>Chargement des boissons...</p>
       </div>
     );
   }

@@ -112,6 +112,7 @@ export const StockManagement = ({
             value={stockSearchTerm}
             onChange={(e) => setStockSearchTerm(e.target.value)}
             className="search-input-with-icon"
+            style={{ paddingLeft: '45px' }}
           />
           <div className="search-icon-absolute">
             <SearchIcon />

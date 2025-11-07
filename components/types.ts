@@ -199,8 +199,8 @@ export const menuItems: MenuItem[] = [
     prix: "1500 FCFA",
     image: images.omlette,
     description: "Omelette simple aux oeufs battus, légère et moelleuse.",
-    catégorie: ["Petit déjeuné"],
-    filtre: ["Petit déjeuné"],
+    catégorie: ["Petit Déjeuner"],
+    filtre: ["Petit Déjeuner"],
   },
   {
     id: 19,
@@ -208,8 +208,8 @@ export const menuItems: MenuItem[] = [
     prix: "2000 FCFA",
     image: images.omletteSardine,
     description: "Omelette garnie de sardines et dépices douces.",
-    catégorie: ["Petit déjeuné"],
-    filtre: ["Petit déjeuné"],
+    catégorie: ["Petit Déjeuner"],
+    filtre: ["Petit Déjeuner"],
   },
   {
     id: 20,
@@ -217,8 +217,8 @@ export const menuItems: MenuItem[] = [
     prix: "2000 FCFA",
     image: images.omletteSaucisson,
     description: "Omelette généreuse au saucisson, parfaite pour les gourmands.",
-    catégorie: ["Petit déjeuné"],
-    filtre: ["Petit déjeuné"],
+    catégorie: ["Petit Déjeuner"],
+    filtre: ["Petit Déjeuner"],
   },
   {
     id: 21,

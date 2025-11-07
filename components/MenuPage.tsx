@@ -278,43 +278,7 @@ const MenuPage: React.FC<Props> = ({
         </>
       )}
 
-      {/* --- Footer --- */}
-      <section className="footer">
-        <h2>Contactez nous</h2>
-        <div className="tel">
-          <img src={images.phone} alt="" />
-          <p className="num"><span>Téléphone:</span> +237 657 011 948 / 675 026 289</p>
-        </div>
-        <div className="mail">
-          <img src={images.mail} alt="" />
-          <p>eatneo@yahoo.com</p>
-        </div>
-        <div className="loc">
-          <img src={images.loc} alt="" />
-          <p>A 500m de Abattoir</p>
-        </div>
-        <div className="socials">
-          <div>
-            <a href="https://www.facebook.com/share/19eJEP4m5g/?mibextid=wwXIfr">
-              <img src={images.facebook} alt="" />
-            </a>
-            <p>FaceBook</p>
-          </div>
-          <div>
-            <a href="https://www.tiktok.com/@paulina.hotel21?_t=ZM-8ycfR0dU40s&_r=1">
-              <img src={images.tiktok} alt="" />
-            </a>
-            <p>TikTok</p>
-          </div>
-          <div>
-            <a href="https://wa.link/zxqlo7">
-              <img src={images.whatsapp} alt="" />
-            </a>
-            <p>WhatsApp</p>
-          </div>
-        </div>
-        <footer>Copyright Eat Neo 2025 all rights reserved</footer>
-      </section>
+
     </div>
   );
 };
