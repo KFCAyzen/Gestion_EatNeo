@@ -19,8 +19,8 @@ type Props = {
 
 const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) => {
 
-  const [nom, setNom] = useState("");
   const [prenom, setPrenom] = useState("");
+  const [numeroTable, setNumeroTable] = useState("");
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   
   // Système de notifications
@@ -45,11 +45,11 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
 
   // Écouter les commandes du client
   useEffect(() => {
-    if (nom.trim() && prenom.trim()) {
+    if (prenom.trim() && numeroTable.trim()) {
       const q = query(
         collection(db, 'commandes'),
-        where('clientNom', '==', nom.trim()),
-        where('clientPrenom', '==', prenom.trim())
+        where('clientPrenom', '==', prenom.trim()),
+        where('numeroTable', '==', numeroTable.trim())
       );
       
       const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -73,7 +73,7 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
     } else {
       setMesCommandes([]);
     }
-  }, [nom, prenom]);
+  }, [prenom, numeroTable]);
 
   // Récupère le prix réel d'un item (string ou tableau)
   const getPrixString = (item: MenuItem) => {
@@ -149,8 +149,8 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
       return;
     }
 
-    if (!nom.trim() || !prenom.trim()) {
-      showToast("Veuillez remplir votre nom et prénom.", 'warning');
+    if (!numeroTable.trim()) {
+      showToast("Veuillez remplir le numéro de table.", 'warning');
       return;
     }
 
@@ -163,8 +163,8 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
           quantité: Number(item.quantité || 1)
         })),
         total: Number(totalPrix || 0),
-        clientNom: String(nom.trim()),
-        clientPrenom: String(prenom.trim()),
+        clientPrenom: String(prenom.trim() || 'Client'),
+        numeroTable: String(numeroTable.trim()),
         localisation: String(localisation || "Non spécifiée"),
         dateCommande: serverTimestamp(),
         statut: String('en_attente')
@@ -182,7 +182,7 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
             .join("\n") +
           `\n\nTotal: ${formatPrix(totalPrix)}` +
           `\nLocalisation : ${localisation || "Non spécifiée"}` +
-          `\nNom : ${nom}\nPrénom : ${prenom}`
+          `\nPrénom : ${prenom || 'Client'}\nNuméro de table : ${numeroTable}`
       );
 
       window.open(`https://wa.link/oa9ot6?text=${message}`, "_blank");
@@ -205,7 +205,7 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
             .join("\n") +
           `\n\nTotal: ${formatPrix(totalPrix)}` +
           `\nLocalisation : ${localisation || "Non spécifiée"}` +
-          `\nNom : ${nom}\nPrénom : ${prenom}`
+          `\nPrénom : ${prenom || 'Client'}\nNuméro de table : ${numeroTable}`
       );
 
       window.open(`https://wa.link/oa9ot6?text=${message}`, "_blank");
@@ -283,17 +283,18 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
             <div className="form-inputs">
               <input
                 type="text"
-                placeholder="Nom"
-                value={nom}
-                onChange={e => setNom(e.target.value)}
+                placeholder="Prénom (optionnel)"
+                value={prenom}
+                onChange={e => setPrenom(e.target.value)}
                 className="form-input"
               />
               <input
                 type="text"
-                placeholder="Prénom"
-                value={prenom}
-                onChange={e => setPrenom(e.target.value)}
+                placeholder="Numéro de table *"
+                value={numeroTable}
+                onChange={e => setNumeroTable(e.target.value)}
                 className="form-input"
+                required
               />
             </div>
           </div>
@@ -310,11 +311,11 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
       )}
       
       {/* Affichage des commandes du client */}
-      {nom.trim() && prenom.trim() && (
+      {prenom.trim() && numeroTable.trim() && (
         <div className="orders-section">
           <h3 className="orders-title">Mes Commandes en cours</h3>
           {mesCommandes.length === 0 ? (
-            <p className="orders-empty">Aucune commande en cours pour {prenom} {nom}</p>
+            <p className="orders-empty">Aucune commande en cours pour la table {numeroTable}</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {mesCommandes.map((commande) => (
