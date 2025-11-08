@@ -194,9 +194,8 @@ export default function AppContent() {
             onLogin={(username, password) => {
               if (login(username, password)) {
                 setShowLogin(false)
-                if (user?.role === 'admin') {
-                  router.push('/admin')
-                }
+                // Redirection vers admin après connexion réussie
+                router.push('/admin')
                 return true
               }
               return false
