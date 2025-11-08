@@ -83,12 +83,14 @@ export default function AdminPage({ userRole }: AdminPageProps) {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [activeTab, setActiveTab] = useState<'menu' | 'commandes' | 'stock' | 'historique' | 'rentabilite'>('menu');
   const [stockView, setStockView] = useState<'boissons' | 'plats'>('boissons');
+  const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out' | 'ok'>('all');
   const [historiqueView, setHistoriqueView] = useState<'commandes' | 'mouvements'>('commandes');
   const [periodFilter, setPeriodFilter] = useState('month');
   const [typeFilter, setTypeFilter] = useState('all');
   const [mouvements, setMouvements] = useState<any[]>([]);
   const [stockSearchTerm, setStockSearchTerm] = useState('');
   const [commandesPeriodFilter, setCommandesPeriodFilter] = useState('month');
+  const [pendingStockChange, setPendingStockChange] = useState<{itemId: string, newStock: number, collection: string} | null>(null);
   
   // Système de notifications
   const { toasts, modal, showToast, removeToast, showModal, closeModal } = useNotifications();
@@ -331,6 +333,15 @@ export default function AdminPage({ userRole }: AdminPageProps) {
         });
       }
 
+      // Enregistrer l'activité
+      await logActivity({
+        action: editId ? 'Modification' : 'Ajout',
+        entity: collectionName.slice(0, -1).toLowerCase(),
+        entityId: editId || 'nouveau',
+        details: `${editId ? 'Modification' : 'Ajout'} de "${nom}" effectué par ${userRole}`,
+        type: editId ? 'update' : 'create'
+      });
+
       showToast(editId ? "Item modifié avec succès !" : "Item ajouté avec succès !", 'success');
       // reset formulaire
       setNom("");
@@ -527,7 +538,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
     }
   };
 
-  // Gestion du stock avec enregistrement des mouvements
+  // Gestion du stock avec enregistrement des mouvements (pour augmentation directe)
   const updateStock = async (collectionName: "Plats" | "Boissons", id: string, newStock: number) => {
     const finalStock = Math.max(0, newStock);
     try {
@@ -552,15 +563,91 @@ export default function AdminPage({ userRole }: AdminPageProps) {
             unite: 'unités',
             stockAvant: oldStock,
             stockApres: finalStock,
-            description: `Ajustement manuel du stock`,
+            description: `Ajustement manuel du stock par ${userRole}`,
             categorie: collectionName === 'Boissons' ? 'boissons' : 'plats'
           });
+          
+          // Enregistrer la notification pour augmentation
+          if (difference > 0) {
+            await logNotification(
+              'stock_low',
+              `Stock augmenté pour ${itemData.nom}`,
+              `Le stock de "${itemData.nom}" est passé de ${oldStock} à ${finalStock} unités`
+            );
+            
+            await logActivity({
+              action: 'Augmentation stock',
+              entity: collectionName.toLowerCase(),
+              entityId: id,
+              details: `Stock de "${itemData.nom}" augmenté: ${oldStock} → ${finalStock} unités par ${userRole}`,
+              type: 'update'
+            });
+          }
         }
       }
     } catch (error) {
       console.error('Erreur lors de la mise à jour du stock:', error);
-      alert('Erreur lors de la mise à jour du stock');
+      showToast('Erreur lors de la mise à jour du stock', 'error');
     }
+  };
+
+  // Fonction pour confirmer le changement de stock
+  const confirmStockChange = async () => {
+    if (pendingStockChange) {
+      try {
+        // Récupérer les détails de l'item avant mise à jour
+        const itemDoc = await getDoc(doc(db, pendingStockChange.collection, pendingStockChange.itemId));
+        if (itemDoc.exists()) {
+          const itemData = itemDoc.data();
+          const oldStock = itemData.stock || 0;
+          const newStock = pendingStockChange.newStock;
+          
+          // Mettre à jour le stock
+          await updateDoc(doc(db, pendingStockChange.collection, pendingStockChange.itemId), {
+            stock: newStock
+          });
+          
+          // Enregistrer le mouvement de stock
+          const difference = newStock - oldStock;
+          await logMouvementStock({
+            item: itemData.nom,
+            type: difference > 0 ? 'entree' : 'sortie',
+            quantite: Math.abs(difference),
+            unite: 'unités',
+            stockAvant: oldStock,
+            stockApres: newStock,
+            description: `Ajustement manuel du stock par ${userRole}`,
+            categorie: pendingStockChange.collection === 'Boissons' ? 'boissons' : 'plats'
+          });
+          
+          // Enregistrer la notification
+          await logNotification(
+            difference > 0 ? 'stock_low' : 'stock_out',
+            `Stock ${difference > 0 ? 'augmenté' : 'diminué'} pour ${itemData.nom}`,
+            `Le stock de "${itemData.nom}" est passé de ${oldStock} à ${newStock} unités`
+          );
+          
+          // Enregistrer l'activité
+          await logActivity({
+            action: 'Modification stock',
+            entity: pendingStockChange.collection.toLowerCase(),
+            entityId: pendingStockChange.itemId,
+            details: `Stock de "${itemData.nom}" modifié: ${oldStock} → ${newStock} unités par ${userRole}`,
+            type: 'update'
+          });
+        }
+        
+        setPendingStockChange(null);
+        showToast('Stock mis à jour avec succès !', 'success');
+      } catch (error) {
+        console.error('Erreur lors de la confirmation:', error);
+        showToast('Erreur lors de la mise à jour du stock', 'error');
+      }
+    }
+  };
+
+  const cancelStockChange = () => {
+    setPendingStockChange(null);
   };
 
   const initializeStock = async () => {
@@ -771,6 +858,15 @@ export default function AdminPage({ userRole }: AdminPageProps) {
         masque: false,
         catégorie: ['Boissons'],
         filtre: ['Boissons']
+      });
+      
+      // Enregistrer l'activité
+      await logActivity({
+        action: 'Ajout',
+        entity: 'boisson',
+        entityId: 'nouveau',
+        details: `Ajout de "${newBoisson.nom}" avec stock initial de ${newBoisson.stock} unités par ${userRole}`,
+        type: 'create'
       });
       
       setNewBoisson({ nom: '', prix: '', stock: 10 });
@@ -1648,10 +1744,11 @@ export default function AdminPage({ userRole }: AdminPageProps) {
             setStockView={setStockView}
             stockSearchTerm={stockSearchTerm}
             setStockSearchTerm={setStockSearchTerm}
+            stockFilter={stockFilter}
+            setStockFilter={setStockFilter}
             onInitializeStock={initializeStock}
             onResetLowStock={resetLowStock}
             onAddBoisson={() => setShowAddBoisson(true)}
-
             onExportStockReport={exportStockReport}
             boissonsCount={boissons.length}
             lowStockCount={boissons.filter(item => (item.stock || 0) <= 5 && (item.stock || 0) > 0).length}
@@ -1751,19 +1848,25 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                   
                   {/* Contrôles de stock */}
                   <div className="stock-controls-complex">
-                    <button 
-                      type="button"
-                      onClick={async (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const newStock = Math.max(0, (item.stock || 0) - 1);
-                        await updateStock("Boissons", String(item.id), newStock);
-                      }}
-                      className="stock-btn-minus-hover"
-                      title="Diminuer le stock"
-                    >
-                      <MinusIcon />
-                    </button>
+                    {userRole === 'admin' && (
+                      <button 
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const newStock = Math.max(0, (item.stock || 0) - 1);
+                          setPendingStockChange({
+                            itemId: String(item.id),
+                            newStock,
+                            collection: "Boissons"
+                          });
+                        }}
+                        className="stock-btn-minus-hover"
+                        title="Diminuer le stock (Admin seulement)"
+                      >
+                        <MinusIcon />
+                      </button>
+                    )}
                     
                     <input
                       type="number"
@@ -1796,6 +1899,24 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                       <PlusIcon />
                     </button>
                   </div>
+                  
+                  {/* Boutons de confirmation si modification en cours */}
+                  {pendingStockChange?.itemId === String(item.id) && (
+                    <div className="stock-confirmation-buttons">
+                      <button
+                        onClick={confirmStockChange}
+                        className="stock-confirm-btn"
+                      >
+                        Confirmer
+                      </button>
+                      <button
+                        onClick={cancelStockChange}
+                        className="stock-cancel-btn"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  )}
                   
                   <button
                     onClick={() => handleDelete("Boissons", String(item.id))}
@@ -1852,19 +1973,25 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                   
                   {/* Contrôles de stock */}
                   <div className="stock-controls-complex">
-                    <button 
-                      type="button"
-                      onClick={async (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const newStock = Math.max(0, (item.stock || 0) - 1);
-                        await updateStock("Plats", String(item.id), newStock);
-                      }}
-                      className="stock-btn-minus-hover"
-                      title="Diminuer le stock"
-                    >
-                      <MinusIcon />
-                    </button>
+                    {userRole === 'admin' && (
+                      <button 
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const newStock = Math.max(0, (item.stock || 0) - 1);
+                          setPendingStockChange({
+                            itemId: String(item.id),
+                            newStock,
+                            collection: "Plats"
+                          });
+                        }}
+                        className="stock-btn-minus-hover"
+                        title="Diminuer le stock (Admin seulement)"
+                      >
+                        <MinusIcon />
+                      </button>
+                    )}
                     
                     <input
                       type="number"
@@ -1897,6 +2024,24 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                       <PlusIcon />
                     </button>
                   </div>
+                  
+                  {/* Boutons de confirmation si modification en cours */}
+                  {pendingStockChange?.itemId === String(item.id) && (
+                    <div className="stock-confirmation-buttons">
+                      <button
+                        onClick={confirmStockChange}
+                        className="stock-confirm-btn"
+                      >
+                        Confirmer
+                      </button>
+                      <button
+                        onClick={cancelStockChange}
+                        className="stock-cancel-btn"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}

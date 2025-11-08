@@ -1,11 +1,17 @@
 import { useState } from 'react';
 import { PlusIcon, SearchIcon, DownloadIcon } from './Icons';
 
+type StockFilter = 'all' | 'low' | 'out' | 'ok';
+
+export type { StockFilter };
+
 interface StockManagementProps {
   stockView: 'boissons' | 'plats';
   setStockView: (view: 'boissons' | 'plats') => void;
   stockSearchTerm: string;
   setStockSearchTerm: (term: string) => void;
+  stockFilter: StockFilter;
+  setStockFilter: (filter: StockFilter) => void;
   onInitializeStock: () => void;
   onResetLowStock: () => void;
   onAddBoisson: () => void;
@@ -25,6 +31,8 @@ export const StockManagement = ({
   setStockView,
   stockSearchTerm,
   setStockSearchTerm,
+  stockFilter,
+  setStockFilter,
   onInitializeStock,
   onResetLowStock,
   onAddBoisson,
@@ -44,38 +52,62 @@ export const StockManagement = ({
       <div className="stock-stats-grid">
         {stockView === 'boissons' ? (
           <>
-            <div className="stock-stat-card">
+            <div 
+              className={`stock-stat-card clickable ${stockFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setStockFilter('all')}
+            >
               <h4 className="stock-stat-title">Total Boissons</h4>
               <p className="stock-stat-number blue">{boissonsCount}</p>
             </div>
-            <div className="stock-stat-card">
+            <div 
+              className={`stock-stat-card clickable ${stockFilter === 'low' ? 'active' : ''}`}
+              onClick={() => setStockFilter('low')}
+            >
               <h4 className="stock-stat-title">Stock Faible</h4>
               <p className="stock-stat-number orange">{lowStockCount}</p>
             </div>
-            <div className="stock-stat-card">
+            <div 
+              className={`stock-stat-card clickable ${stockFilter === 'out' ? 'active' : ''}`}
+              onClick={() => setStockFilter('out')}
+            >
               <h4 className="stock-stat-title">Rupture</h4>
               <p className="stock-stat-number red">{outOfStockCount}</p>
             </div>
-            <div className="stock-stat-card">
+            <div 
+              className={`stock-stat-card clickable ${stockFilter === 'ok' ? 'active' : ''}`}
+              onClick={() => setStockFilter('ok')}
+            >
               <h4 className="stock-stat-title">Stock OK</h4>
               <p className="stock-stat-number green">{okStockCount}</p>
             </div>
           </>
         ) : (
           <>
-            <div className="stock-stat-card">
+            <div 
+              className={`stock-stat-card clickable ${stockFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setStockFilter('all')}
+            >
               <h4 className="stock-stat-title">Total Plats</h4>
               <p className="stock-stat-number blue">{platsCount}</p>
             </div>
-            <div className="stock-stat-card">
+            <div 
+              className={`stock-stat-card clickable ${stockFilter === 'low' ? 'active' : ''}`}
+              onClick={() => setStockFilter('low')}
+            >
               <h4 className="stock-stat-title">Stock Faible</h4>
               <p className="stock-stat-number orange">{lowPlatsCount}</p>
             </div>
-            <div className="stock-stat-card">
+            <div 
+              className={`stock-stat-card clickable ${stockFilter === 'out' ? 'active' : ''}`}
+              onClick={() => setStockFilter('out')}
+            >
               <h4 className="stock-stat-title">Rupture</h4>
               <p className="stock-stat-number red">{outOfStockPlatsCount}</p>
             </div>
-            <div className="stock-stat-card">
+            <div 
+              className={`stock-stat-card clickable ${stockFilter === 'ok' ? 'active' : ''}`}
+              onClick={() => setStockFilter('ok')}
+            >
               <h4 className="stock-stat-title">Stock OK</h4>
               <p className="stock-stat-number green">{okPlatsCount}</p>
             </div>

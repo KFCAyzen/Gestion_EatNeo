@@ -1063,4 +1063,66 @@ footer{
   }
  }
 
+/* Stock Management Styles */
+.stock-stat-card.clickable {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.stock-stat-card.clickable:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(46, 125, 50, 0.2);
+  border-color: rgba(46, 125, 50, 0.3);
+}
+
+.stock-stat-card.clickable.active {
+  border-color: #2e7d32;
+  background: linear-gradient(135deg, rgba(46, 125, 50, 0.1) 0%, rgba(46, 125, 50, 0.05) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(46, 125, 50, 0.25);
+}
+
+/* Stock Confirmation Buttons */
+.stock-confirmation-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  justify-content: center;
+}
+
+.stock-confirm-btn {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.stock-confirm-btn:hover {
+  background: #45a049;
+  transform: translateY(-1px);
+}
+
+.stock-cancel-btn {
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.stock-cancel-btn:hover {
+  background: #da190b;
+  transform: translateY(-1px);
+}
+
  
