@@ -393,13 +393,96 @@ export default function AdminPage({ userRole }: AdminPageProps) {
     }
   };
 
-  // Gestion des commandes
+  // Gestion des commandes avec déduction automatique du stock
   const updateCommandeStatut = async (commandeId: string, nouveauStatut: string) => {
     try {
+      // Récupérer les détails de la commande
+      const commandeDoc = await getDoc(doc(db, 'commandes', commandeId));
+      if (!commandeDoc.exists()) {
+        showToast('Commande introuvable', 'error');
+        return;
+      }
+      
+      const commandeData = commandeDoc.data() as Commande;
+      
+      // Si le nouveau statut est "livree", déduire le stock
+      if (nouveauStatut === 'livree' && commandeData.statut !== 'livree') {
+        for (const item of commandeData.items) {
+          // Chercher l'article dans les plats
+          const platsSnapshot = await getDocs(collection(db, 'Plats'));
+          let itemFound = false;
+          
+          for (const platDoc of platsSnapshot.docs) {
+            const platData = platDoc.data();
+            if (platData.nom === item.nom) {
+              const currentStock = platData.stock || 0;
+              const newStock = Math.max(0, currentStock - item.quantité);
+              
+              await updateDoc(doc(db, 'Plats', platDoc.id), {
+                stock: newStock
+              });
+              
+              // Enregistrer le mouvement de stock
+              await logMouvementStock({
+                item: item.nom,
+                type: 'sortie',
+                quantite: item.quantité,
+                unite: 'unités',
+                stockAvant: currentStock,
+                stockApres: newStock,
+                description: `Livraison commande #${commandeId.slice(-6)}`,
+                categorie: 'plats'
+              });
+              
+              itemFound = true;
+              break;
+            }
+          }
+          
+          // Si pas trouvé dans les plats, chercher dans les boissons
+          if (!itemFound) {
+            const boissonsSnapshot = await getDocs(collection(db, 'Boissons'));
+            
+            for (const boissonDoc of boissonsSnapshot.docs) {
+              const boissonData = boissonDoc.data();
+              if (boissonData.nom === item.nom) {
+                const currentStock = boissonData.stock || 0;
+                const newStock = Math.max(0, currentStock - item.quantité);
+                
+                await updateDoc(doc(db, 'Boissons', boissonDoc.id), {
+                  stock: newStock
+                });
+                
+                // Enregistrer le mouvement de stock
+                await logMouvementStock({
+                  item: item.nom,
+                  type: 'sortie',
+                  quantite: item.quantité,
+                  unite: 'unités',
+                  stockAvant: currentStock,
+                  stockApres: newStock,
+                  description: `Livraison commande #${commandeId.slice(-6)}`,
+                  categorie: 'boissons'
+                });
+                
+                break;
+              }
+            }
+          }
+        }
+      }
+      
+      // Mettre à jour le statut de la commande
       await updateDoc(doc(db, 'commandes', commandeId), {
         statut: nouveauStatut
       });
-      showToast('Statut mis à jour avec succès !', 'success');
+      
+      showToast(
+        nouveauStatut === 'livree' 
+          ? 'Commande livrée et stock mis à jour !' 
+          : 'Statut mis à jour avec succès !', 
+        'success'
+      );
     } catch (error) {
       console.error('Erreur lors de la mise à jour:', error);
       showToast('Erreur lors de la mise à jour du statut', 'error');
