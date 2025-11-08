@@ -1,11 +1,14 @@
 'use client'
 
 import '@/styles/App.css'
+import '@/styles/Auth.css'
 import PlatsPage from './PlatsPage'
 import BoissonsPage from './BoissonsPage'
 import CartPage from './CartPage'
 import ProtectedAdminRoute from './ProtectedAdminRoute'
 import HistoriquePage from './HistoriquePage'
+import AdminLogin from './AdminLogin'
+import { useAuth } from '../hooks/useAuth'
 
 import { useState, useEffect } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
@@ -45,11 +48,12 @@ export default function AppContent() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { user, login, logout, isAdmin } = useAuth()
   const [cartItems, setCartItems] = useState<MenuItem[]>([]);
   const [table, setTable] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [showScrollUp, setShowScrollUp] = useState(false);
-;
+  const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
     const storedCart = localStorage.getItem("cart");
@@ -120,31 +124,28 @@ export default function AppContent() {
           <h1>EAT NEO</h1>
         </div>
         <div className="title-right">
-          {pathname === '/admin' ? (
+          {user ? (
             <>
-              <Link href="/notifications" className="notification-link">
-                <NotificationIcon />
-              </Link>
+              {pathname === '/admin' && (
+                <Link href="/notifications" className="notification-link">
+                  <NotificationIcon />
+                </Link>
+              )}
+              <span className="user-name">{user.username}</span>
               <button 
                 className="logout-btn"
-                onClick={async () => {
-                  try {
-                    const { signOut } = await import('firebase/auth');
-                    const { auth } = await import('./firebase');
-                    await signOut(auth);
-                    router.push('/')
-                  } catch (err) {
-                    console.error(err)
-                  }
+                onClick={() => {
+                  logout()
+                  router.push('/')
                 }}
               >
                 <LogoutIcon />
               </button>
             </>
           ) : (
-            <Link href="/admin" className="admin-link">
+            <button onClick={() => setShowLogin(true)} className="admin-link">
               <AdminIcon />
-            </Link>
+            </button>
           )}
         </div>
       </div>
@@ -185,7 +186,25 @@ export default function AppContent() {
           localisation={table}
         />
       )}
-      {pathname === '/admin' && <ProtectedAdminRoute />}
+      {pathname === '/admin' && user && <ProtectedAdminRoute userRole={user.role} />}
+      
+      {showLogin && (
+        <div className="login-overlay">
+          <AdminLogin 
+            onLogin={(username, password) => {
+              if (login(username, password)) {
+                setShowLogin(false)
+                if (user?.role === 'admin') {
+                  router.push('/admin')
+                }
+                return true
+              }
+              return false
+            }}
+            onClose={() => setShowLogin(false)}
+          />
+        </div>
+      )}
       {pathname === '/historique' && <HistoriquePage />}
 
       {/* BOTTOM BAR */}

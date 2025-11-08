@@ -15,6 +15,7 @@ import { AdminTabs } from './AdminTabs';
 import { MenuForm } from './MenuForm';
 import { StockManagement } from './StockManagement';
 import { MouvementsStock } from './MouvementsStock';
+import ProfitAnalysis from './ProfitAnalysis';
 import { LoadingSpinner, SearchIcon, EditIcon, DeleteIcon, EyeIcon, EyeOffIcon, PlusIcon, MinusIcon, HistoryIcon } from './Icons';
 import '@/styles/AdminPage.css'
 import { menuItems, drinksItems } from "./types";
@@ -55,7 +56,7 @@ interface MouvementStock {
   stockApres: number;
   description: string;
   date: Timestamp;
-  categorie: 'boissons' | 'ingredients';
+  categorie: 'boissons' | 'plats';
 }
 // Convertir une URL Firebase Storage → chemin interne utilisable par ref()
 function getStoragePathFromUrl(url: string) {
@@ -63,7 +64,11 @@ function getStoragePathFromUrl(url: string) {
   return match ? decodeURIComponent(match[1]) : "";
 }
 
-export default function AdminPage() {
+interface AdminPageProps {
+  userRole: 'admin' | 'employee'
+}
+
+export default function AdminPage({ userRole }: AdminPageProps) {
   type PriceOption = { label: string; value: string; selected?: boolean };
   const [nom, setNom] = useState("");
   const [description, setDescription] = useState("");
@@ -76,8 +81,8 @@ export default function AdminPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [editingCollection, setEditingCollection] = useState<"Plats" | "Boissons" | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<'menu' | 'commandes' | 'stock' | 'historique'>('menu');
-  const [stockView, setStockView] = useState<'boissons' | 'ingredients'>('boissons');
+  const [activeTab, setActiveTab] = useState<'menu' | 'commandes' | 'stock' | 'historique' | 'rentabilite'>('menu');
+  const [stockView, setStockView] = useState<'boissons' | 'plats'>('boissons');
   const [historiqueView, setHistoriqueView] = useState<'commandes' | 'mouvements'>('commandes');
   const [periodFilter, setPeriodFilter] = useState('month');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -89,15 +94,7 @@ export default function AdminPage() {
   const { toasts, modal, showToast, removeToast, showModal, closeModal } = useNotifications();
   const { logActivity, logNotification } = useActivityLogger();
   
-  // États pour la gestion des ingrédients
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  const [showAddIngredient, setShowAddIngredient] = useState(false);
-  const [newIngredient, setNewIngredient] = useState({
-    nom: '',
-    quantite: 0,
-    unite: 'kg',
-    seuilAlerte: 5
-  });
+
   const [showAddBoisson, setShowAddBoisson] = useState(false);
   const [newBoisson, setNewBoisson] = useState({
     nom: '',
@@ -214,21 +211,7 @@ export default function AdminPage() {
     return () => unsubscribe();
   }, []);
 
-  // Récupération temps réel des ingrédients
-  useEffect(() => {
-    const q = query(collection(db, 'ingredients'), orderBy('nom'));
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const ingredientsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Ingredient[];
-      
-      setIngredients(ingredientsData);
-    });
 
-    return () => unsubscribe();
-  }, []);
 
   // Récupération de l'historique des commandes (commandes livrées)
   const [historique, setHistorique] = useState<Commande[]>([]);
@@ -487,7 +470,7 @@ export default function AdminPage() {
             stockAvant: oldStock,
             stockApres: finalStock,
             description: `Ajustement manuel du stock`,
-            categorie: collectionName === 'Boissons' ? 'boissons' : 'ingredients'
+            categorie: collectionName === 'Boissons' ? 'boissons' : 'plats'
           });
         }
       }
@@ -566,8 +549,6 @@ export default function AdminPage() {
   };
 
   const exportStockReport = () => {
-    const lowIngredients = ingredients.filter(ing => ing.quantite <= ing.seuilAlerte);
-    
     const pdfContent = `
       <html>
         <head>
@@ -606,20 +587,20 @@ export default function AdminPage() {
           
           <div class="stats">
             <div class="stat-card">
-              <h3>Total Boissons</h3>
-              <p class="number blue">${boissons.length}</p>
+              <h3>Total Articles</h3>
+              <p class="number blue">${boissons.length + plats.length}</p>
             </div>
             <div class="stat-card">
               <h3>Stock Faible</h3>
-              <p class="number orange">${boissons.filter(item => (item.stock || 0) <= 5 && (item.stock || 0) > 0).length}</p>
+              <p class="number orange">${boissons.filter(item => (item.stock || 0) <= 5 && (item.stock || 0) > 0).length + plats.filter(item => (item.stock || 0) <= 5 && (item.stock || 0) > 0).length}</p>
             </div>
             <div class="stat-card">
               <h3>Rupture</h3>
-              <p class="number red">${boissons.filter(item => (item.stock || 0) === 0).length}</p>
+              <p class="number red">${boissons.filter(item => (item.stock || 0) === 0).length + plats.filter(item => (item.stock || 0) === 0).length}</p>
             </div>
             <div class="stat-card">
               <h3>Stock OK</h3>
-              <p class="number green">${boissons.filter(item => (item.stock || 0) > 5).length}</p>
+              <p class="number green">${boissons.filter(item => (item.stock || 0) > 5).length + plats.filter(item => (item.stock || 0) > 5).length}</p>
             </div>
           </div>
           
@@ -651,26 +632,24 @@ export default function AdminPage() {
           </div>
           
           <div class="section">
-            <h2>État des Ingrédients</h2>
+            <h2>État des Plats</h2>
             <table>
               <thead>
                 <tr>
-                  <th>Ingrédient</th>
-                  <th>Quantité</th>
-                  <th>Seuil d'Alerte</th>
+                  <th>Plat</th>
+                  <th>Stock Actuel</th>
                   <th>Statut</th>
                 </tr>
               </thead>
               <tbody>
-                ${ingredients.map(ing => {
-                  const isLow = ing.quantite <= ing.seuilAlerte;
-                  const status = isLow ? 'Stock Faible' : 'OK';
-                  const statusClass = isLow ? 'status-low' : 'status-ok';
+                ${plats.map(item => {
+                  const stock = item.stock || 0;
+                  const status = stock === 0 ? 'Rupture' : stock <= 5 ? 'Stock Faible' : 'OK';
+                  const statusClass = stock === 0 ? 'status-out' : stock <= 5 ? 'status-low' : 'status-ok';
                   return `
                     <tr>
-                      <td>${ing.nom}</td>
-                      <td>${ing.quantite} ${ing.unite}</td>
-                      <td>${ing.seuilAlerte} ${ing.unite}</td>
+                      <td>${item.nom}</td>
+                      <td>${stock} unités</td>
                       <td class="${statusClass}">${status}</td>
                     </tr>
                   `;
@@ -694,32 +673,7 @@ export default function AdminPage() {
     }
   };
 
-  // Initialiser les ingrédients de base
-  const initializeBaseIngredients = async () => {
-    const baseIngredients = [
-      { nom: 'Riz', quantite: 10, unite: 'kg', seuilAlerte: 2 },
-      { nom: 'Poulet', quantite: 5, unite: 'kg', seuilAlerte: 1 },
-      { nom: 'Poisson', quantite: 3, unite: 'kg', seuilAlerte: 1 },
-      { nom: 'Oignons', quantite: 2, unite: 'kg', seuilAlerte: 1 },
-      { nom: 'Tomates', quantite: 3, unite: 'kg', seuilAlerte: 1 },
-      { nom: 'Pommes de terre', quantite: 5, unite: 'kg', seuilAlerte: 2 },
-      { nom: 'Plantains', quantite: 20, unite: 'pièces', seuilAlerte: 5 },
-      { nom: 'Viande', quantite: 4, unite: 'kg', seuilAlerte: 1 },
-      { nom: 'Arachides', quantite: 2, unite: 'kg', seuilAlerte: 1 },
-      { nom: 'Spaghetti', quantite: 3, unite: 'kg', seuilAlerte: 1 },
-      { nom: 'Sel', quantite: 1, unite: 'kg', seuilAlerte: 0.5 }
-    ];
-    
-    try {
-      for (const ingredient of baseIngredients) {
-        await addDoc(collection(db, 'ingredients'), ingredient);
-      }
-      alert('Ingrédients de base ajoutés avec succès !');
-    } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de l\'ajout des ingrédients');
-    }
-  };
+
 
   // Gestion des boissons
   const addBoisson = async () => {
@@ -745,73 +699,7 @@ export default function AdminPage() {
     }
   };
 
-  // Gestion des ingrédients
-  const addIngredient = async () => {
-    if (!newIngredient.nom.trim()) return alert('Nom requis');
-    
-    try {
-      await addDoc(collection(db, 'ingredients'), {
-        nom: newIngredient.nom,
-        quantite: newIngredient.quantite,
-        unite: newIngredient.unite,
-        seuilAlerte: newIngredient.seuilAlerte
-      });
-      
-      setNewIngredient({ nom: '', quantite: 0, unite: 'kg', seuilAlerte: 5 });
-      setShowAddIngredient(false);
-      alert('Ingrédient ajouté avec succès !');
-    } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de l\'ajout');
-    }
-  };
 
-  const updateIngredientStock = async (id: string, newQuantite: number) => {
-    try {
-      // Récupérer l'ancienne quantité
-      const ingredientDoc = await getDoc(doc(db, 'ingredients', id));
-      if (ingredientDoc.exists()) {
-        const ingredientData = ingredientDoc.data();
-        const oldQuantite = ingredientData.quantite || 0;
-        const finalQuantite = Math.max(0, newQuantite);
-        
-        // Mettre à jour la quantité
-        await updateDoc(doc(db, 'ingredients', id), {
-          quantite: finalQuantite
-        });
-        
-        // Enregistrer le mouvement si il y a un changement
-        if (oldQuantite !== finalQuantite) {
-          const difference = finalQuantite - oldQuantite;
-          await logMouvementStock({
-            item: ingredientData.nom,
-            type: difference > 0 ? 'entree' : 'sortie',
-            quantite: Math.abs(difference),
-            unite: ingredientData.unite,
-            stockAvant: oldQuantite,
-            stockApres: finalQuantite,
-            description: `Ajustement manuel du stock`,
-            categorie: 'ingredients'
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de la mise à jour');
-    }
-  };
-
-  const deleteIngredient = async (id: string) => {
-    if (!window.confirm('Supprimer cet ingrédient ?')) return;
-    
-    try {
-      await deleteDoc(doc(db, 'ingredients', id));
-      alert('Ingrédient supprimé !');
-    } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de la suppression');
-    }
-  };
 
   // Fonction pour ajouter les nouveaux plats
   const addNewMenuItems = async () => {
@@ -1433,6 +1321,7 @@ export default function AdminPage() {
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
         commandesCount={commandes.filter(c => c.statut !== 'livree').length}
+        userRole={userRole}
       />
 
       {/* Contenu de l'onglet Menu */}
@@ -1679,17 +1568,16 @@ export default function AdminPage() {
             onInitializeStock={initializeStock}
             onResetLowStock={resetLowStock}
             onAddBoisson={() => setShowAddBoisson(true)}
-            onAddIngredient={() => setShowAddIngredient(true)}
-            onInitializeBaseIngredients={initializeBaseIngredients}
+
             onExportStockReport={exportStockReport}
             boissonsCount={boissons.length}
             lowStockCount={boissons.filter(item => (item.stock || 0) <= 5 && (item.stock || 0) > 0).length}
             outOfStockCount={boissons.filter(item => (item.stock || 0) === 0).length}
             okStockCount={boissons.filter(item => (item.stock || 0) > 5).length}
-            ingredientsCount={ingredients.length}
-            lowIngredientsCount={ingredients.filter(ing => ing.quantite <= ing.seuilAlerte).length}
-            okIngredientsCount={ingredients.filter(ing => ing.quantite > ing.seuilAlerte).length}
-            totalUnits={ingredients.reduce((total, ing) => total + ing.quantite, 0)}
+            platsCount={plats.length}
+            lowPlatsCount={plats.filter(item => (item.stock || 0) <= 5 && (item.stock || 0) > 0).length}
+            outOfStockPlatsCount={plats.filter(item => (item.stock || 0) === 0).length}
+            okPlatsCount={plats.filter(item => (item.stock || 0) > 5).length}
           />
 
 
@@ -1839,143 +1727,106 @@ export default function AdminPage() {
             </>
           )}
 
-          {/* Gestion des Ingrédients */}
-      {stockView === 'ingredients' && (
-        <>
-          <h3 className="ingredients-section-title">Ingrédients ({ingredients.length})</h3>
-          
-          {/* Formulaire d'ajout d'ingrédient */}
-          {showAddIngredient && (
-            <div className="ingredient-form">
-              <h4>Ajouter un nouvel ingrédient</h4>
-              <div className="ingredient-form-grid">
-                <input
-                  type="text"
-                  placeholder="Nom de l'ingrédient"
-                  value={newIngredient.nom}
-                  onChange={(e) => setNewIngredient({...newIngredient, nom: e.target.value})}
-                  className="ingredient-form-input"
-                />
-                <input
-                  type="number"
-                  placeholder="Quantité"
-                  value={newIngredient.quantite}
-                  onChange={(e) => setNewIngredient({...newIngredient, quantite: Number(e.target.value)})}
-                  className="ingredient-form-input"
-                />
-                <select
-                  value={newIngredient.unite}
-                  onChange={(e) => setNewIngredient({...newIngredient, unite: e.target.value})}
-                  className="ingredient-form-input"
-                >
-                  <option value="kg">kg</option>
-                  <option value="L">L</option>
-                  <option value="pièces">pièces</option>
-                  <option value="g">g</option>
-                  <option value="ml">ml</option>
-                </select>
-                <input
-                  type="number"
-                  placeholder="Seuil d'alerte"
-                  value={newIngredient.seuilAlerte}
-                  onChange={(e) => setNewIngredient({...newIngredient, seuilAlerte: Number(e.target.value)})}
-                  className="ingredient-form-input"
-                />
-              </div>
-              <div className="ingredient-form-actions">
-                <button
-                  onClick={addIngredient}
-                  className="ingredient-btn-add"
-                >
-                  Ajouter
-                </button>
-                <button
-                  onClick={() => setShowAddIngredient(false)}
-                  className="ingredient-btn-cancel"
-                >
-                  Annuler
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Liste des ingrédients */}
-          <div className="ingredients-grid">
-            {ingredients.filter(ingredient => 
-              ingredient.nom?.toLowerCase().includes(stockSearchTerm.toLowerCase())
-            ).map(ingredient => {
-              const isLowStock = ingredient.quantite <= ingredient.seuilAlerte;
+          {/* Gestion des Plats */}
+          {stockView === 'plats' && (
+            <>
+              <h3 className="stock-section-title">Plats ({plats.length})</h3>
+              
+              <div className="stock-grid-container">
+            {plats.filter(item => 
+              item.nom?.toLowerCase().includes(stockSearchTerm.toLowerCase())
+            ).map(item => {
+              const stockLevel = item.stock || 0;
+              const isOutOfStock = stockLevel === 0;
+              const isLowStock = stockLevel <= 5 && stockLevel > 0;
               
               return (
-                <div key={ingredient.id} className={`ingredient-card ${isLowStock ? 'low-stock' : 'normal-stock'}`}>
+                <div key={item.id} className={`stock-card-complex ${isOutOfStock ? 'out-of-stock' : isLowStock ? 'low-stock' : 'normal-stock'}`}>
                   {/* Badge de statut */}
-                  <div className={`ingredient-status-badge ${isLowStock ? 'low-stock' : 'normal-stock'}`}>
-                    {isLowStock ? 'Stock Faible' : 'OK'}
+                  <div className={`stock-badge-complex ${isOutOfStock ? 'out-of-stock' : isLowStock ? 'low-stock' : 'normal-stock'}`}>
+                    {isOutOfStock ? 'Rupture' : isLowStock ? 'Faible' : 'OK'}
                   </div>
                   
-                  <h4 className="ingredient-title">
-                    {ingredient.nom}
-                  </h4>
-                  
-                  <div className="ingredient-info">
-                    <p>
-                      Quantité: <span className={`ingredient-quantity ${isLowStock ? 'low-stock' : 'normal-stock'}`}>
-                        {ingredient.quantite} {ingredient.unite}
-                      </span>
-                    </p>
-                    <p>
-                      Seuil d'alerte: {ingredient.seuilAlerte} {ingredient.unite}
-                    </p>
+                  {/* Image et nom */}
+                  <div className="stock-header-complex">
+                    {item.image && (
+                      <div className="stock-image-complex">
+                        <img 
+                          src={item.image} 
+                          alt={item.nom} 
+                        />
+                      </div>
+                    )}
+                    <div className="stock-info-complex">
+                      <h4 className="stock-title-complex">
+                        {item.nom}
+                      </h4>
+                      <p className="stock-text-complex">
+                        Stock actuel: <span className={`stock-level-complex ${isOutOfStock ? 'out-of-stock' : isLowStock ? 'low-stock' : 'normal-stock'}`}>{stockLevel}</span> unités
+                      </p>
+                    </div>
                   </div>
                   
-                  {/* Contrôles */}
-                  <div className="ingredient-controls">
-                    <button
-                      onClick={() => updateIngredientStock(ingredient.id, ingredient.quantite - 1)}
-                      className="ingredient-btn-minus"
+                  {/* Contrôles de stock */}
+                  <div className="stock-controls-complex">
+                    <button 
+                      type="button"
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const newStock = Math.max(0, (item.stock || 0) - 1);
+                        await updateStock("Plats", String(item.id), newStock);
+                      }}
+                      className="stock-btn-minus-hover"
+                      title="Diminuer le stock"
                     >
                       <MinusIcon />
                     </button>
                     
                     <input
                       type="number"
-                      value={ingredient.quantite}
-                      onChange={(e) => {
+                      value={item.stock || 0}
+                      onChange={async (e) => {
                         const value = e.target.value.replace(/[^0-9]/g, '');
-                        updateIngredientStock(ingredient.id, Number(value) || 0);
+                        await setStockValue("Plats", String(item.id), value);
                       }}
                       onKeyPress={(e) => {
                         if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') {
                           e.preventDefault();
                         }
                       }}
-                      className="ingredient-input"
+                      className="stock-input-complex"
                       min="0"
                       placeholder="0"
                     />
                     
-                    <button
-                      onClick={() => updateIngredientStock(ingredient.id, ingredient.quantite + 1)}
-                      className="ingredient-btn-plus"
+                    <button 
+                      type="button"
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const newStock = (item.stock || 0) + 1;
+                        await updateStock("Plats", String(item.id), newStock);
+                      }}
+                      className="stock-btn-plus-hover"
+                      title="Augmenter le stock"
                     >
                       <PlusIcon />
                     </button>
                   </div>
-                  
-                  <button
-                    onClick={() => deleteIngredient(ingredient.id)}
-                    className="ingredient-btn-delete"
-                  >
-                    Supprimer
-                  </button>
                 </div>
               );
             })}
           </div>
-        </>
-      )}
+            </>
+          )}
     </div>
   )}
+
+      {/* Contenu de l'onglet Rentabilité - Admin seulement */}
+      {activeTab === 'rentabilite' && userRole === 'admin' && (
+        <ProfitAnalysis />
+      )}
 
       {/* Contenu de l'onglet Historique */}
       {activeTab === 'historique' && (

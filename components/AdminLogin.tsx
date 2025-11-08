@@ -1,30 +1,25 @@
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { auth } from './firebase';
-import '@/styles/AdminLogin.css' 
+import '@/styles/AdminLogin.css'
+import '@/styles/Auth.css' 
 
-export default function AdminLogin() {
-  const [email, setEmail] = useState('');
-  const [pwd, setPwd] = useState('');
+interface AdminLoginProps {
+  onLogin: (username: string, password: string) => boolean
+  onClose?: () => void
+}
+
+export default function AdminLogin({ onLogin, onClose }: AdminLoginProps) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const login = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    try {
-      await signInWithEmailAndPassword(auth, email, pwd);
-      alert("Connexion réussie !");
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      alert("Déconnexion réussie !");
-    } catch (err) {
-      console.error(err);
+    
+    if (onLogin(username, password)) {
+      // Connexion réussie
+    } else {
+      setError('Identifiants incorrects');
     }
   };
 
@@ -36,15 +31,15 @@ export default function AdminLogin() {
           <p>Eat Neo - Back Office</p>
         </div>
         
-        <form onSubmit={login} className="admin-login-form">
+        <form onSubmit={handleLogin} className="admin-login-form">
           <div className="input-group">
-            <label htmlFor="email">Adresse email</label>
+            <label htmlFor="username">Nom d'utilisateur</label>
             <input
-              id="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="exemple@gmail.com"
-              type="email"
+              id="username"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              placeholder="admin ou user"
+              type="text"
               required
               className="form-input"
             />
@@ -54,8 +49,8 @@ export default function AdminLogin() {
             <label htmlFor="password">Mot de passe</label>
             <input
               id="password"
-              value={pwd}
-              onChange={e => setPwd(e.target.value)}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
               type="password"
               required
@@ -66,17 +61,22 @@ export default function AdminLogin() {
           {error && (
             <div className="error-message">
               <span>⚠️</span>
-              <p>Identifiants incorrects. Veuillez réessayer.</p>
+              <p>{error}</p>
             </div>
           )}
 
-          <button type="submit" className="login-btn">
-            Se connecter
-          </button>
+          <div className="login-actions">
+            <button type="submit" className="login-btn">
+              Se connecter
+            </button>
+            {onClose && (
+              <button type="button" onClick={onClose} className="cancel-btn">
+                Annuler
+              </button>
+            )}
+          </div>
           
-          <button type="button" onClick={handleLogout} className="logout-btn">
-            Se déconnecter
-          </button>
+
         </form>
       </div>
     </div>

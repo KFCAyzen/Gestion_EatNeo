@@ -2,24 +2,22 @@ import { useState } from 'react';
 import { PlusIcon, SearchIcon, DownloadIcon } from './Icons';
 
 interface StockManagementProps {
-  stockView: 'boissons' | 'ingredients';
-  setStockView: (view: 'boissons' | 'ingredients') => void;
+  stockView: 'boissons' | 'plats';
+  setStockView: (view: 'boissons' | 'plats') => void;
   stockSearchTerm: string;
   setStockSearchTerm: (term: string) => void;
   onInitializeStock: () => void;
   onResetLowStock: () => void;
   onAddBoisson: () => void;
-  onAddIngredient: () => void;
-  onInitializeBaseIngredients: () => void;
   onExportStockReport: () => void;
   boissonsCount: number;
   lowStockCount: number;
   outOfStockCount: number;
   okStockCount: number;
-  ingredientsCount?: number;
-  lowIngredientsCount?: number;
-  okIngredientsCount?: number;
-  totalUnits?: number;
+  platsCount: number;
+  lowPlatsCount: number;
+  outOfStockPlatsCount: number;
+  okPlatsCount: number;
 }
 
 export const StockManagement = ({
@@ -30,17 +28,15 @@ export const StockManagement = ({
   onInitializeStock,
   onResetLowStock,
   onAddBoisson,
-  onAddIngredient,
-  onInitializeBaseIngredients,
   onExportStockReport,
   boissonsCount,
   lowStockCount,
   outOfStockCount,
   okStockCount,
-  ingredientsCount = 0,
-  lowIngredientsCount = 0,
-  okIngredientsCount = 0,
-  totalUnits = 0
+  platsCount,
+  lowPlatsCount,
+  outOfStockPlatsCount,
+  okPlatsCount
 }: StockManagementProps) => {
   return (
     <>
@@ -68,20 +64,20 @@ export const StockManagement = ({
         ) : (
           <>
             <div className="stock-stat-card">
-              <h4 className="stock-stat-title">Total Ingrédients</h4>
-              <p className="stock-stat-number blue">{ingredientsCount}</p>
+              <h4 className="stock-stat-title">Total Plats</h4>
+              <p className="stock-stat-number blue">{platsCount}</p>
             </div>
             <div className="stock-stat-card">
               <h4 className="stock-stat-title">Stock Faible</h4>
-              <p className="stock-stat-number orange">{lowIngredientsCount}</p>
+              <p className="stock-stat-number orange">{lowPlatsCount}</p>
+            </div>
+            <div className="stock-stat-card">
+              <h4 className="stock-stat-title">Rupture</h4>
+              <p className="stock-stat-number red">{outOfStockPlatsCount}</p>
             </div>
             <div className="stock-stat-card">
               <h4 className="stock-stat-title">Stock OK</h4>
-              <p className="stock-stat-number green">{okIngredientsCount}</p>
-            </div>
-            <div className="stock-stat-card">
-              <h4 className="stock-stat-title">Unités Totales</h4>
-              <p className="stock-stat-number purple">{totalUnits}</p>
+              <p className="stock-stat-number green">{okPlatsCount}</p>
             </div>
           </>
         )}
@@ -96,10 +92,10 @@ export const StockManagement = ({
           Boissons
         </button>
         <button
-          onClick={() => setStockView('ingredients')}
-          className={`stock-tab-button ${stockView === 'ingredients' ? 'active' : 'inactive'}`}
+          onClick={() => setStockView('plats')}
+          className={`stock-tab-button ${stockView === 'plats' ? 'active' : 'inactive'}`}
         >
-          Ingrédients
+          Plats
         </button>
       </div>
 
@@ -134,17 +130,7 @@ export const StockManagement = ({
             Ajouter boisson
           </button>
         )}
-        {stockView === 'ingredients' && (
-          <>
-            <button onClick={onAddIngredient} className="stock-action-button light-green stock-action-button-flex">
-              <PlusIcon />
-              Ajouter ingrédient
-            </button>
-            <button onClick={onInitializeBaseIngredients} className="stock-action-button blue stock-action-button-flex">
-              Initialiser ingrédients de base
-            </button>
-          </>
-        )}
+
         <button onClick={onExportStockReport} className="stock-action-button purple stock-action-button-flex">
           <DownloadIcon />
           Exporter PDF
