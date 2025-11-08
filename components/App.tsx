@@ -121,7 +121,7 @@ export default function AppContent() {
       <div className="title">
         <div className="title-left">
           <Image src="/logo.jpg" alt="PH" width={50} height={50} />
-          <h1>EAT NEO</h1>
+          <h1>EAT NEO FAST FOOD</h1>
         </div>
         <div className="title-right">
           {user ? (
@@ -207,23 +207,7 @@ export default function AppContent() {
       {pathname === '/historique' && <HistoriquePage />}
 
       {/* BOTTOM BAR */}
-      <nav
-        className="bottom-bar"
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          width: "100%",
-          backgroundColor: "rgba(255, 255, 255, 0.71)",
-          backdropFilter: "blur(10px)",
-          borderTop: "1px solid #ddd",
-          display: "flex",
-          justifyContent: "space-around",
-          alignItems: "center",
-          padding: "2px 0",
-          zIndex: 1000,
-        }}
-      >
+      <nav className="bottom-bar">
         <div className="menu">
           <Link href="/" style={{ textDecoration: 'none', color: 'black' }}>
             <Image
