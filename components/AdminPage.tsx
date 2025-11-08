@@ -1828,8 +1828,8 @@ export default function AdminPage({ userRole }: AdminPageProps) {
         <ProfitAnalysis />
       )}
 
-      {/* Contenu de l'onglet Historique */}
-      {activeTab === 'historique' && (
+      {/* Contenu de l'onglet Historique - Admin seulement */}
+      {activeTab === 'historique' && userRole === 'admin' && (
         <div className="historique-section">
           <h2>Historique & Rapports</h2>
           

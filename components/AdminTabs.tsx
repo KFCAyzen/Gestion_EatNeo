@@ -32,21 +32,23 @@ export const AdminTabs = ({ activeTab, setActiveTab, commandesCount, userRole }:
         <span>Stock</span>
       </button>
       {userRole === 'admin' && (
-        <button 
-          onClick={() => setActiveTab('rentabilite')}
-          className={`admin-tab-btn ${activeTab === 'rentabilite' ? 'active' : ''} admin-tab-btn-flex`}
-        >
-          <TrendingUpIcon active={activeTab === 'rentabilite'} />
-          <span>Rentabilité</span>
-        </button>
+        <>
+          <button 
+            onClick={() => setActiveTab('rentabilite')}
+            className={`admin-tab-btn ${activeTab === 'rentabilite' ? 'active' : ''} admin-tab-btn-flex`}
+          >
+            <TrendingUpIcon active={activeTab === 'rentabilite'} />
+            <span>Rentabilité</span>
+          </button>
+          <button 
+            onClick={() => setActiveTab('historique')}
+            className={`admin-tab-btn ${activeTab === 'historique' ? 'active' : ''} admin-tab-btn-flex`}
+          >
+            <HistoryIcon active={activeTab === 'historique'} />
+            <span>Historique</span>
+          </button>
+        </>
       )}
-      <button 
-        onClick={() => setActiveTab('historique')}
-        className={`admin-tab-btn ${activeTab === 'historique' ? 'active' : ''} admin-tab-btn-flex`}
-      >
-        <HistoryIcon active={activeTab === 'historique'} />
-        <span>Historique</span>
-      </button>
     </div>
   );
 };
