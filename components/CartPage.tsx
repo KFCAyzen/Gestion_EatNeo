@@ -176,13 +176,24 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
 
       // Envoyer via WhatsApp
       const message = encodeURIComponent(
-        `Bonjour, j'aimerais commander les articles suivants :\n\n` +
+        `🍽️ *NOUVELLE COMMANDE - EAT NEO*\n\n` +
+        `👤 *Client:* ${prenom || 'Client'}\n` +
+        `🏷️ *Table:* ${numeroTable}\n` +
+        `📍 *Localisation:* ${localisation || "Non spécifiée"}\n\n` +
+        `📋 *DÉTAIL DE LA COMMANDE:*\n` +
+        `${"─".repeat(30)}\n` +
           cartItems
-            .map(item => `- ${item.nom} x${item.quantité} (${getPrixLabel(item)})`)
+            .map((item, index) => 
+              `${index + 1}. *${item.nom}*\n` +
+              `   Quantité: ${item.quantité}\n` +
+              `   Prix unitaire: ${getPrixString(item)}\n` +
+              `   Sous-total: ${formatPrix(parsePrix(getPrixString(item)) * (item.quantité || 1))}\n`
+            )
             .join("\n") +
-          `\n\nTotal: ${formatPrix(totalPrix)}` +
-          `\nLocalisation : ${localisation || "Non spécifiée"}` +
-          `\nPrénom : ${prenom || 'Client'}\nNuméro de table : ${numeroTable}`
+          `${"─".repeat(30)}\n` +
+          `💰 *TOTAL GÉNÉRAL: ${formatPrix(totalPrix)}*\n\n` +
+          `⏰ Commande passée le ${new Date().toLocaleString('fr-FR')}\n\n` +
+          `Merci ! 🙏`
       );
 
       window.open(`https://wa.link/oa9ot6?text=${message}`, "_blank");
@@ -199,13 +210,24 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
       
       // Envoyer quand même via WhatsApp en cas d'erreur Firebase
       const message = encodeURIComponent(
-        `Bonjour, j'aimerais commander les articles suivants :\n\n` +
+        `🍽️ *NOUVELLE COMMANDE - EAT NEO*\n\n` +
+        `👤 *Client:* ${prenom || 'Client'}\n` +
+        `🏷️ *Table:* ${numeroTable}\n` +
+        `📍 *Localisation:* ${localisation || "Non spécifiée"}\n\n` +
+        `📋 *DÉTAIL DE LA COMMANDE:*\n` +
+        `${"─".repeat(30)}\n` +
           cartItems
-            .map(item => `- ${item.nom} x${item.quantité} (${getPrixLabel(item)})`)
+            .map((item, index) => 
+              `${index + 1}. *${item.nom}*\n` +
+              `   Quantité: ${item.quantité}\n` +
+              `   Prix unitaire: ${getPrixString(item)}\n` +
+              `   Sous-total: ${formatPrix(parsePrix(getPrixString(item)) * (item.quantité || 1))}\n`
+            )
             .join("\n") +
-          `\n\nTotal: ${formatPrix(totalPrix)}` +
-          `\nLocalisation : ${localisation || "Non spécifiée"}` +
-          `\nPrénom : ${prenom || 'Client'}\nNuméro de table : ${numeroTable}`
+          `${"─".repeat(30)}\n` +
+          `💰 *TOTAL GÉNÉRAL: ${formatPrix(totalPrix)}*\n\n` +
+          `⏰ Commande passée le ${new Date().toLocaleString('fr-FR')}\n\n` +
+          `Merci ! 🙏`
       );
 
       window.open(`https://wa.link/oa9ot6?text=${message}`, "_blank");

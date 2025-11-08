@@ -124,6 +124,14 @@ export default function AppContent() {
           <h1>EAT NEO FAST FOOD</h1>
         </div>
         <div className="title-right">
+          {(pathname === '/' || pathname === '/boissons') && (
+            <button 
+              onClick={() => user ? router.push('/admin') : setShowLogin(true)} 
+              className="admin-link"
+            >
+              <AdminIcon />
+            </button>
+          )}
           {user ? (
             <>
               {pathname === '/admin' && (
@@ -142,11 +150,7 @@ export default function AppContent() {
                 <LogoutIcon />
               </button>
             </>
-          ) : (
-            <button onClick={() => setShowLogin(true)} className="admin-link">
-              <AdminIcon />
-            </button>
-          )}
+          ) : null}
         </div>
       </div>
 
