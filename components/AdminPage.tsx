@@ -1871,9 +1871,13 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                     <input
                       type="number"
                       value={item.stock || 0}
-                      onChange={async (e) => {
-                        const value = e.target.value.replace(/[^0-9]/g, '');
-                        await setStockValue("Boissons", String(item.id), value);
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 0;
+                        setPendingStockChange({
+                          itemId: String(item.id),
+                          newStock: value,
+                          collection: "Boissons"
+                        });
                       }}
                       onKeyPress={(e) => {
                         if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') {
@@ -1887,11 +1891,15 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                     
                     <button 
                       type="button"
-                      onClick={async (e) => {
+                      onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         const newStock = (item.stock || 0) + 1;
-                        await updateStock("Boissons", String(item.id), newStock);
+                        setPendingStockChange({
+                          itemId: String(item.id),
+                          newStock,
+                          collection: "Boissons"
+                        });
                       }}
                       className="stock-btn-plus-hover"
                       title="Augmenter le stock"
@@ -1900,30 +1908,32 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                     </button>
                   </div>
                   
-                  {/* Boutons de confirmation si modification en cours */}
-                  {pendingStockChange?.itemId === String(item.id) && (
-                    <div className="stock-confirmation-buttons">
+                  {/* Boutons d'action */}
+                  <div className="stock-actions-row">
+                    {pendingStockChange?.itemId === String(item.id) ? (
+                      <>
+                        <button
+                          onClick={confirmStockChange}
+                          className="stock-confirm-btn"
+                        >
+                          Confirmer
+                        </button>
+                        <button
+                          onClick={cancelStockChange}
+                          className="stock-cancel-btn"
+                        >
+                          Annuler
+                        </button>
+                      </>
+                    ) : (
                       <button
-                        onClick={confirmStockChange}
-                        className="stock-confirm-btn"
+                        onClick={() => handleDelete("Boissons", String(item.id))}
+                        className="ingredient-btn-delete"
                       >
-                        Confirmer
+                        Supprimer
                       </button>
-                      <button
-                        onClick={cancelStockChange}
-                        className="stock-cancel-btn"
-                      >
-                        Annuler
-                      </button>
-                    </div>
-                  )}
-                  
-                  <button
-                    onClick={() => handleDelete("Boissons", String(item.id))}
-                    className="ingredient-btn-delete"
-                  >
-                    Supprimer
-                  </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -1996,9 +2006,13 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                     <input
                       type="number"
                       value={item.stock || 0}
-                      onChange={async (e) => {
-                        const value = e.target.value.replace(/[^0-9]/g, '');
-                        await setStockValue("Plats", String(item.id), value);
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 0;
+                        setPendingStockChange({
+                          itemId: String(item.id),
+                          newStock: value,
+                          collection: "Plats"
+                        });
                       }}
                       onKeyPress={(e) => {
                         if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') {
@@ -2012,11 +2026,15 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                     
                     <button 
                       type="button"
-                      onClick={async (e) => {
+                      onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         const newStock = (item.stock || 0) + 1;
-                        await updateStock("Plats", String(item.id), newStock);
+                        setPendingStockChange({
+                          itemId: String(item.id),
+                          newStock,
+                          collection: "Plats"
+                        });
                       }}
                       className="stock-btn-plus-hover"
                       title="Augmenter le stock"
@@ -2025,23 +2043,32 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                     </button>
                   </div>
                   
-                  {/* Boutons de confirmation si modification en cours */}
-                  {pendingStockChange?.itemId === String(item.id) && (
-                    <div className="stock-confirmation-buttons">
+                  {/* Boutons d'action */}
+                  <div className="stock-actions-row">
+                    {pendingStockChange?.itemId === String(item.id) ? (
+                      <>
+                        <button
+                          onClick={confirmStockChange}
+                          className="stock-confirm-btn"
+                        >
+                          Confirmer
+                        </button>
+                        <button
+                          onClick={cancelStockChange}
+                          className="stock-cancel-btn"
+                        >
+                          Annuler
+                        </button>
+                      </>
+                    ) : (
                       <button
-                        onClick={confirmStockChange}
-                        className="stock-confirm-btn"
+                        onClick={() => handleDelete("Plats", String(item.id))}
+                        className="ingredient-btn-delete"
                       >
-                        Confirmer
+                        Supprimer
                       </button>
-                      <button
-                        onClick={cancelStockChange}
-                        className="stock-cancel-btn"
-                      >
-                        Annuler
-                      </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               );
             })}
