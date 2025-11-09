@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { db, storage } from "./firebase";
 import { collection, addDoc, doc, deleteDoc, getDoc, getDocs, setDoc, updateDoc, query, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
 import { ref, deleteObject } from "firebase/storage";
@@ -109,6 +109,77 @@ export default function AdminPage({ userRole }: AdminPageProps) {
   const { items: plats } = useRealtimeCollection("Plats");
   const { items: boissons } = useRealtimeCollection("Boissons");
   const [loading, setLoading] = useState(true);
+
+  // Optimisation: Mémoriser les listes filtrées
+  const filteredPlats = useMemo(() => {
+    const searchLower = searchTerm.toLowerCase();
+    return plats.filter(item => 
+      item.nom?.toLowerCase().includes(searchLower) ||
+      item.filtre?.[0]?.toLowerCase().includes(searchLower)
+    );
+  }, [plats, searchTerm]);
+  
+  const filteredBoissons = useMemo(() => {
+    const searchLower = searchTerm.toLowerCase();
+    return boissons.filter(item => 
+      item.nom?.toLowerCase().includes(searchLower) ||
+      item.filtre?.[0]?.toLowerCase().includes(searchLower)
+    );
+  }, [boissons, searchTerm]);
+  
+  // Optimisation: Mémoriser les listes filtrées pour le stock
+  const filteredStockBoissons = useMemo(() => {
+    const searchLower = stockSearchTerm.toLowerCase();
+    return boissons.filter(item => {
+      const matchesSearch = item.nom?.toLowerCase().includes(searchLower);
+      const stockLevel = item.stock || 0;
+      
+      let matchesFilter = true;
+      switch (stockFilter) {
+        case 'low': matchesFilter = stockLevel <= 5 && stockLevel > 0; break;
+        case 'out': matchesFilter = stockLevel === 0; break;
+        case 'ok': matchesFilter = stockLevel > 5; break;
+      }
+      
+      return matchesSearch && matchesFilter;
+    });
+  }, [boissons, stockSearchTerm, stockFilter]);
+  
+  const filteredStockPlats = useMemo(() => {
+    const searchLower = stockSearchTerm.toLowerCase();
+    return plats.filter(item => {
+      const matchesSearch = item.nom?.toLowerCase().includes(searchLower);
+      const stockLevel = item.stock || 0;
+      
+      let matchesFilter = true;
+      switch (stockFilter) {
+        case 'low': matchesFilter = stockLevel <= 5 && stockLevel > 0; break;
+        case 'out': matchesFilter = stockLevel === 0; break;
+        case 'ok': matchesFilter = stockLevel > 5; break;
+      }
+      
+      return matchesSearch && matchesFilter;
+    });
+  }, [plats, stockSearchTerm, stockFilter]);
+
+  // Optimisation: Calculer les statistiques de stock une seule fois
+  const stockStats = useMemo(() => {
+    const calculateStats = (items: MenuItem[]) => {
+      let low = 0, out = 0, ok = 0;
+      for (const item of items) {
+        const stock = item.stock || 0;
+        if (stock === 0) out++;
+        else if (stock <= 5) low++;
+        else ok++;
+      }
+      return { low, out, ok };
+    };
+    
+    return {
+      boissons: calculateStats(boissons),
+      plats: calculateStats(plats)
+    };
+  }, [boissons, plats]);
 
   // Fonction pour supprimer et re-uploader tous les items avec le champ masque
   const resetAndReuploadItems = async () => {
@@ -386,10 +457,11 @@ export default function AdminPage({ userRole }: AdminPageProps) {
     );
   };
 
-  const formatPrix = (item: MenuItem) =>
-    typeof item.prix === "string"
-      ? item.prix
-      : item.prix.map(p => `${p.label ? p.label + " - " : ""}${p.value}`).join(", ");
+  // Optimisation: Mémoriser le formatage des prix
+  const formatPrix = useCallback((item: MenuItem) => {
+    if (typeof item.prix === "string") return item.prix;
+    return item.prix.map(p => `${p.label ? p.label + " - " : ""}${p.value}`).join(", ");
+  }, []);
 
   // Fonction pour masquer/afficher un item
   const toggleItemVisibility = async (collectionName: "Plats" | "Boissons", id: string, currentStatus: boolean) => {
@@ -404,10 +476,17 @@ export default function AdminPage({ userRole }: AdminPageProps) {
     }
   };
 
-  // Gestion des commandes avec déduction automatique du stock
+  // Optimisation: Créer un index des items pour éviter les recherches O(n)
+  const itemsIndex = useMemo(() => {
+    const index = new Map<string, {id: string, collection: 'Plats' | 'Boissons', stock: number}>();
+    plats.forEach(item => index.set(item.nom, {id: String(item.id), collection: 'Plats', stock: item.stock || 0}));
+    boissons.forEach(item => index.set(item.nom, {id: String(item.id), collection: 'Boissons', stock: item.stock || 0}));
+    return index;
+  }, [plats, boissons]);
+
+  // Gestion des commandes avec déduction automatique du stock (optimisé)
   const updateCommandeStatut = async (commandeId: string, nouveauStatut: string) => {
     try {
-      // Récupérer les détails de la commande
       const commandeDoc = await getDoc(doc(db, 'commandes', commandeId));
       if (!commandeDoc.exists()) {
         showToast('Commande introuvable', 'error');
@@ -418,75 +497,35 @@ export default function AdminPage({ userRole }: AdminPageProps) {
       
       // Si le nouveau statut est "livree", déduire le stock
       if (nouveauStatut === 'livree' && commandeData.statut !== 'livree') {
+        const stockUpdates: Promise<void>[] = [];
+        
         for (const item of commandeData.items) {
-          // Chercher l'article dans les plats
-          const platsSnapshot = await getDocs(collection(db, 'Plats'));
-          let itemFound = false;
-          
-          for (const platDoc of platsSnapshot.docs) {
-            const platData = platDoc.data();
-            if (platData.nom === item.nom) {
-              const currentStock = platData.stock || 0;
-              const newStock = Math.max(0, currentStock - item.quantité);
-              
-              await updateDoc(doc(db, 'Plats', platDoc.id), {
-                stock: newStock
-              });
-              
-              // Enregistrer le mouvement de stock
-              await logMouvementStock({
-                item: item.nom,
-                type: 'sortie',
-                quantite: item.quantité,
-                unite: 'unités',
-                stockAvant: currentStock,
-                stockApres: newStock,
-                description: `Livraison commande #${commandeId.slice(-6)}`,
-                categorie: 'plats'
-              });
-              
-              itemFound = true;
-              break;
-            }
-          }
-          
-          // Si pas trouvé dans les plats, chercher dans les boissons
-          if (!itemFound) {
-            const boissonsSnapshot = await getDocs(collection(db, 'Boissons'));
+          const itemInfo = itemsIndex.get(item.nom);
+          if (itemInfo) {
+            const newStock = Math.max(0, itemInfo.stock - item.quantité);
             
-            for (const boissonDoc of boissonsSnapshot.docs) {
-              const boissonData = boissonDoc.data();
-              if (boissonData.nom === item.nom) {
-                const currentStock = boissonData.stock || 0;
-                const newStock = Math.max(0, currentStock - item.quantité);
-                
-                await updateDoc(doc(db, 'Boissons', boissonDoc.id), {
-                  stock: newStock
-                });
-                
-                // Enregistrer le mouvement de stock
-                await logMouvementStock({
+            // Batch les mises à jour pour améliorer les performances
+            stockUpdates.push(
+              updateDoc(doc(db, itemInfo.collection, itemInfo.id), { stock: newStock })
+                .then(() => logMouvementStock({
                   item: item.nom,
                   type: 'sortie',
                   quantite: item.quantité,
                   unite: 'unités',
-                  stockAvant: currentStock,
+                  stockAvant: itemInfo.stock,
                   stockApres: newStock,
                   description: `Livraison commande #${commandeId.slice(-6)}`,
-                  categorie: 'boissons'
-                });
-                
-                break;
-              }
-            }
+                  categorie: itemInfo.collection === 'Plats' ? 'plats' : 'boissons'
+                }))
+            );
           }
         }
+        
+        // Exécuter toutes les mises à jour en parallèle
+        await Promise.all(stockUpdates);
       }
       
-      // Mettre à jour le statut de la commande
-      await updateDoc(doc(db, 'commandes', commandeId), {
-        statut: nouveauStatut
-      });
+      await updateDoc(doc(db, 'commandes', commandeId), { statut: nouveauStatut });
       
       showToast(
         nouveauStatut === 'livree' 
@@ -520,13 +559,14 @@ export default function AdminPage({ userRole }: AdminPageProps) {
     );
   };
 
-  const formatDate = (timestamp: Timestamp): string => {
+  // Optimisation: Mémoriser les fonctions de formatage
+  const formatDate = useCallback((timestamp: Timestamp): string => {
     return timestamp.toDate().toLocaleString('fr-FR');
-  };
+  }, []);
 
-  const formatPrixCommande = (valeur: number): string => {
+  const formatPrixCommande = useCallback((valeur: number): string => {
     return valeur.toLocaleString('fr-FR') + ' FCFA';
-  };
+  }, []);
 
   const getStatutColor = (statut: string): string => {
     switch (statut) {
@@ -1084,34 +1124,33 @@ export default function AdminPage({ userRole }: AdminPageProps) {
     }
   };
 
-  // Filtrer les mouvements selon la période et le type
-  const filteredMouvements = mouvements.filter(mouvement => {
+  // Optimisation: Mémoriser les filtres pour éviter les recalculs
+  const filteredMouvements = useMemo(() => {
     const now = new Date();
-    const mouvementDate = mouvement.date.toDate();
+    const todayStr = now.toDateString();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
     
-    // Filtre par période
-    let periodMatch = true;
-    switch (periodFilter) {
-      case 'today':
-        periodMatch = mouvementDate.toDateString() === now.toDateString();
-        break;
-      case 'week':
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        periodMatch = mouvementDate >= weekAgo;
-        break;
-      case 'month':
-        const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-        periodMatch = mouvementDate >= monthAgo;
-        break;
-      default:
-        periodMatch = true;
-    }
-    
-    // Filtre par type
-    const typeMatch = typeFilter === 'all' || mouvement.categorie === typeFilter;
-    
-    return periodMatch && typeMatch;
-  });
+    return mouvements.filter(mouvement => {
+      const mouvementDate = mouvement.date.toDate();
+      
+      // Filtre par période optimisé
+      let periodMatch = true;
+      switch (periodFilter) {
+        case 'today':
+          periodMatch = mouvementDate.toDateString() === todayStr;
+          break;
+        case 'week':
+          periodMatch = mouvementDate >= weekAgo;
+          break;
+        case 'month':
+          periodMatch = mouvementDate >= monthAgo;
+          break;
+      }
+      
+      return periodMatch && (typeFilter === 'all' || mouvement.categorie === typeFilter);
+    });
+  }, [mouvements, periodFilter, typeFilter]);
 
   // Fonctions d'export et d'impression
   const printMouvements = () => {
@@ -1269,24 +1308,26 @@ export default function AdminPage({ userRole }: AdminPageProps) {
     URL.revokeObjectURL(link.href);
   };
 
-  // Filtrer les commandes livrées selon la période
-  const filteredHistorique = historique.filter(commande => {
-    const now = new Date();
-    const commandeDate = commande.dateCommande.toDate();
+  // Optimisation: Mémoriser le filtrage des commandes
+  const filteredHistorique = useMemo(() => {
+    if (commandesPeriodFilter === 'all') return historique;
     
-    switch (commandesPeriodFilter) {
-      case 'today':
-        return commandeDate.toDateString() === now.toDateString();
-      case 'week':
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        return commandeDate >= weekAgo;
-      case 'month':
-        const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-        return commandeDate >= monthAgo;
-      default:
-        return true;
-    }
-  });
+    const now = new Date();
+    const todayStr = now.toDateString();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+    
+    return historique.filter(commande => {
+      const commandeDate = commande.dateCommande.toDate();
+      
+      switch (commandesPeriodFilter) {
+        case 'today': return commandeDate.toDateString() === todayStr;
+        case 'week': return commandeDate >= weekAgo;
+        case 'month': return commandeDate >= monthAgo;
+        default: return true;
+      }
+    });
+  }, [historique, commandesPeriodFilter]);
 
   // Fonctions d'export pour les commandes
   const printCommandes = () => {
@@ -1565,10 +1606,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
       {/* Liste items (uniquement contenu stocké dans Firestore) */}
       <h2>Plats ({plats.length})</h2>
       <ul className="item-list">
-        {plats.filter(item => 
-          item.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          item.filtre?.[0]?.toLowerCase().includes(searchTerm.toLowerCase())
-        ).map(item => (
+        {filteredPlats.map(item => (
           <li key={item.id} className="item-card">
             {item.image && <img src={item.image} alt={item.nom} className="item-img" />}
             <div className="item-info">
@@ -1615,10 +1653,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
 
       <h2>Boissons ({boissons.length})</h2>
       <ul className="item-list">
-        {boissons.filter(item => 
-          item.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          item.filtre?.[0]?.toLowerCase().includes(searchTerm.toLowerCase())
-        ).map(item => (
+        {filteredBoissons.map(item => (
           <li key={item.id} className="item-card">
             {item.image && <img src={item.image} alt={item.nom} className="item-img" />}
             <div className="item-info">
@@ -1751,13 +1786,13 @@ export default function AdminPage({ userRole }: AdminPageProps) {
             onAddBoisson={() => setShowAddBoisson(true)}
             onExportStockReport={exportStockReport}
             boissonsCount={boissons.length}
-            lowStockCount={boissons.filter(item => (item.stock || 0) <= 5 && (item.stock || 0) > 0).length}
-            outOfStockCount={boissons.filter(item => (item.stock || 0) === 0).length}
-            okStockCount={boissons.filter(item => (item.stock || 0) > 5).length}
+            lowStockCount={stockStats.boissons.low}
+            outOfStockCount={stockStats.boissons.out}
+            okStockCount={stockStats.boissons.ok}
             platsCount={plats.length}
-            lowPlatsCount={plats.filter(item => (item.stock || 0) <= 5 && (item.stock || 0) > 0).length}
-            outOfStockPlatsCount={plats.filter(item => (item.stock || 0) === 0).length}
-            okPlatsCount={plats.filter(item => (item.stock || 0) > 5).length}
+            lowPlatsCount={stockStats.plats.low}
+            outOfStockPlatsCount={stockStats.plats.out}
+            okPlatsCount={stockStats.plats.ok}
           />
 
 
@@ -1812,32 +1847,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
               )}
               
               <div className="stock-grid-container">
-            {boissons.filter(item => {
-              // Filtre par recherche
-              const matchesSearch = item.nom?.toLowerCase().includes(stockSearchTerm.toLowerCase());
-              
-              // Filtre par statut de stock
-              const stockLevel = item.stock || 0;
-              let matchesFilter = true;
-              
-              switch (stockFilter) {
-                case 'low':
-                  matchesFilter = stockLevel <= 5 && stockLevel > 0;
-                  break;
-                case 'out':
-                  matchesFilter = stockLevel === 0;
-                  break;
-                case 'ok':
-                  matchesFilter = stockLevel > 5;
-                  break;
-                case 'all':
-                default:
-                  matchesFilter = true;
-                  break;
-              }
-              
-              return matchesSearch && matchesFilter;
-            }).map(item => {
+            {filteredStockBoissons.map(item => {
               const stockLevel = item.stock || 0;
               const isOutOfStock = stockLevel === 0;
               const isLowStock = stockLevel <= 5 && stockLevel > 0;
@@ -1970,32 +1980,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
               <h3 className="stock-section-title">Plats ({plats.length})</h3>
               
               <div className="stock-grid-container">
-            {plats.filter(item => {
-              // Filtre par recherche
-              const matchesSearch = item.nom?.toLowerCase().includes(stockSearchTerm.toLowerCase());
-              
-              // Filtre par statut de stock
-              const stockLevel = item.stock || 0;
-              let matchesFilter = true;
-              
-              switch (stockFilter) {
-                case 'low':
-                  matchesFilter = stockLevel <= 5 && stockLevel > 0;
-                  break;
-                case 'out':
-                  matchesFilter = stockLevel === 0;
-                  break;
-                case 'ok':
-                  matchesFilter = stockLevel > 5;
-                  break;
-                case 'all':
-                default:
-                  matchesFilter = true;
-                  break;
-              }
-              
-              return matchesSearch && matchesFilter;
-            }).map(item => {
+            {filteredStockPlats.map(item => {
               const stockLevel = item.stock || 0;
               const isOutOfStock = stockLevel === 0;
               const isLowStock = stockLevel <= 5 && stockLevel > 0;

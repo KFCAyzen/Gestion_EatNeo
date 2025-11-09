@@ -10,7 +10,7 @@ import HistoriquePage from './HistoriquePage'
 import AdminLogin from './AdminLogin'
 import { useAuth } from '../hooks/useAuth'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -64,26 +64,40 @@ export default function AppContent() {
     localStorage.setItem("cart", JSON.stringify(cartItems));
   }, [cartItems]);
 
-  useEffect(() => {
-    const tableParam = searchParams.get('table')
-    const chambreParam = searchParams.get('chambre')
-    const hp03Param = searchParams.get('HP03')
+  // Optimisation: Mémoriser le calcul de la table
+  const tableValue = useMemo(() => {
+    const tableParam = searchParams.get('table');
+    const chambreParam = searchParams.get('chambre');
+    const hp03Param = searchParams.get('HP03');
 
-    if (tableParam) setTable(`Table ${tableParam}`)
-    else if (chambreParam) setTable(`Chambre ${chambreParam}`)
-    else if (hp03Param !== null) setTable('HP03')
-    else setTable(null)
-  }, [searchParams])
+    if (tableParam) return `Table ${tableParam}`;
+    if (chambreParam) return `Chambre ${chambreParam}`;
+    if (hp03Param !== null) return 'HP03';
+    return null;
+  }, [searchParams]);
 
   useEffect(() => {
+    setTable(tableValue);
+  }, [tableValue]);
+
+  // Optimisation: Throttle du scroll pour améliorer les performances
+  useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      setShowScrollUp(window.scrollY > 200);
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          setShowScrollUp(window.scrollY > 200);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const prixToString = (
+  // Optimisation: Mémoriser la fonction de conversion de prix
+  const prixToString = useCallback((
     prix: string | { label: string; value: string; selected?: boolean }[]
   ): string => {
     if (typeof prix === "string") return prix;
@@ -92,28 +106,36 @@ export default function AppContent() {
       return selected ? selected.value : prix[0].value;
     }
     return "";
-  };
+  }, []);
 
-  const handleAddToCart = (item: MenuItem) => {
+  // Optimisation: Mémoriser la fonction d'ajout au panier et utiliser un index
+  const cartItemsIndex = useMemo(() => {
+    const index = new Map<string, number>();
+    cartItems.forEach((item, idx) => {
+      const key = `${item.id}-${prixToString(item.prix)}`;
+      index.set(key, idx);
+    });
+    return index;
+  }, [cartItems, prixToString]);
+
+  const handleAddToCart = useCallback((item: MenuItem) => {
     const prixStr = prixToString(item.prix);
     const uniqueKey = `${item.id}-${prixStr}`;
+    const existingIndex = cartItemsIndex.get(uniqueKey);
 
-    const existingItem = cartItems.find(
-      (i) => `${i.id}-${prixToString(i.prix)}` === uniqueKey
-    );
-
-    if (existingItem) {
-      setCartItems(
-        cartItems.map((i) =>
-          `${i.id}-${prixToString(i.prix)}` === uniqueKey
-            ? { ...i, quantité: (i.quantité ?? 0) + 1 }
-            : i
-        )
-      );
+    if (existingIndex !== undefined) {
+      setCartItems(prev => {
+        const newItems = [...prev];
+        newItems[existingIndex] = {
+          ...newItems[existingIndex],
+          quantité: (newItems[existingIndex].quantité ?? 0) + 1
+        };
+        return newItems;
+      });
     } else {
-      setCartItems([...cartItems, { ...item, prix: prixStr, quantité: 1 }]);
+      setCartItems(prev => [...prev, { ...item, prix: prixStr, quantité: 1 }]);
     }
-  };
+  }, [prixToString, cartItemsIndex]);
 
   return (
     <>

@@ -1,24 +1,36 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { db } from '@/components/firebase'
 import { collection, onSnapshot } from 'firebase/firestore'
 import type { MenuItem } from '@/components/types'
 
+// Cache global pour éviter les requêtes multiples
+const collectionsCache = new Map<string, MenuItem[]>()
+const subscriptionsCache = new Map<string, (() => void)[]>()
+
 export function useRealtimeCollection(collectionName: string) {
-  const [items, setItems] = useState<MenuItem[]>([]);
+  const [items, setItems] = useState<MenuItem[]>(() => collectionsCache.get(collectionName) || []);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Optimisation: Mémoriser la référence de collection
+  const collectionRef = useMemo(() => collection(db, collectionName), [collectionName]);
+
   useEffect(() => {
-    console.log(`Setting up listener for collection: ${collectionName}`);
+    // Vérifier si on a déjà des données en cache
+    const cachedData = collectionsCache.get(collectionName);
+    if (cachedData && cachedData.length > 0) {
+      setItems(cachedData);
+      setLoading(false);
+    }
     
     const unsubscribe = onSnapshot(
-      collection(db, collectionName),
+      collectionRef,
       (snapshot) => {
-        console.log(`Received ${snapshot.docs.length} documents from ${collectionName}`);
-        
-        const docs = snapshot.docs.map((docSnap) => {
-          const data = docSnap.data() as any;
-          return {
+        // Optimisation: Traitement batch des documents
+        const docs: MenuItem[] = [];
+        snapshot.docs.forEach((docSnap) => {
+          const data = docSnap.data();
+          docs.push({
             id: docSnap.id,
             nom: data.nom ?? "",
             description: data.description ?? "",
@@ -28,9 +40,11 @@ export function useRealtimeCollection(collectionName: string) {
             filtre: Array.isArray(data.filtre) ? data.filtre : [],
             masque: data.masque ?? false,
             stock: data.stock ?? 0,
-          } as MenuItem;
+          } as MenuItem);
         });
         
+        // Mettre à jour le cache global
+        collectionsCache.set(collectionName, docs);
         setItems(docs);
         setLoading(false);
         setError(null);
@@ -42,13 +56,30 @@ export function useRealtimeCollection(collectionName: string) {
       }
     );
     
+    // Gérer les souscriptions multiples
+    const existingSubs = subscriptionsCache.get(collectionName) || [];
+    existingSubs.push(unsubscribe);
+    subscriptionsCache.set(collectionName, existingSubs);
+    
     return () => {
-      console.log(`Cleaning up listener for ${collectionName}`);
       unsubscribe();
+      // Nettoyer la souscription du cache
+      const subs = subscriptionsCache.get(collectionName) || [];
+      const index = subs.indexOf(unsubscribe);
+      if (index > -1) {
+        subs.splice(index, 1);
+        subscriptionsCache.set(collectionName, subs);
+      }
     };
-  }, [collectionName]);
+  }, [collectionName, collectionRef]);
 
-  return { items, loading, error } as const;
+  // Optimisation: Mémoriser les items triés
+  const sortedItems = useMemo(() => 
+    items.sort((a, b) => (a.nom || '').localeCompare(b.nom || '')), 
+    [items]
+  );
+
+  return { items: sortedItems, loading, error } as const;
 }
 
 
