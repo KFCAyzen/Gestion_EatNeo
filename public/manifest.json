@@ -1,0 +1,27 @@
+{
+  "name": "Eat Neo Fast Food",
+  "short_name": "Eat Neo",
+  "description": "Application de commande en ligne pour Eat Neo Fast Food",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2e7d32",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["food", "business"],
+  "lang": "fr",
+  "dir": "ltr"
+}

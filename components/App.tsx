@@ -8,6 +8,7 @@ import CartPage from './CartPage'
 import ProtectedAdminRoute from './ProtectedAdminRoute'
 import HistoriquePage from './HistoriquePage'
 import AdminLogin from './AdminLogin'
+import PWAInstaller from './PWAInstaller'
 import { useAuth } from '../hooks/useAuth'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
@@ -297,6 +298,8 @@ export default function AppContent() {
           />
         </div>
       )}
+      
+      <PWAInstaller />
     </>
   );
 }
