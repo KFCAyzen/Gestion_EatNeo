@@ -1812,9 +1812,32 @@ export default function AdminPage({ userRole }: AdminPageProps) {
               )}
               
               <div className="stock-grid-container">
-            {boissons.filter(item => 
-              item.nom?.toLowerCase().includes(stockSearchTerm.toLowerCase())
-            ).map(item => {
+            {boissons.filter(item => {
+              // Filtre par recherche
+              const matchesSearch = item.nom?.toLowerCase().includes(stockSearchTerm.toLowerCase());
+              
+              // Filtre par statut de stock
+              const stockLevel = item.stock || 0;
+              let matchesFilter = true;
+              
+              switch (stockFilter) {
+                case 'low':
+                  matchesFilter = stockLevel <= 5 && stockLevel > 0;
+                  break;
+                case 'out':
+                  matchesFilter = stockLevel === 0;
+                  break;
+                case 'ok':
+                  matchesFilter = stockLevel > 5;
+                  break;
+                case 'all':
+                default:
+                  matchesFilter = true;
+                  break;
+              }
+              
+              return matchesSearch && matchesFilter;
+            }).map(item => {
               const stockLevel = item.stock || 0;
               const isOutOfStock = stockLevel === 0;
               const isLowStock = stockLevel <= 5 && stockLevel > 0;
@@ -1947,9 +1970,32 @@ export default function AdminPage({ userRole }: AdminPageProps) {
               <h3 className="stock-section-title">Plats ({plats.length})</h3>
               
               <div className="stock-grid-container">
-            {plats.filter(item => 
-              item.nom?.toLowerCase().includes(stockSearchTerm.toLowerCase())
-            ).map(item => {
+            {plats.filter(item => {
+              // Filtre par recherche
+              const matchesSearch = item.nom?.toLowerCase().includes(stockSearchTerm.toLowerCase());
+              
+              // Filtre par statut de stock
+              const stockLevel = item.stock || 0;
+              let matchesFilter = true;
+              
+              switch (stockFilter) {
+                case 'low':
+                  matchesFilter = stockLevel <= 5 && stockLevel > 0;
+                  break;
+                case 'out':
+                  matchesFilter = stockLevel === 0;
+                  break;
+                case 'ok':
+                  matchesFilter = stockLevel > 5;
+                  break;
+                case 'all':
+                default:
+                  matchesFilter = true;
+                  break;
+              }
+              
+              return matchesSearch && matchesFilter;
+            }).map(item => {
               const stockLevel = item.stock || 0;
               const isOutOfStock = stockLevel === 0;
               const isLowStock = stockLevel <= 5 && stockLevel > 0;
