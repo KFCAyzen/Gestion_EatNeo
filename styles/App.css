@@ -34,7 +34,7 @@ html, body {
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  margin: 0;
+  margin: 0 0 40px 0;
   color: #2e7d32;
   padding: 8px 20px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(46, 125, 50, 0.1) 100%);
