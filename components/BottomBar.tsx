@@ -28,7 +28,11 @@ const PanierIcon = ({ active = false }: { active?: boolean }) => (
   </svg>
 );
 
-export default function BottomBar() {
+interface BottomBarProps {
+  cartItemsCount?: number
+}
+
+export default function BottomBar({ cartItemsCount = 0 }: BottomBarProps) {
   const router = useRouter()
   const pathname = usePathname()
 
@@ -80,7 +84,8 @@ export default function BottomBar() {
                 padding: '8px 12px',
                 borderRadius: '12px',
                 transition: 'all 0.3s ease',
-                backgroundColor: item.active ? 'rgba(46, 125, 50, 0.1)' : 'transparent'
+                backgroundColor: item.active ? 'rgba(46, 125, 50, 0.1)' : 'transparent',
+                position: 'relative'
               }}
               onMouseEnter={(e) => {
                 if (!item.active) {
@@ -103,6 +108,26 @@ export default function BottomBar() {
               }}>
                 {item.label}
               </span>
+              {item.path === '/panier' && cartItemsCount > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '2px',
+                  right: '8px',
+                  backgroundColor: '#25d366',
+                  color: 'white',
+                  borderRadius: '50%',
+                  width: '18px',
+                  height: '18px',
+                  fontSize: '10px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid white'
+                }}>
+                  {cartItemsCount}
+                </span>
+              )}
             </button>
           )
         })}

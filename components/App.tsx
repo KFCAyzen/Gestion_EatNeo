@@ -79,6 +79,7 @@ const BackIcon = () => (
 
 
 import MobileHeader from './MobileHeader'
+import BottomBar from './BottomBar'
 
 export default function AppContent() {
   const pathname = usePathname()
@@ -184,6 +185,16 @@ export default function AppContent() {
       setCartItems(prev => [...prev, { ...item, prix: prixStr, quantité: 1 }]);
     }
   }, [prixToString, cartItemsIndex]);
+
+  // Ajouter classe admin-page au body si on est sur admin
+  useEffect(() => {
+    if (pathname === '/admin') {
+      document.body.classList.add('admin-page')
+    } else {
+      document.body.classList.remove('admin-page')
+    }
+    return () => document.body.classList.remove('admin-page')
+  }, [pathname])
 
   return (
     <>
@@ -336,43 +347,7 @@ export default function AppContent() {
       {pathname === '/historique' && <HistoriquePage />}
 
       {/* BOTTOM BAR */}
-      <nav className="bottom-bar">
-        <div className="menu">
-          <Link href="/boissons" style={{ textDecoration: 'none', color: 'black' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M6 2L8 6H16L18 2" stroke={pathname === '/boissons' ? "#2e7d32" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M8 6V18C8 19.1046 8.89543 20 10 20H14C15.1046 20 16 19.1046 16 18V6" stroke={pathname === '/boissons' ? "#2e7d32" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill={pathname === '/boissons' ? "rgba(46, 125, 50, 0.08)" : "none"}/>
-              <path d="M10 10C10 11.1046 10.8954 12 12 12C13.1046 12 14 11.1046 14 10" stroke={pathname === '/boissons' ? "#2e7d32" : "#666"} strokeWidth="1.5" strokeLinecap="round"/>
-              <circle cx="12" cy="22" r="1" fill={pathname === '/boissons' ? "#2e7d32" : "#999"}/>
-            </svg>
-            <span style={{ fontSize: '11px', fontWeight: pathname === '/boissons' ? '600' : '500', color: pathname === '/boissons' ? '#2e7d32' : '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Boissons</span>
-          </Link>
-        </div>
-        <div className="menu">
-          <Link href="/" style={{ textDecoration: 'none', color: 'black' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="8" stroke={pathname === '/' ? "#2e7d32" : "#666"} strokeWidth="2" fill={pathname === '/' ? "rgba(46, 125, 50, 0.08)" : "none"}/>
-              <path d="M8 8L16 16M16 8L8 16" stroke={pathname === '/' ? "#2e7d32" : "#999"} strokeWidth="1.5" strokeLinecap="round"/>
-              <circle cx="12" cy="12" r="2" fill={pathname === '/' ? "#2e7d32" : "#999"}/>
-              <path d="M12 4V2M12 22V20M20 12H22M2 12H4" stroke={pathname === '/' ? "#2e7d32" : "#999"} strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-            <span style={{ fontSize: '11px', fontWeight: pathname === '/' ? '600' : '500', color: pathname === '/' ? '#2e7d32' : '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Plats</span>
-          </Link>
-        </div>
-        <div className="menu">
-          <Link className="cartBtn" href="/panier">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M3 7H5L5.4 9M7 16H17L21 7H5.4M7 16L5.4 9M7 16L4.7 18.3C4.3 18.7 4.6 19.5 5.1 19.5H17" stroke={pathname === '/panier' ? "#2e7d32" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M16 11V13" stroke={pathname === '/panier' ? "#2e7d32" : "#999"} strokeWidth="1.5" strokeLinecap="round"/>
-              <circle cx="9" cy="21" r="1" fill={pathname === '/panier' ? "#2e7d32" : "#666"}/>
-              <circle cx="17" cy="21" r="1" fill={pathname === '/panier' ? "#2e7d32" : "#666"}/>
-            </svg>
-            <span style={{ fontSize: '11px', fontWeight: pathname === '/panier' ? '600' : '500', color: pathname === '/panier' ? '#2e7d32' : '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Panier</span>
-            <p>{cartItems.length}</p>
-          </Link>
-        </div>
-
-      </nav>
+      {pathname !== '/admin' && <BottomBar cartItemsCount={cartItems.length} />}
 
       {pathname !== '/panier' && showScrollUp && (
         <div
