@@ -55,15 +55,15 @@ export default function DesktopMenu({ cartItemsCount }: DesktopMenuProps) {
       {isOpen && (
         <div className="desktop-dropdown">
           <Link href="/" onClick={() => setIsOpen(false)}>
-            <Image src={images.plats} alt="Plats" width={18} height={18} />
+            <Image src={images.food} alt="Plats" width={18} height={18} />
             Plats
           </Link>
           <Link href="/boissons" onClick={() => setIsOpen(false)}>
-            <Image src={images.bois} alt="Boissons" width={18} height={18} />
+            <Image src={images.glass} alt="Boissons" width={18} height={18} />
             Boissons
           </Link>
           <Link href="/panier" onClick={() => setIsOpen(false)}>
-            <Image src={images.cart} alt="Panier" width={18} height={18} />
+            <Image src={images.carts} alt="Panier" width={18} height={18} />
             Panier {cartItemsCount > 0 && `(${cartItemsCount})`}
           </Link>
         </div>

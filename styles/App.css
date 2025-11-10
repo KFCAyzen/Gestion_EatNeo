@@ -1563,6 +1563,11 @@ footer{
   .app {
     padding-top: 56px !important;
   }
+  
+  .search-container {
+    margin-top: 10px !important;
+    padding-top: 10px !important;
+  }
 }
 
  
