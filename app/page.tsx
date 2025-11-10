@@ -10,7 +10,7 @@ function AppWrapper() {
 
 export default function HomePage() {
   return (
-    <Suspense fallback={<LoadingSpinner />}>
+    <Suspense fallback={<LoadingSpinner text="Chargement de l'application..." size={50} />}>
       <AppWrapper />
     </Suspense>
   )
