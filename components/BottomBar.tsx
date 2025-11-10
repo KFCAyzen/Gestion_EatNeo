@@ -65,7 +65,8 @@ export default function BottomBar({ cartItemsCount = 0 }: BottomBarProps) {
         alignItems: 'center',
         maxWidth: '500px',
         margin: '0 auto',
-        padding: '0 20px'
+        padding: '0 40px',
+        gap: '20px'
       }}>
         {navItems.map((item) => {
           const IconComponent = item.icon

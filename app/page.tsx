@@ -2,6 +2,7 @@
 
 import { Suspense } from 'react'
 import AppContent from '@/components/App'
+import LoadingSpinner from '@/components/LoadingSpinner'
 
 function AppWrapper() {
   return <AppContent />
@@ -9,7 +10,7 @@ function AppWrapper() {
 
 export default function HomePage() {
   return (
-    <Suspense fallback={<div>Chargement...</div>}>
+    <Suspense fallback={<LoadingSpinner />}>
       <AppWrapper />
     </Suspense>
   )
