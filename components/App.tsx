@@ -43,6 +43,14 @@ const NotificationIcon = () => (
   </svg>
 );
 
+// Icône retour SVG
+const BackIcon = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+    <path d="M19 12H5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M12 19L5 12L12 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
 
 
 export default function AppContent() {
@@ -142,27 +150,28 @@ export default function AppContent() {
     <>
       {/* HEADER */}
       <div className="title">
-        <div className="title-left">
-          <Image src="/logo.jpg" alt="PH" width={50} height={50} />
-          <h1>EAT NEO FAST FOOD</h1>
-        </div>
-        <div className="title-right">
-          {(pathname === '/' || pathname === '/boissons') && (
-            <button 
-              onClick={() => user ? router.push('/admin') : setShowLogin(true)} 
-              className="admin-link"
-            >
-              <AdminIcon />
-            </button>
-          )}
-          {user ? (
-            <>
-              {pathname === '/admin' && (
-                <Link href="/notifications" className="notification-link">
-                  <NotificationIcon />
-                </Link>
-              )}
-              <span className="user-name">{user.username}</span>
+        {pathname === '/admin' ? (
+          // Header mobile pour back office
+          <>
+            <div className="title-left mobile-admin-header">
+              <button 
+                onClick={() => router.push('/')} 
+                className="back-btn mobile-only"
+              >
+                <BackIcon />
+              </button>
+              <span className="admin-title mobile-only">Back Office</span>
+              {/* Desktop: logo et titre normaux */}
+              <div className="desktop-only">
+                <Image src="/logo.jpg" alt="PH" width={50} height={50} />
+                <h1>EAT NEO FAST FOOD</h1>
+              </div>
+            </div>
+            <div className="title-right">
+              <Link href="/notifications" className="notification-link">
+                <NotificationIcon />
+              </Link>
+              <span className="user-name">{user?.username}</span>
               <button 
                 className="logout-btn"
                 onClick={() => {
@@ -172,9 +181,41 @@ export default function AppContent() {
               >
                 <LogoutIcon />
               </button>
-            </>
-          ) : null}
-        </div>
+            </div>
+          </>
+        ) : (
+          // Header normal
+          <>
+            <div className="title-left">
+              <Image src="/logo.jpg" alt="PH" width={50} height={50} />
+              <h1>EAT NEO FAST FOOD</h1>
+            </div>
+            <div className="title-right">
+              {(pathname === '/' || pathname === '/boissons') && (
+                <button 
+                  onClick={() => user ? router.push('/admin') : setShowLogin(true)} 
+                  className="admin-link"
+                >
+                  <AdminIcon />
+                </button>
+              )}
+              {user ? (
+                <>
+                  <span className="user-name">{user.username}</span>
+                  <button 
+                    className="logout-btn"
+                    onClick={() => {
+                      logout()
+                      router.push('/')
+                    }}
+                  >
+                    <LogoutIcon />
+                  </button>
+                </>
+              ) : null}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Barre de recherche */}

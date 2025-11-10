@@ -1149,4 +1149,51 @@ footer{
   transform: translateY(-1px);
 }
 
+/* Header mobile pour back office */
+.mobile-admin-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  color: #2e7d32;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: background-color 0.3s ease;
+}
+
+.back-btn:hover {
+  background-color: rgba(46, 125, 50, 0.1);
+}
+
+.admin-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+.mobile-only {
+  display: none;
+}
+
+.desktop-only {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: flex;
+  }
+  
+  .desktop-only {
+    display: none;
+  }
+}
+
  
