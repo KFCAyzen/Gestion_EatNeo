@@ -92,6 +92,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
   const [stockSearchTerm, setStockSearchTerm] = useState('');
   const [commandesPeriodFilter, setCommandesPeriodFilter] = useState('month');
   const [pendingStockChange, setPendingStockChange] = useState<{itemId: string, newStock: number, collection: string} | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
   
   // Système de notifications
   const { toasts, modal, showToast, removeToast, showModal, closeModal } = useNotifications();
@@ -271,11 +272,17 @@ export default function AdminPage({ userRole }: AdminPageProps) {
 
   // Fonction pour supprimer et re-uploader tous les items avec le champ masque
   const resetAndReuploadItems = async () => {
+    if (isResetting) {
+      showToast('Opération de reset déjà en cours, veuillez patienter...', 'warning');
+      return;
+    }
+
     showModal(
       "Confirmer le reset",
       "⚠️ ATTENTION: Cette action supprimera TOUTES les données actuelles et les remplacera par les données par défaut. Voulez-vous d'abord créer une sauvegarde ?",
       "warning",
       async () => {
+        setIsResetting(true);
         try {
           // Créer automatiquement une sauvegarde avant le reset
           await backupCurrentData();
@@ -361,15 +368,21 @@ export default function AdminPage({ userRole }: AdminPageProps) {
             } catch (error) {
               console.error('Erreur lors du reset:', error);
               showToast('Erreur lors du reset', 'error');
+            } finally {
+              setIsResetting(false);
             }
           }, 1000); // Attendre 1 seconde
         } catch (error) {
           console.error('Erreur lors de la sauvegarde:', error);
           showToast('Erreur lors de la sauvegarde', 'error');
+          setIsResetting(false);
         }
         closeModal();
       },
-      closeModal
+      () => {
+        closeModal();
+        setIsResetting(false);
+      }
     );
   };
 
@@ -1813,8 +1826,9 @@ export default function AdminPage({ userRole }: AdminPageProps) {
         <button
           onClick={resetAndReuploadItems}
           className="action-button red"
+          disabled={isResetting}
         >
-          Reset & Re-upload
+          {isResetting ? 'Reset en cours...' : 'Reset & Re-upload'}
         </button>
       </div>
 

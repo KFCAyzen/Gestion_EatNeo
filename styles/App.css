@@ -21,7 +21,7 @@ html, body {
   overflow-x: hidden;
   margin: 0;
   padding: 0;
-  padding-top: 56px;
+  padding-top: 0;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -40,11 +40,10 @@ html, body {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(46, 125, 50, 0.1) 100%);
   backdrop-filter: blur(15px);
   border-bottom: 1px solid rgba(46, 125, 50, 0.1);
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  z-index: 1000 !important;
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 1000;
   box-shadow: 0 2px 20px rgba(46, 125, 50, 0.08);
   min-height: 56px;
   box-sizing: border-box;
@@ -1262,6 +1261,20 @@ footer{
     transform: translate(-50%, -50%);
   }
  }
+
+/* Boutons désactivés */
+.action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #ccc !important;
+  color: #666 !important;
+  transform: none !important;
+}
+
+.action-button:disabled:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
 
 /* Stock Management Styles */
 .stock-stat-card.clickable {
