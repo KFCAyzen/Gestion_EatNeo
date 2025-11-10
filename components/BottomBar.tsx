@@ -5,26 +5,28 @@ import { useRouter, usePathname } from 'next/navigation'
 // Icônes SVG pour la bottom bar
 const BoissonsIcon = ({ active = false }: { active?: boolean }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <path d="M5 12V7C5 5.89543 5.89543 5 7 5H17C18.1046 5 19 5.89543 19 7V12" stroke={active ? "#2e7d32" : "#666"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M5 12C5 16.4183 8.58172 20 13 20H11C6.58172 20 3 16.4183 3 12V11H5V12Z" fill={active ? "rgba(46, 125, 50, 0.1)" : "none"} stroke={active ? "#2e7d32" : "#666"} strokeWidth="2.5"/>
-    <path d="M19 12C19 16.4183 15.4183 20 11 20H13C17.4183 20 21 16.4183 21 12V11H19V12Z" fill={active ? "rgba(46, 125, 50, 0.1)" : "none"} stroke={active ? "#2e7d32" : "#666"} strokeWidth="2.5"/>
-    <path d="M8 2L9 5M16 2L15 5" stroke={active ? "#2e7d32" : "#666"} strokeWidth="2.5" strokeLinecap="round"/>
+    <path d="M6 2L8 6H16L18 2" stroke={active ? "#2e7d32" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M8 6V18C8 19.1046 8.89543 20 10 20H14C15.1046 20 16 19.1046 16 18V6" stroke={active ? "#2e7d32" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill={active ? "rgba(46, 125, 50, 0.08)" : "none"}/>
+    <path d="M10 10C10 11.1046 10.8954 12 12 12C13.1046 12 14 11.1046 14 10" stroke={active ? "#2e7d32" : "#666"} strokeWidth="1.5" strokeLinecap="round"/>
+    <circle cx="12" cy="22" r="1" fill={active ? "#2e7d32" : "#999"}/>
   </svg>
 );
 
 const PlatsIcon = ({ active = false }: { active?: boolean }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <circle cx="12" cy="12" r="9" stroke={active ? "#2e7d32" : "#666"} strokeWidth="2.5" fill={active ? "rgba(46, 125, 50, 0.1)" : "none"}/>
-    <path d="M12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3Z" stroke={active ? "#2e7d32" : "#666"} strokeWidth="2.5"/>
-    <path d="M8 12H16M12 8V16" stroke={active ? "#2e7d32" : "#666"} strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="12" cy="12" r="8" stroke={active ? "#2e7d32" : "#666"} strokeWidth="2" fill={active ? "rgba(46, 125, 50, 0.08)" : "none"}/>
+    <path d="M8 8L16 16M16 8L8 16" stroke={active ? "#2e7d32" : "#999"} strokeWidth="1.5" strokeLinecap="round"/>
+    <circle cx="12" cy="12" r="2" fill={active ? "#2e7d32" : "#999"}/>
+    <path d="M12 4V2M12 22V20M20 12H22M2 12H4" stroke={active ? "#2e7d32" : "#999"} strokeWidth="1.5" strokeLinecap="round"/>
   </svg>
 );
 
 const PanierIcon = ({ active = false }: { active?: boolean }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V16.5" stroke={active ? "#2e7d32" : "#666"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill={active ? "rgba(46, 125, 50, 0.1)" : "none"}/>
-    <circle cx="9" cy="20" r="1" stroke={active ? "#2e7d32" : "#666"} strokeWidth="2.5" fill={active ? "#2e7d32" : "none"}/>
-    <circle cx="20" cy="20" r="1" stroke={active ? "#2e7d32" : "#666"} strokeWidth="2.5" fill={active ? "#2e7d32" : "none"}/>
+    <path d="M3 7H5L5.4 9M7 16H17L21 7H5.4M7 16L5.4 9M7 16L4.7 18.3C4.3 18.7 4.6 19.5 5.1 19.5H17" stroke={active ? "#2e7d32" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M16 11V13" stroke={active ? "#2e7d32" : "#999"} strokeWidth="1.5" strokeLinecap="round"/>
+    <circle cx="9" cy="21" r="1" fill={active ? "#2e7d32" : "#666"}/>
+    <circle cx="17" cy="21" r="1" fill={active ? "#2e7d32" : "#666"}/>
   </svg>
 );
 
