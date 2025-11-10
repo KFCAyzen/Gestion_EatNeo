@@ -647,6 +647,20 @@ input, textarea, select {
   font-size: 16px;
 }
 
+/* Empêcher le zoom automatique sur mobile */
+@media screen and (max-width: 768px) {
+  input, textarea, select {
+    font-size: 16px !important;
+    transform-origin: left top;
+    transform: scale(1) !important;
+  }
+  
+  input:focus, textarea:focus, select:focus {
+    font-size: 16px !important;
+    transform: scale(1) !important;
+  }
+}
+
 /* Modern Search Bar */
 .search-container {
   width: calc(100vw - 20px) !important;
