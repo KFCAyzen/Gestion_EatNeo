@@ -35,7 +35,6 @@ export const usePushNotifications = () => {
         icon: '/logo.jpg',
         badge: '/logo.jpg',
         tag: 'eat-neo-notification',
-        renotify: true,
         ...options
       });
     }

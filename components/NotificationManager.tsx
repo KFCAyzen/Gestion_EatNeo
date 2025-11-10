@@ -1,14 +1,24 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useAuth } from '@/hooks/useAuth';
-import { useRealtimeCollection } from '@/hooks/useRealtimeCollection';
+import { collection, query, orderBy, onSnapshot, where } from 'firebase/firestore';
+import { db } from './firebase';
+
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  timestamp: any;
+  read: boolean;
+  priority: 'low' | 'medium' | 'high';
+}
 
 export default function NotificationManager() {
   const { requestPermission, sendNotification, permission } = usePushNotifications();
   const { user } = useAuth();
-  const { data: notifications } = useRealtimeCollection('notifications');
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
     if (user && permission === 'default') {
@@ -17,12 +27,29 @@ export default function NotificationManager() {
   }, [user, permission, requestPermission]);
 
   useEffect(() => {
-    if (notifications && notifications.length > 0 && permission === 'granted') {
+    const notifQuery = query(
+      collection(db, 'notifications'), 
+      orderBy('timestamp', 'desc')
+    );
+    
+    const unsubscribe = onSnapshot(notifQuery, (snapshot) => {
+      const notificationsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Notification[];
+      setNotifications(notificationsData);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (notifications.length > 0 && permission === 'granted') {
       const latestNotification = notifications[0];
       const lastNotificationId = localStorage.getItem('lastNotificationId');
       
       if (latestNotification.id !== lastNotificationId) {
-        sendNotification(latestNotification.titre, {
+        sendNotification(latestNotification.title, {
           body: latestNotification.message,
           data: { id: latestNotification.id }
         });
