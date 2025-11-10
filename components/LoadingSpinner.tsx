@@ -1,6 +1,11 @@
 'use client'
 
-const LoadingSpinner = () => {
+interface LoadingSpinnerProps {
+  text?: string;
+  size?: number;
+}
+
+const LoadingSpinner = ({ text, size }: LoadingSpinnerProps) => {
   return (
     <div style={{
       position: 'fixed',
@@ -22,29 +27,29 @@ const LoadingSpinner = () => {
       }}>
         <div style={{
           position: 'relative',
-          width: '60px',
-          height: '60px'
+          width: `${size || 60}px`,
+          height: `${size || 60}px`
         }}>
           <div style={{
             position: 'absolute',
-            width: '60px',
-            height: '60px',
+            width: `${size || 60}px`,
+            height: `${size || 60}px`,
             borderRadius: '50%',
             background: 'linear-gradient(45deg, #2e7d32, #4caf50)',
             animation: 'pulse1 1.5s ease-in-out infinite'
           }}></div>
           <div style={{
             position: 'absolute',
-            width: '60px',
-            height: '60px',
+            width: `${size || 60}px`,
+            height: `${size || 60}px`,
             borderRadius: '50%',
             background: 'linear-gradient(45deg, #4caf50, #81c784)',
             animation: 'pulse2 1.5s ease-in-out infinite 0.3s'
           }}></div>
           <div style={{
             position: 'absolute',
-            width: '60px',
-            height: '60px',
+            width: `${size || 60}px`,
+            height: `${size || 60}px`,
             borderRadius: '50%',
             background: 'linear-gradient(45deg, #81c784, #a5d6a7)',
             animation: 'pulse3 1.5s ease-in-out infinite 0.6s'
@@ -58,7 +63,7 @@ const LoadingSpinner = () => {
           animation: 'fadeInOut 2s ease-in-out infinite',
           letterSpacing: '2px'
         }}>
-          EAT NEO
+          {text || 'EAT NEO'}
         </div>
       </div>
       
