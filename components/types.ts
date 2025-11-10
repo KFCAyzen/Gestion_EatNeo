@@ -9,10 +9,10 @@ export type MenuItem = {
   image: string;
   description?: string;
   catégorie: string[];
-  filtre: string[];   //  Nouveau champ obligatoire (identique à catégorie)
+  filtre: string[];   //   Champ obligatoire (identique à catégorie)
   quantité?: number;
-  masque?: boolean;   // Nouveau champ pour masquer l'item du menu
-  stock?: number;     // Nouveau champ pour la gestion de stock
+  masque?: boolean;   //  Champ pour masquer l'item du menu
+  stock?: number;     //  Champ pour la gestion de stock
 };
 
 export const menuItems: MenuItem[] = [

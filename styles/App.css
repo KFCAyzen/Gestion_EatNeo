@@ -163,8 +163,8 @@ html, body {
   min-height: 70px !important;
  }
 
- /* Afficher la bottom bar seulement sur mobile et pas sur admin */
-@media (max-width: 768px) {
+ /* Afficher la bottom bar sur mobile et tablette, pas sur desktop */
+@media (max-width: 1024px) {
   body:not(.admin-page) .bottom-bar {
     display: flex !important;
     position: fixed !important;
@@ -1662,14 +1662,14 @@ footer{
 }
 
 /* Afficher le menu desktop seulement sur desktop */
-@media (min-width: 769px) {
+@media (min-width: 1025px) {
   .desktop-menu-container {
     display: block !important;
   }
 }
 
 /* Masquer le menu desktop sur mobile et tablette */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .desktop-menu-container {
     display: none !important;
   }
