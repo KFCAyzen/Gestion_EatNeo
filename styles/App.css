@@ -3,6 +3,15 @@ html, body {
   overflow-x: hidden;
   position: relative;
   height: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  html, body {
+    position: relative;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
  .app {
@@ -137,9 +146,11 @@ html, body {
   display: flex !important;
   justify-content: space-around !important;
   align-items: center !important;
-  transform: translateZ(0) !important;
-  -webkit-transform: translateZ(0) !important;
-  will-change: transform !important;
+  transform: translate3d(0, 0, 0) !important;
+  -webkit-transform: translate3d(0, 0, 0) !important;
+  will-change: auto !important;
+  -webkit-backface-visibility: hidden !important;
+  backface-visibility: hidden !important;
  }
 
  /* Correction spécifique pour mobile */
@@ -150,8 +161,23 @@ html, body {
     left: 0 !important;
     right: 0 !important;
     width: 100vw !important;
+    height: 70px !important;
     padding: 6px 0 !important;
     padding-bottom: env(safe-area-inset-bottom, 6px) !important;
+    transform: translate3d(0, 0, 0) !important;
+    -webkit-transform: translate3d(0, 0, 0) !important;
+    -webkit-backface-visibility: hidden !important;
+    backface-visibility: hidden !important;
+    contain: layout style paint !important;
+  }
+  
+  body {
+    padding-bottom: 80px !important;
+    overflow-x: hidden !important;
+  }
+  
+  .menu-section:last-child {
+    margin-bottom: 90px !important;
   }
  }
 
