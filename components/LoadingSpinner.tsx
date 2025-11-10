@@ -22,7 +22,7 @@ const LoadingSpinner = ({ text, size }: LoadingSpinnerProps) => {
       backgroundColor: 'white',
       zIndex: 99999
     }}>
-      {/* Logo principal - style WhatsApp */}
+      {/* Logo + Nom centré */}
       <div style={{
         display: 'flex',
         flexDirection: 'column',
@@ -37,7 +37,7 @@ const LoadingSpinner = ({ text, size }: LoadingSpinnerProps) => {
           height={80}
           style={{
             borderRadius: '50%',
-            marginBottom: '20px'
+            marginBottom: '16px'
           }}
         />
         
@@ -75,7 +75,7 @@ const LoadingSpinner = ({ text, size }: LoadingSpinnerProps) => {
           margin: 0,
           fontWeight: '400'
         }}>
-          de EAT NEO FAST FOOD
+          by World Dev Tech
         </p>
       </div>
       
