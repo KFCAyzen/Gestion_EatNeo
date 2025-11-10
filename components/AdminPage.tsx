@@ -1803,12 +1803,6 @@ export default function AdminPage({ userRole }: AdminPageProps) {
           </div>
         </div>
         <button
-          onClick={migrateExistingItems}
-          className="action-button blue"
-        >
-          Mettre à jour les items
-        </button>
-        <button
           onClick={backupCurrentData}
           className="action-button green"
         >
@@ -1823,13 +1817,6 @@ export default function AdminPage({ userRole }: AdminPageProps) {
             style={{ display: 'none' }}
           />
         </label>
-        <button
-          onClick={resetAndReuploadItems}
-          className="action-button red"
-          disabled={isResetting}
-        >
-          {isResetting ? 'Reset en cours...' : 'Reset & Re-upload'}
-        </button>
       </div>
 
       {/* Debug info */}
