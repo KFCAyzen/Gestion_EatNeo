@@ -1459,12 +1459,16 @@
 }
 
 .search-input-with-icon {
-  padding-left: 40px;
+  padding-left: 65px;
   width: 100%;
   padding: 10px;
   border: 1px solid #ddd;
   border-radius: 6px;
   font-size: 14px;
+}
+
+.search-input-with-icon::placeholder {
+  padding-left: 25px;
 }
 
 .search-icon-absolute {

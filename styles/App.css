@@ -416,7 +416,7 @@ html, body {
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(8px);
-  z-index: 10;
+  z-index: 99997;
   pointer-events: all;
  }
 
@@ -432,7 +432,7 @@ html, body {
   max-width: 380px;
   box-shadow: 0 20px 60px rgba(46, 125, 50, 0.15), 0 8px 25px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(46, 125, 50, 0.08);
-  z-index: 20;
+  z-index: 99998;
   animation: fadeIn 0.3s ease-in-out;
   backdrop-filter: blur(10px);
  }
@@ -482,6 +482,10 @@ html, body {
   box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
  }
 
+ .close:active{
+  transform: translateY(0);
+ }
+
  .addBtn{
   margin: 0;
   background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
@@ -504,6 +508,10 @@ html, body {
  .addBtn:hover{
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(46, 125, 50, 0.4);
+ }
+
+ .addBtn:active{
+  transform: translateY(0);
  }
 
  .modal h2, strong{

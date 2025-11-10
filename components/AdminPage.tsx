@@ -204,8 +204,15 @@ export default function AdminPage({ userRole }: AdminPageProps) {
       // Collecter toutes les catégories existantes pour normalisation
       const existingCategories: string[] = [];
       
-      // Re-uploader les items avec normalisation
+      // Re-uploader les items avec normalisation et vérification des doublons
+      const addedItems = new Set<string>(); // Prévenir les doublons
+      
       for (const item of menuItems) {
+        const itemKey = item.nom?.toLowerCase().trim();
+        if (addedItems.has(itemKey)) {
+          console.log(`Doublon détecté et ignoré: ${item.nom}`);
+          continue;
+        }
         const similarCategory = findSimilarCategory(item.filtre?.[0] || '', existingCategories);
         const finalCategory = similarCategory || item.filtre?.[0] || '';
         if (!existingCategories.includes(finalCategory)) {
@@ -225,9 +232,16 @@ export default function AdminPage({ userRole }: AdminPageProps) {
           filtre: [finalCategory],
           masque: false
         });
+        
+        addedItems.add(itemKey);
       }
       
       for (const item of drinksItems) {
+        const itemKey = item.nom?.toLowerCase().trim();
+        if (addedItems.has(itemKey)) {
+          console.log(`Doublon détecté et ignoré: ${item.nom}`);
+          continue;
+        }
         const similarCategory = findSimilarCategory(item.filtre?.[0] || '', existingCategories);
         const finalCategory = similarCategory || item.filtre?.[0] || '';
         if (!existingCategories.includes(finalCategory)) {
@@ -247,6 +261,8 @@ export default function AdminPage({ userRole }: AdminPageProps) {
           filtre: [finalCategory],
           masque: false
         });
+        
+        addedItems.add(itemKey);
       }
       
         showToast('Tous les items ont été re-uploadés avec normalisation !', 'success');
@@ -425,6 +441,18 @@ export default function AdminPage({ userRole }: AdminPageProps) {
     if (prix.length >= 2 && prix.some(p => !p.label.trim())) return alert("Le label est obligatoire quand il y a plusieurs prix.");
     if (!categorie.trim()) return alert("Merci de renseigner une catégorie !");
     if (!filtre.trim()) return alert("Merci de renseigner un filtre !");
+
+    // Vérification des doublons (sauf en mode édition)
+    if (!editId) {
+      const existingItems = [...plats, ...boissons];
+      const duplicateItem = existingItems.find(item => 
+        item.nom?.toLowerCase().trim() === nom.toLowerCase().trim()
+      );
+      
+      if (duplicateItem) {
+        return alert(`Un plat/boisson avec le nom "${nom}" existe déjà. Veuillez choisir un autre nom.`);
+      }
+    }
 
     try {
       // Auto-détection des boissons basée sur le filtre/catégorie

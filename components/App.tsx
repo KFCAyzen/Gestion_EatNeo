@@ -10,6 +10,7 @@ import HistoriquePage from './HistoriquePage'
 import AdminLogin from './AdminLogin'
 import PWAInstaller from './PWAInstaller'
 import NotificationManager from './NotificationManager'
+import OfflineIndicator from './OfflineIndicator'
 import { useAuth } from '../hooks/useAuth'
 import { useNotificationCount } from '../hooks/useNotificationCount'
 
@@ -402,6 +403,7 @@ export default function AppContent() {
       
       <PWAInstaller />
       <NotificationManager />
+      <OfflineIndicator />
 
     </>
   );

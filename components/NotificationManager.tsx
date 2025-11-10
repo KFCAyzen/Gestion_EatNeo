@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useAuth } from '@/hooks/useAuth';
+import { useOfflineSync } from '@/hooks/useOfflineSync';
+import { useOrderNotifications } from '@/hooks/useOrderNotifications';
 import { collection, query, orderBy, onSnapshot, where } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -18,7 +20,11 @@ interface Notification {
 export default function NotificationManager() {
   const { requestPermission, sendNotification, permission } = usePushNotifications();
   const { user } = useAuth();
+  const { isOnline, pendingOrders } = useOfflineSync();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  
+  // Initialiser les notifications de commandes
+  useOrderNotifications();
 
   useEffect(() => {
     if (user && permission === 'default') {
@@ -57,6 +63,13 @@ export default function NotificationManager() {
       }
     }
   }, [notifications, permission, sendNotification]);
+
+  // Afficher un indicateur hors ligne si nécessaire
+  useEffect(() => {
+    if (!isOnline && pendingOrders.length > 0) {
+      console.log(`Mode hors ligne: ${pendingOrders.length} commande(s) en attente`);
+    }
+  }, [isOnline, pendingOrders]);
 
   return null;
 }
