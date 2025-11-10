@@ -276,95 +276,98 @@ export default function AdminPage({ userRole }: AdminPageProps) {
       "⚠️ ATTENTION: Cette action supprimera TOUTES les données actuelles et les remplacera par les données par défaut. Voulez-vous d'abord créer une sauvegarde ?",
       "warning",
       async () => {
-        // Créer automatiquement une sauvegarde avant le reset
-        await backupCurrentData();
-        
-        // Attendre 1 seconde pour que la sauvegarde se termine
-        setTimeout(async () => {
-    
-    try {
-      // Supprimer toutes les collections
-      const collections = ['Plats', 'Boissons'];
-      
-      for (const collectionName of collections) {
-        const snapshot = await getDocs(collection(db, collectionName));
-        for (const docSnapshot of snapshot.docs) {
-          await deleteDoc(doc(db, collectionName, docSnapshot.id));
-        }
-      }
-      
-      // Collecter toutes les catégories existantes pour normalisation
-      const existingCategories: string[] = [];
-      
-      // Re-uploader les items avec normalisation et vérification des doublons
-      const addedItems = new Set<string>(); // Prévenir les doublons
-      
-      for (const item of menuItems) {
-        const itemKey = item.nom?.toLowerCase().trim();
-        if (addedItems.has(itemKey)) {
-          console.log(`Doublon détecté et ignoré: ${item.nom}`);
-          continue;
-        }
-        const similarCategory = findSimilarCategory(item.filtre?.[0] || '', existingCategories);
-        const finalCategory = similarCategory || item.filtre?.[0] || '';
-        if (!existingCategories.includes(finalCategory)) {
-          existingCategories.push(finalCategory);
-        }
-        
-        const formattedPrix = typeof item.prix === 'string' 
-          ? formatPrice(item.prix)
-          : Array.isArray(item.prix) 
-            ? item.prix.map(p => ({ ...p, value: formatPrice(p.value) }))
-            : item.prix;
-        
-        await addDoc(collection(db, 'Plats'), {
-          ...item,
-          prix: formattedPrix,
-          catégorie: [finalCategory],
-          filtre: [finalCategory],
-          masque: false
-        });
-        
-        addedItems.add(itemKey);
-      }
-      
-      for (const item of drinksItems) {
-        const itemKey = item.nom?.toLowerCase().trim();
-        if (addedItems.has(itemKey)) {
-          console.log(`Doublon détecté et ignoré: ${item.nom}`);
-          continue;
-        }
-        const similarCategory = findSimilarCategory(item.filtre?.[0] || '', existingCategories);
-        const finalCategory = similarCategory || item.filtre?.[0] || '';
-        if (!existingCategories.includes(finalCategory)) {
-          existingCategories.push(finalCategory);
-        }
-        
-        const formattedPrix = typeof item.prix === 'string' 
-          ? formatPrice(item.prix)
-          : Array.isArray(item.prix) 
-            ? item.prix.map(p => ({ ...p, value: formatPrice(p.value) }))
-            : item.prix;
-        
-        await addDoc(collection(db, 'Boissons'), {
-          ...item,
-          prix: formattedPrix,
-          catégorie: [finalCategory],
-          filtre: [finalCategory],
-          masque: false
-        });
-        
-        addedItems.add(itemKey);
-      }
-      
-          showToast('Tous les items ont été re-uploadés avec normalisation !', 'success');
-          closeModal();
+        try {
+          // Créer automatiquement une sauvegarde avant le reset
+          await backupCurrentData();
+          
+          // Attendre 1 seconde pour que la sauvegarde se termine
+          setTimeout(async () => {
+            try {
+              // Supprimer toutes les collections
+              const collections = ['Plats', 'Boissons'];
+              
+              for (const collectionName of collections) {
+                const snapshot = await getDocs(collection(db, collectionName));
+                for (const docSnapshot of snapshot.docs) {
+                  await deleteDoc(doc(db, collectionName, docSnapshot.id));
+                }
+              }
+              
+              // Collecter toutes les catégories existantes pour normalisation
+              const existingCategories: string[] = [];
+              
+              // Re-uploader les items avec normalisation et vérification des doublons
+              const addedItems = new Set<string>(); // Prévenir les doublons
+              
+              for (const item of menuItems) {
+                const itemKey = item.nom?.toLowerCase().trim();
+                if (addedItems.has(itemKey)) {
+                  console.log(`Doublon détecté et ignoré: ${item.nom}`);
+                  continue;
+                }
+                const similarCategory = findSimilarCategory(item.filtre?.[0] || '', existingCategories);
+                const finalCategory = similarCategory || item.filtre?.[0] || '';
+                if (!existingCategories.includes(finalCategory)) {
+                  existingCategories.push(finalCategory);
+                }
+                
+                const formattedPrix = typeof item.prix === 'string' 
+                  ? formatPrice(item.prix)
+                  : Array.isArray(item.prix) 
+                    ? item.prix.map(p => ({ ...p, value: formatPrice(p.value) }))
+                    : item.prix;
+                
+                await addDoc(collection(db, 'Plats'), {
+                  ...item,
+                  prix: formattedPrix,
+                  catégorie: [finalCategory],
+                  filtre: [finalCategory],
+                  masque: false
+                });
+                
+                addedItems.add(itemKey);
+              }
+              
+              for (const item of drinksItems) {
+                const itemKey = item.nom?.toLowerCase().trim();
+                if (addedItems.has(itemKey)) {
+                  console.log(`Doublon détecté et ignoré: ${item.nom}`);
+                  continue;
+                }
+                const similarCategory = findSimilarCategory(item.filtre?.[0] || '', existingCategories);
+                const finalCategory = similarCategory || item.filtre?.[0] || '';
+                if (!existingCategories.includes(finalCategory)) {
+                  existingCategories.push(finalCategory);
+                }
+                
+                const formattedPrix = typeof item.prix === 'string' 
+                  ? formatPrice(item.prix)
+                  : Array.isArray(item.prix) 
+                    ? item.prix.map(p => ({ ...p, value: formatPrice(p.value) }))
+                    : item.prix;
+                
+                await addDoc(collection(db, 'Boissons'), {
+                  ...item,
+                  prix: formattedPrix,
+                  catégorie: [finalCategory],
+                  filtre: [finalCategory],
+                  masque: false
+                });
+                
+                addedItems.add(itemKey);
+              }
+              
+              showToast('Tous les items ont été re-uploadés avec normalisation !', 'success');
+            } catch (error) {
+              console.error('Erreur lors du reset:', error);
+              showToast('Erreur lors du reset', 'error');
+            }
+          }, 1000); // Attendre 1 seconde
         } catch (error) {
-          console.error('Erreur lors du reset:', error);
-          showToast('Erreur lors du reset', 'error');
-          closeModal();
+          console.error('Erreur lors de la sauvegarde:', error);
+          showToast('Erreur lors de la sauvegarde', 'error');
         }
-        }, 1000); // Attendre 1 seconde
+        closeModal();
       },
       closeModal
     );

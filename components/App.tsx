@@ -349,7 +349,7 @@ export default function AppContent() {
       {/* BOTTOM BAR */}
       {pathname !== '/admin' && <BottomBar cartItemsCount={cartItems.length} />}
 
-      {pathname !== '/panier' && showScrollUp && (
+      {pathname !== '/panier' && pathname !== '/admin' && showScrollUp && (
         <div
           style={{
             position: "fixed",

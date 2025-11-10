@@ -1,0 +1,11 @@
+{
+  "name": "upload-images-script",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "dependencies": {
+    "firebase": "^10.7.1"
+  },
+  "scripts": {
+    "upload": "node uploadImages.js"
+  }
+}
