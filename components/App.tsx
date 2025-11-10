@@ -80,6 +80,7 @@ const BackIcon = () => (
 
 import MobileHeader from './MobileHeader'
 import BottomBar from './BottomBar'
+import DesktopMenu from './DesktopMenu'
 
 export default function AppContent() {
   const pathname = usePathname()
@@ -262,6 +263,7 @@ export default function AppContent() {
               <h1>EAT NEO FAST FOOD</h1>
             </div>
             <div className="title-right">
+              <DesktopMenu cartItemsCount={cartItems.length} />
               <Link href="/notifications" className="notification-link">
                 <NotificationIcon count={notificationCount} />
               </Link>

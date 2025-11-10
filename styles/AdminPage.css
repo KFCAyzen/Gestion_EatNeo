@@ -1459,7 +1459,7 @@
 }
 
 .search-input-with-icon {
-  padding-left: 65px;
+  padding-left: 40px;
   width: 100%;
   padding: 10px;
   border: 1px solid #ddd;
@@ -1467,8 +1467,9 @@
   font-size: 14px;
 }
 
-.search-input-with-icon::placeholder {
-  padding-left: 25px;
+.search-input-with-icon:not(:placeholder-shown) + .search-icon-absolute {
+  opacity: 0;
+  visibility: hidden;
 }
 
 .search-icon-absolute {
@@ -1477,6 +1478,8 @@
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  opacity: 0.6;
 }
 
 .action-button {
