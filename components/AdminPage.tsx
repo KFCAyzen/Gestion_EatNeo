@@ -182,13 +182,105 @@ export default function AdminPage({ userRole }: AdminPageProps) {
     };
   }, [boissons, plats]);
 
+  // Fonction pour restaurer depuis une sauvegarde
+  const restoreFromBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    try {
+      const text = await file.text();
+      const backupData = JSON.parse(text);
+      
+      if (!backupData.plats || !backupData.boissons) {
+        showToast('Fichier de sauvegarde invalide', 'error');
+        return;
+      }
+      
+      showModal(
+        "Restaurer la sauvegarde",
+        `Restaurer ${backupData.totalItems} items depuis la sauvegarde du ${new Date(backupData.timestamp).toLocaleString('fr-FR')} ? Cela remplacera toutes les données actuelles.`,
+        "warning",
+        async () => {
+          try {
+            // Supprimer toutes les données actuelles
+            const collections = ['Plats', 'Boissons'];
+            for (const collectionName of collections) {
+              const snapshot = await getDocs(collection(db, collectionName));
+              for (const docSnapshot of snapshot.docs) {
+                await deleteDoc(doc(db, collectionName, docSnapshot.id));
+              }
+            }
+            
+            // Restaurer les plats
+            for (const plat of backupData.plats) {
+              const { id, ...platData } = plat; // Exclure l'ancien ID
+              await addDoc(collection(db, 'Plats'), platData);
+            }
+            
+            // Restaurer les boissons
+            for (const boisson of backupData.boissons) {
+              const { id, ...boissonData } = boisson; // Exclure l'ancien ID
+              await addDoc(collection(db, 'Boissons'), boissonData);
+            }
+            
+            showToast(`${backupData.totalItems} items restaurés avec succès !`, 'success');
+            closeModal();
+          } catch (error) {
+            console.error('Erreur lors de la restauration:', error);
+            showToast('Erreur lors de la restauration', 'error');
+            closeModal();
+          }
+        },
+        closeModal
+      );
+    } catch (error) {
+      console.error('Erreur lors de la lecture du fichier:', error);
+      showToast('Erreur lors de la lecture du fichier de sauvegarde', 'error');
+    }
+    
+    // Reset l'input file
+    event.target.value = '';
+  };
+
+  // Fonction pour sauvegarder les données actuelles
+  const backupCurrentData = async () => {
+    try {
+      const allItems = [...plats, ...boissons];
+      const backupData = {
+        timestamp: new Date().toISOString(),
+        plats: plats,
+        boissons: boissons,
+        totalItems: allItems.length
+      };
+      
+      const dataStr = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `backup-eatneo-${new Date().toISOString().split('T')[0]}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      
+      showToast('Sauvegarde créée avec succès !', 'success');
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      showToast('Erreur lors de la sauvegarde', 'error');
+    }
+  };
+
   // Fonction pour supprimer et re-uploader tous les items avec le champ masque
   const resetAndReuploadItems = async () => {
     showModal(
       "Confirmer le reset",
-      "Supprimer et re-uploader tous les items ? Cette action est irréversible.",
+      "⚠️ ATTENTION: Cette action supprimera TOUTES les données actuelles et les remplacera par les données par défaut. Voulez-vous d'abord créer une sauvegarde ?",
       "warning",
       async () => {
+        // Créer automatiquement une sauvegarde avant le reset
+        await backupCurrentData();
+        
+        // Attendre 1 seconde pour que la sauvegarde se termine
+        setTimeout(async () => {
     
     try {
       // Supprimer toutes les collections
@@ -265,15 +357,16 @@ export default function AdminPage({ userRole }: AdminPageProps) {
         addedItems.add(itemKey);
       }
       
-        showToast('Tous les items ont été re-uploadés avec normalisation !', 'success');
-        closeModal();
-      } catch (error) {
-        console.error('Erreur lors du reset:', error);
-        showToast('Erreur lors du reset', 'error');
-        closeModal();
-      }
-    },
-    closeModal
+          showToast('Tous les items ont été re-uploadés avec normalisation !', 'success');
+          closeModal();
+        } catch (error) {
+          console.error('Erreur lors du reset:', error);
+          showToast('Erreur lors du reset', 'error');
+          closeModal();
+        }
+        }, 1000); // Attendre 1 seconde
+      },
+      closeModal
     );
   };
 
@@ -1699,6 +1792,21 @@ export default function AdminPage({ userRole }: AdminPageProps) {
         >
           Mettre à jour les items
         </button>
+        <button
+          onClick={backupCurrentData}
+          className="action-button green"
+        >
+          Sauvegarder les données
+        </button>
+        <label className="action-button blue" style={{ cursor: 'pointer' }}>
+          Restaurer sauvegarde
+          <input
+            type="file"
+            accept=".json"
+            onChange={restoreFromBackup}
+            style={{ display: 'none' }}
+          />
+        </label>
         <button
           onClick={resetAndReuploadItems}
           className="action-button red"
