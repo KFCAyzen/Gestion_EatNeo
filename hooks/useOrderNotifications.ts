@@ -69,7 +69,7 @@ export function useOrderNotifications() {
   };
 
   const handleOrderStatusChange = async (order: Order) => {
-    const statusMessages = {
+    const statusMessages: Record<string, string> = {
       en_preparation: 'Commande en préparation',
       pret: 'Commande prête',
       livre: 'Commande livrée'
