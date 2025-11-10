@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { UploadIcon, MinusIcon, Spinner } from './Icons';
+import { findSimilarCategory, formatPrice } from './utils';
 
 interface PriceOption {
   label: string;
@@ -50,7 +51,11 @@ export const MenuForm = ({
   
   const updatePriceOption = (index: number, field: "label" | "value", val: string) => {
     const updated = [...prix];
-    updated[index][field] = val;
+    if (field === "value") {
+      updated[index][field] = val;
+    } else {
+      updated[index][field] = val;
+    }
     setPrix(updated);
   };
   

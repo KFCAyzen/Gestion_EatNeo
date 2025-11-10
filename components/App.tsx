@@ -9,6 +9,7 @@ import ProtectedAdminRoute from './ProtectedAdminRoute'
 import HistoriquePage from './HistoriquePage'
 import AdminLogin from './AdminLogin'
 import PWAInstaller from './PWAInstaller'
+import NotificationManager from './NotificationManager'
 import { useAuth } from '../hooks/useAuth'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
@@ -53,6 +54,8 @@ const BackIcon = () => (
 
 
 
+import MobileHeader from './MobileHeader'
+
 export default function AppContent() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -63,6 +66,17 @@ export default function AppContent() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [showScrollUp, setShowScrollUp] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+
+  const getPageTitle = () => {
+    switch (pathname) {
+      case '/admin': return 'Back Office'
+      case '/panier': return 'Panier'
+      case '/historique': return 'Historique'
+      case '/boissons': return 'Boissons'
+      case '/': return 'Plats'
+      default: return 'EAT NEO'
+    }
+  }
 
   useEffect(() => {
     const storedCart = localStorage.getItem("cart");
@@ -148,7 +162,28 @@ export default function AppContent() {
 
   return (
     <>
-      {/* HEADER */}
+      {/* MOBILE HEADER */}
+      <MobileHeader 
+        title={getPageTitle()}
+        showBackButton={pathname !== '/' && pathname !== '/boissons'}
+        onBack={() => {
+          if (pathname === '/admin') {
+            router.push('/')
+          } else {
+            router.back()
+          }
+        }}
+        showNotifications={true}
+        showAdmin={true}
+        user={user}
+        onAdminClick={() => user ? router.push('/admin') : setShowLogin(true)}
+        onLogout={() => {
+          logout()
+          router.push('/')
+        }}
+      />
+      
+      {/* DESKTOP HEADER */}
       <div className="title">
         {pathname === '/admin' ? (
           // Header mobile pour back office
@@ -191,14 +226,15 @@ export default function AppContent() {
               <h1>EAT NEO FAST FOOD</h1>
             </div>
             <div className="title-right">
-              {(pathname === '/' || pathname === '/boissons') && (
-                <button 
-                  onClick={() => user ? router.push('/admin') : setShowLogin(true)} 
-                  className="admin-link"
-                >
-                  <AdminIcon />
-                </button>
-              )}
+              <Link href="/notifications" className="notification-link">
+                <NotificationIcon />
+              </Link>
+              <button 
+                onClick={() => user ? router.push('/admin') : setShowLogin(true)} 
+                className="admin-link"
+              >
+                <AdminIcon />
+              </button>
               {user ? (
                 <>
                   <span className="user-name">{user.username}</span>
@@ -277,70 +313,71 @@ export default function AppContent() {
       {/* BOTTOM BAR */}
       <nav className="bottom-bar">
         <div className="menu">
-          <Link href="/" style={{ textDecoration: 'none', color: 'black' }}>
-            <Image
-              src={pathname === '/' ? images.food2 : images.food}
-              alt=""
-              width={30}
-              height={30}
-            />
+          <Link href="/boissons" style={{ textDecoration: 'none', color: 'black' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M6 2L8 6H16L18 2" stroke={pathname === '/boissons' ? "#2e7d32" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M8 6V18C8 19.1046 8.89543 20 10 20H14C15.1046 20 16 19.1046 16 18V6" stroke={pathname === '/boissons' ? "#2e7d32" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill={pathname === '/boissons' ? "rgba(46, 125, 50, 0.08)" : "none"}/>
+              <path d="M10 10C10 11.1046 10.8954 12 12 12C13.1046 12 14 11.1046 14 10" stroke={pathname === '/boissons' ? "#2e7d32" : "#666"} strokeWidth="1.5" strokeLinecap="round"/>
+              <circle cx="12" cy="22" r="1" fill={pathname === '/boissons' ? "#2e7d32" : "#999"}/>
+            </svg>
+            <span style={{ fontSize: '11px', fontWeight: pathname === '/boissons' ? '600' : '500', color: pathname === '/boissons' ? '#2e7d32' : '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Boissons</span>
           </Link>
         </div>
         <div className="menu">
-          <Link href="/boissons" style={{ textDecoration: 'none', color: 'black' }}>
-            <Image
-              className="bois"
-              src={pathname === '/boissons' ? images.glass1 : images.glass}
-              alt=""
-              width={30}
-              height={30}
-            />
+          <Link href="/" style={{ textDecoration: 'none', color: 'black' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="8" stroke={pathname === '/' ? "#2e7d32" : "#666"} strokeWidth="2" fill={pathname === '/' ? "rgba(46, 125, 50, 0.08)" : "none"}/>
+              <path d="M8 8L16 16M16 8L8 16" stroke={pathname === '/' ? "#2e7d32" : "#999"} strokeWidth="1.5" strokeLinecap="round"/>
+              <circle cx="12" cy="12" r="2" fill={pathname === '/' ? "#2e7d32" : "#999"}/>
+              <path d="M12 4V2M12 22V20M20 12H22M2 12H4" stroke={pathname === '/' ? "#2e7d32" : "#999"} strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            <span style={{ fontSize: '11px', fontWeight: pathname === '/' ? '600' : '500', color: pathname === '/' ? '#2e7d32' : '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Plats</span>
           </Link>
         </div>
         <div className="menu">
           <Link className="cartBtn" href="/panier">
-            <Image
-              src={pathname === '/panier' ? images.carts1 : images.carts}
-              alt="Panier"
-              width={30}
-              height={30}
-            />
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M3 7H5L5.4 9M7 16H17L21 7H5.4M7 16L5.4 9M7 16L4.7 18.3C4.3 18.7 4.6 19.5 5.1 19.5H17" stroke={pathname === '/panier' ? "#2e7d32" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M16 11V13" stroke={pathname === '/panier' ? "#2e7d32" : "#999"} strokeWidth="1.5" strokeLinecap="round"/>
+              <circle cx="9" cy="21" r="1" fill={pathname === '/panier' ? "#2e7d32" : "#666"}/>
+              <circle cx="17" cy="21" r="1" fill={pathname === '/panier' ? "#2e7d32" : "#666"}/>
+            </svg>
+            <span style={{ fontSize: '11px', fontWeight: pathname === '/panier' ? '600' : '500', color: pathname === '/panier' ? '#2e7d32' : '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Panier</span>
             <p>{cartItems.length}</p>
           </Link>
         </div>
 
       </nav>
 
-      {pathname !== '/panier' && pathname !== '/admin' && showScrollUp && (
+      {pathname !== '/panier' && showScrollUp && (
         <div
           style={{
             position: "fixed",
-            bottom: "70px",
+            bottom: "90px",
             right: "15px",
             display: "flex",
-            border: "none",
-            borderRadius: "20px",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "40px",
+            height: "40px",
+            backgroundColor: "#2e7d32",
+            borderRadius: "50%",
             cursor: "pointer",
             zIndex: 1000,
             opacity: 1,
             transition: "opacity 0.3s ease",
+            boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
           }}
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         >
-          <Image
-            src={images.up}
-            style={{
-              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-              borderRadius: '15px',
-            }}
-            alt=""
-            width={35}
-            height={35}
-          />
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M18 15L12 9L6 15" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </div>
       )}
       
       <PWAInstaller />
+      <NotificationManager />
     </>
   );
 }

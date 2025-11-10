@@ -3,32 +3,28 @@
 import { useRouter, usePathname } from 'next/navigation'
 
 // Icônes SVG pour la bottom bar
-const HomeIcon = ({ active = false }: { active?: boolean }) => (
+const BoissonsIcon = ({ active = false }: { active?: boolean }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M9 22V12H15V22" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M5 12V7C5 5.89543 5.89543 5 7 5H17C18.1046 5 19 5.89543 19 7V12" stroke={active ? "#2e7d32" : "#666"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M5 12C5 16.4183 8.58172 20 13 20H11C6.58172 20 3 16.4183 3 12V11H5V12Z" fill={active ? "rgba(46, 125, 50, 0.1)" : "none"} stroke={active ? "#2e7d32" : "#666"} strokeWidth="2.5"/>
+    <path d="M19 12C19 16.4183 15.4183 20 11 20H13C17.4183 20 21 16.4183 21 12V11H19V12Z" fill={active ? "rgba(46, 125, 50, 0.1)" : "none"} stroke={active ? "#2e7d32" : "#666"} strokeWidth="2.5"/>
+    <path d="M8 2L9 5M16 2L15 5" stroke={active ? "#2e7d32" : "#666"} strokeWidth="2.5" strokeLinecap="round"/>
   </svg>
 );
 
-const CartIcon = ({ active = false }: { active?: boolean }) => (
+const PlatsIcon = ({ active = false }: { active?: boolean }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <circle cx="8" cy="21" r="1" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <circle cx="19" cy="21" r="1" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M2.05 2.05H4L6.2 12.6C6.37245 13.3923 6.76768 14.1154 7.33677 14.6846C7.90586 15.2538 8.62797 15.6423 9.42 15.8L18 16C18.7923 15.9977 19.5154 15.6023 20.0846 15.0332C20.6538 14.4641 21.0423 13.742 21.25 12.95L22 8H5.12" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <circle cx="12" cy="12" r="9" stroke={active ? "#2e7d32" : "#666"} strokeWidth="2.5" fill={active ? "rgba(46, 125, 50, 0.1)" : "none"}/>
+    <path d="M12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3Z" stroke={active ? "#2e7d32" : "#666"} strokeWidth="2.5"/>
+    <path d="M8 12H16M12 8V16" stroke={active ? "#2e7d32" : "#666"} strokeWidth="2" strokeLinecap="round"/>
   </svg>
 );
 
-const UserIcon = ({ active = false }: { active?: boolean }) => (
+const PanierIcon = ({ active = false }: { active?: boolean }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <circle cx="12" cy="7" r="4" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const AdminIcon = ({ active = false }: { active?: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <path d="M12 15C16.4183 15 20 11.4183 20 7C20 2.58172 16.4183 -1 12 -1C7.58172 -1 4 2.58172 4 7C4 11.4183 7.58172 15 12 15Z" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M8.21 13.89L7 23L12 20L17 23L15.79 13.88" stroke={active ? "#FF6B35" : "#666"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V16.5" stroke={active ? "#2e7d32" : "#666"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill={active ? "rgba(46, 125, 50, 0.1)" : "none"}/>
+    <circle cx="9" cy="20" r="1" stroke={active ? "#2e7d32" : "#666"} strokeWidth="2.5" fill={active ? "#2e7d32" : "none"}/>
+    <circle cx="20" cy="20" r="1" stroke={active ? "#2e7d32" : "#666"} strokeWidth="2.5" fill={active ? "#2e7d32" : "none"}/>
   </svg>
 );
 
@@ -38,44 +34,27 @@ export default function BottomBar() {
 
   const navItems = [
     { 
-      icon: HomeIcon, 
-      label: 'Accueil', 
+      icon: BoissonsIcon, 
+      label: 'Boissons', 
+      path: '/boissons',
+      active: pathname === '/boissons'
+    },
+    { 
+      icon: PlatsIcon, 
+      label: 'Plats', 
       path: '/',
       active: pathname === '/'
     },
     { 
-      icon: CartIcon, 
-      label: 'Commande', 
-      path: '/commande',
-      active: pathname === '/commande'
-    },
-    { 
-      icon: UserIcon, 
-      label: 'Profil', 
-      path: '/profil',
-      active: pathname === '/profil'
-    },
-    { 
-      icon: AdminIcon, 
-      label: 'Admin', 
-      path: '/admin',
-      active: pathname === '/admin'
+      icon: PanierIcon, 
+      label: 'Panier', 
+      path: '/panier',
+      active: pathname === '/panier'
     }
   ]
 
   return (
-    <div style={{
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      background: 'rgba(255, 255, 255, 0.95)',
-      backdropFilter: 'blur(10px)',
-      borderTop: '1px solid rgba(0, 0, 0, 0.1)',
-      padding: '8px 0',
-      zIndex: 1000,
-      boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.1)'
-    }}>
+    <div className="bottom-bar">
       <div style={{
         display: 'flex',
         justifyContent: 'space-around',
@@ -101,7 +80,7 @@ export default function BottomBar() {
                 padding: '8px 12px',
                 borderRadius: '12px',
                 transition: 'all 0.3s ease',
-                backgroundColor: item.active ? 'rgba(255, 107, 53, 0.1)' : 'transparent'
+                backgroundColor: item.active ? 'rgba(46, 125, 50, 0.1)' : 'transparent'
               }}
               onMouseEnter={(e) => {
                 if (!item.active) {
@@ -118,7 +97,7 @@ export default function BottomBar() {
               <span style={{
                 fontSize: '11px',
                 fontWeight: item.active ? '600' : '500',
-                color: item.active ? '#FF6B35' : '#666',
+                color: item.active ? '#2e7d32' : '#666',
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px'
               }}>

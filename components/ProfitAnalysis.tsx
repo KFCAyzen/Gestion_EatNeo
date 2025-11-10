@@ -479,7 +479,7 @@ Fin du rapport - ${new Date().toLocaleDateString('fr-FR')}
               </div>
               <div className="card-content">
                 <h4>Revenus</h4>
-                <p className="amount">{formatCurrency(profitData.totalRevenue)}</p>
+                <p className="amount" style={{ fontSize: 'clamp(1.2rem, 4vw, 1.8rem)' }}>{formatCurrency(profitData.totalRevenue)}</p>
                 <p className="details">{profitData.ordersCount} commande{profitData.ordersCount > 1 ? 's' : ''} livrée{profitData.ordersCount > 1 ? 's' : ''}</p>
                 <p className="sub-details">Moyenne: {formatCurrency(profitData.ordersCount > 0 ? profitData.totalRevenue / profitData.ordersCount : 0)}/commande</p>
               </div>
@@ -491,7 +491,7 @@ Fin du rapport - ${new Date().toLocaleDateString('fr-FR')}
               </div>
               <div className="card-content">
                 <h4>Dépenses</h4>
-                <p className="amount">{formatCurrency(profitData.totalExpenses)}</p>
+                <p className="amount" style={{ fontSize: 'clamp(1.2rem, 4vw, 1.8rem)' }}>{formatCurrency(profitData.totalExpenses)}</p>
                 <p className="details">{profitData.expensesCount} dépense{profitData.expensesCount > 1 ? 's' : ''} enregistrée{profitData.expensesCount > 1 ? 's' : ''}</p>
                 <p className="sub-details">Moyenne: {formatCurrency(profitData.expensesCount > 0 ? profitData.totalExpenses / profitData.expensesCount : 0)}/dépense</p>
               </div>
@@ -503,7 +503,7 @@ Fin du rapport - ${new Date().toLocaleDateString('fr-FR')}
               </div>
               <div className="card-content">
                 <h4>Bénéfice Net</h4>
-                <p className="amount">{formatCurrency(profitData.profit)}</p>
+                <p className="amount" style={{ fontSize: 'clamp(1.2rem, 4vw, 1.8rem)' }}>{formatCurrency(profitData.profit)}</p>
                 <p className="details">Marge: {profitData.profitMargin.toFixed(1)}%</p>
                 <p className="sub-details">{profitData.ordersCount > 0 ? formatCurrency(profitData.profit / profitData.ordersCount) : '0 FCFA'}/commande</p>
               </div>

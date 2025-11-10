@@ -19,6 +19,7 @@ import ProfitAnalysis from './ProfitAnalysis';
 import { LoadingSpinner, SearchIcon, EditIcon, DeleteIcon, EyeIcon, EyeOffIcon, PlusIcon, MinusIcon, HistoryIcon } from './Icons';
 import '@/styles/AdminPage.css'
 import { menuItems, drinksItems } from "./types";
+import { findSimilarCategory, formatPrice } from './utils';
 
 
 
@@ -200,22 +201,55 @@ export default function AdminPage({ userRole }: AdminPageProps) {
         }
       }
       
-      // Re-uploader les items avec le champ masque
+      // Collecter toutes les catégories existantes pour normalisation
+      const existingCategories: string[] = [];
+      
+      // Re-uploader les items avec normalisation
       for (const item of menuItems) {
+        const similarCategory = findSimilarCategory(item.filtre?.[0] || '', existingCategories);
+        const finalCategory = similarCategory || item.filtre?.[0] || '';
+        if (!existingCategories.includes(finalCategory)) {
+          existingCategories.push(finalCategory);
+        }
+        
+        const formattedPrix = typeof item.prix === 'string' 
+          ? formatPrice(item.prix)
+          : Array.isArray(item.prix) 
+            ? item.prix.map(p => ({ ...p, value: formatPrice(p.value) }))
+            : item.prix;
+        
         await addDoc(collection(db, 'Plats'), {
           ...item,
+          prix: formattedPrix,
+          catégorie: [finalCategory],
+          filtre: [finalCategory],
           masque: false
         });
       }
       
       for (const item of drinksItems) {
+        const similarCategory = findSimilarCategory(item.filtre?.[0] || '', existingCategories);
+        const finalCategory = similarCategory || item.filtre?.[0] || '';
+        if (!existingCategories.includes(finalCategory)) {
+          existingCategories.push(finalCategory);
+        }
+        
+        const formattedPrix = typeof item.prix === 'string' 
+          ? formatPrice(item.prix)
+          : Array.isArray(item.prix) 
+            ? item.prix.map(p => ({ ...p, value: formatPrice(p.value) }))
+            : item.prix;
+        
         await addDoc(collection(db, 'Boissons'), {
           ...item,
+          prix: formattedPrix,
+          catégorie: [finalCategory],
+          filtre: [finalCategory],
           masque: false
         });
       }
       
-        showToast('Tous les items ont été re-uploadés avec succès !', 'success');
+        showToast('Tous les items ont été re-uploadés avec normalisation !', 'success');
         closeModal();
       } catch (error) {
         console.error('Erreur lors du reset:', error);
@@ -231,7 +265,20 @@ export default function AdminPage({ userRole }: AdminPageProps) {
   const migrateExistingItems = async () => {
     try {
       const collections = ['Plats', 'Boissons'];
+      const existingCategories: string[] = [];
       
+      // Première passe : collecter toutes les catégories
+      for (const collectionName of collections) {
+        const snapshot = await getDocs(collection(db, collectionName));
+        for (const docSnapshot of snapshot.docs) {
+          const data = docSnapshot.data();
+          if (data.filtre?.[0] && !existingCategories.includes(data.filtre[0])) {
+            existingCategories.push(data.filtre[0]);
+          }
+        }
+      }
+      
+      // Deuxième passe : normaliser et mettre à jour
       for (const collectionName of collections) {
         const snapshot = await getDocs(collection(db, collectionName));
         
@@ -244,7 +291,29 @@ export default function AdminPage({ userRole }: AdminPageProps) {
           }
           
           if (data.stock === undefined) {
-            updates.stock = 10; // Stock initial par défaut
+            updates.stock = 10;
+          }
+          
+          // Normaliser la catégorie
+          if (data.filtre?.[0]) {
+            const similarCategory = findSimilarCategory(data.filtre[0], existingCategories);
+            if (similarCategory && similarCategory !== data.filtre[0]) {
+              updates.filtre = [similarCategory];
+              updates.catégorie = [similarCategory];
+            }
+          }
+          
+          // Formater le prix
+          if (data.prix) {
+            const formattedPrix = typeof data.prix === 'string' 
+              ? formatPrice(data.prix)
+              : Array.isArray(data.prix) 
+                ? data.prix.map((p: any) => ({ ...p, value: formatPrice(p.value) }))
+                : data.prix;
+            
+            if (JSON.stringify(formattedPrix) !== JSON.stringify(data.prix)) {
+              updates.prix = formattedPrix;
+            }
           }
           
           if (Object.keys(updates).length > 0) {
@@ -253,7 +322,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
         }
       }
       
-      console.log('Migration terminée: champs masque et stock ajoutés aux items existants');
+      console.log('Migration terminée: normalisation appliquée aux items existants');
     } catch (error) {
       console.error('Erreur lors de la migration:', error);
     }
@@ -373,9 +442,23 @@ export default function AdminPage({ userRole }: AdminPageProps) {
         return alert("Merci de renseigner une description pour les plats !");
       }
 
-      // Si une seule option avec label vide → stocker juste la valeur
-      const prixField: string | PriceOption[] =
-        prix.length === 1 && prix[0].label === "" ? prix[0].value : prix;
+      // Normalisation de la catégorie
+      let finalFiltre = filtre;
+      if (!editId) {
+        const existingCategories = [...plats, ...boissons]
+          .map(item => item.filtre?.[0])
+          .filter(Boolean) as string[];
+        
+        const similarCategory = findSimilarCategory(filtre, existingCategories);
+        if (similarCategory) {
+          finalFiltre = similarCategory;
+        }
+      }
+
+      // Formatage des prix
+      const prixField: string | PriceOption[] = prix.length === 1 && prix[0].label === "" 
+        ? formatPrice(prix[0].value)
+        : prix.map(p => ({ ...p, value: formatPrice(p.value) }));
 
       if (editId) {
         await setDoc(
@@ -384,8 +467,8 @@ export default function AdminPage({ userRole }: AdminPageProps) {
             nom,
             description,
             prix: prixField,
-            catégorie: [filtre],
-            filtre: [filtre], // Enregistrement du filtre comme tableau
+            catégorie: [finalFiltre],
+            filtre: [finalFiltre],
             image: imageUrl,
             masque: false, // Assurer que le champ masque existe
           },
@@ -396,8 +479,8 @@ export default function AdminPage({ userRole }: AdminPageProps) {
           nom,
           description,
           prix: prixField,
-          catégorie: [filtre],
-          filtre: [filtre], // Enregistrement du filtre comme tableau
+          catégorie: [finalFiltre],
+          filtre: [finalFiltre],
           image: imageUrl,
           masque: false, // Nouveau champ pour tous les nouveaux items
           stock: 10, // Stock initial par défaut

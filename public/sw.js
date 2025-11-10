@@ -22,3 +22,27 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
+
+// Gestion des notifications push
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.openWindow('/notifications')
+  );
+});
+
+self.addEventListener('push', (event) => {
+  if (event.data) {
+    const data = event.data.json();
+    const options = {
+      body: data.body,
+      icon: '/logo.jpg',
+      badge: '/logo.jpg',
+      tag: 'eat-neo-notification',
+      data: data.data || {}
+    };
+    event.waitUntil(
+      self.registration.showNotification(data.title, options)
+    );
+  }
+});
