@@ -8,21 +8,25 @@ export default function SplashScreen() {
   const [logoLoaded, setLogoLoaded] = useState(false)
 
   useEffect(() => {
-    // Précharger le logo pour le cache
-    const preloadLogo = () => {
+    // Vérifier si c'est vraiment le premier lancement
+    const hasShownSplash = localStorage.getItem('appStarted')
+    const sessionStarted = sessionStorage.getItem('sessionStarted')
+    const isInitialLoad = !window.performance || window.performance.navigation.type === 0
+    
+    // Ne montrer le splash que si :
+    // 1. C'est le premier démarrage de l'app (localStorage)
+    // 2. C'est un chargement initial (pas une navigation)
+    // 3. Ce n'est pas déjà fait dans cette session
+    if (!hasShownSplash && isInitialLoad && !sessionStarted) {
+      // Précharger le logo
       const img = new Image()
       img.onload = () => setLogoLoaded(true)
-      img.onerror = () => setLogoLoaded(true) // Continuer même en cas d'erreur
+      img.onerror = () => setLogoLoaded(true)
       img.src = '/logo.jpg'
-    }
-
-    // Vérifier si c'est le premier démarrage de l'app
-    const hasShownSplash = localStorage.getItem('appStarted')
-    
-    if (!hasShownSplash) {
-      preloadLogo()
+      
       setIsVisible(true)
       localStorage.setItem('appStarted', 'true')
+      sessionStorage.setItem('sessionStarted', 'true')
       
       const timer = setTimeout(() => {
         setIsVisible(false)
