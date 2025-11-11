@@ -85,6 +85,9 @@ export default function MobileHeader({ title, showBackButton = true, onBack, sho
   const handleMenuAction = (action: string) => {
     setShowMenu(false)
     switch (action) {
+      case 'refresh':
+        window.location.reload()
+        break
       case 'notifications':
         router.push('/notifications')
         break
@@ -117,6 +120,7 @@ export default function MobileHeader({ title, showBackButton = true, onBack, sho
             </button>
             {showMenu && (
               <div className="mobile-dropdown">
+                <button onClick={() => handleMenuAction('refresh')}>Actualiser</button>
                 <button onClick={() => handleMenuAction('notifications')}>Notifications</button>
                 <button onClick={() => handleMenuAction('admin')}>Administration</button>
                 {user && (

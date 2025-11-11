@@ -79,14 +79,17 @@ const BackIcon = () => (
 
 
 import MobileHeader from './MobileHeader'
+import UniversalHeader from './UniversalHeader'
 import BottomBar from './BottomBar'
 import DesktopMenu from './DesktopMenu'
+import { usePWADetection } from '../hooks/usePWADetection'
 
 export default function AppContent() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const router = useRouter()
   const { user, login, logout, isAdmin } = useAuth()
+  const { isPWADesktop } = usePWADetection()
   const [cartItems, setCartItems] = useState<MenuItem[]>([]);
   const [table, setTable] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -199,26 +202,46 @@ export default function AppContent() {
 
   return (
     <>
-      {/* MOBILE HEADER */}
-      <MobileHeader 
-        title={getPageTitle()}
-        showBackButton={pathname !== '/' && pathname !== '/boissons'}
-        onBack={() => {
-          if (pathname === '/admin') {
+      {/* CONDITIONAL HEADERS */}
+      {isPWADesktop ? (
+        <UniversalHeader 
+          title={getPageTitle()}
+          showBackButton={pathname !== '/' && pathname !== '/boissons'}
+          onBack={() => {
+            if (pathname === '/admin') {
+              router.push('/')
+            } else {
+              router.back()
+            }
+          }}
+          user={user}
+          onAdminClick={() => user ? router.push('/admin') : setShowLogin(true)}
+          onLogout={() => {
+            logout()
             router.push('/')
-          } else {
-            router.back()
-          }
-        }}
-        showNotifications={true}
-        showAdmin={true}
-        user={user}
-        onAdminClick={() => user ? router.push('/admin') : setShowLogin(true)}
-        onLogout={() => {
-          logout()
-          router.push('/')
-        }}
-      />
+          }}
+        />
+      ) : (
+        <MobileHeader 
+          title={getPageTitle()}
+          showBackButton={pathname !== '/' && pathname !== '/boissons'}
+          onBack={() => {
+            if (pathname === '/admin') {
+              router.push('/')
+            } else {
+              router.back()
+            }
+          }}
+          showNotifications={true}
+          showAdmin={true}
+          user={user}
+          onAdminClick={() => user ? router.push('/admin') : setShowLogin(true)}
+          onLogout={() => {
+            logout()
+            router.push('/')
+          }}
+        />
+      )}
       
       {/* DESKTOP HEADER */}
       <div className="title">

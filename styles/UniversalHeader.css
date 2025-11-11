@@ -1,0 +1,147 @@
+.universal-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  z-index: 1000;
+  transition: transform 0.3s ease;
+  display: none;
+}
+
+/* Afficher seulement sur PWA desktop */
+@media (display-mode: standalone) and (min-width: 769px) {
+  .universal-header {
+    display: block;
+  }
+}
+
+.universal-header.hidden {
+  transform: translateY(-100%);
+}
+
+.universal-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  padding: 0 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.universal-back-btn {
+  background: none;
+  border: none;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.universal-back-btn:hover {
+  background-color: rgba(255,255,255,0.1);
+}
+
+.universal-header-title {
+  color: white;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+  text-align: center;
+}
+
+.universal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.universal-menu-container {
+  position: relative;
+}
+
+.universal-menu-btn {
+  background: none;
+  border: none;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.universal-menu-btn:hover {
+  background-color: rgba(255,255,255,0.1);
+}
+
+.universal-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  min-width: 180px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.universal-dropdown button {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  color: #333;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.universal-dropdown button:hover {
+  background-color: #f5f5f5;
+}
+
+.universal-dropdown button:first-child {
+  border-top: none;
+}
+
+.universal-dropdown button + button {
+  border-top: 1px solid #eee;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .universal-header-content {
+    padding: 0 12px;
+  }
+  
+  .universal-header-title {
+    font-size: 18px;
+  }
+}
+
+/* Desktop specific */
+@media (min-width: 769px) {
+  .universal-header {
+    -webkit-app-region: drag;
+  }
+  
+  .universal-back-btn,
+  .universal-menu-btn,
+  .universal-dropdown button {
+    -webkit-app-region: no-drag;
+  }
+}

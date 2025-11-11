@@ -49,6 +49,17 @@ html, body {
   box-sizing: border-box;
  }
 
+ /* Masquer le header desktop pour PWA desktop */
+ @media (display-mode: standalone) and (min-width: 769px) {
+  .title {
+    display: none !important;
+  }
+  
+  .app {
+    padding-top: 70px !important;
+  }
+ }
+
  @media (max-width: 768px) {
   .title {
     margin-bottom: 80px;

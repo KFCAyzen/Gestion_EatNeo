@@ -5,6 +5,7 @@ import SplashScreen from '@/components/SplashScreen'
 import '@/styles/index.css'
 import '@/styles/App.css'
 import '@/styles/SplashScreen.css'
+import '@/styles/UniversalHeader.css'
 
 export { metadata }
 
