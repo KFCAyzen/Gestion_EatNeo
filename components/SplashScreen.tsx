@@ -39,18 +39,21 @@ export default function SplashScreen() {
   if (!isVisible) return null
 
   return (
-    <div className="splash-screen">
-      <div className="splash-content">
-        <img 
-          src="/logo.jpg" 
-          alt="Eat Neo" 
-          className="splash-logo"
-        />
-        <h1 className="splash-title">Eat Neo</h1>
-        <div className="splash-loader">
-          <div className="loader-dot"></div>
-          <div className="loader-dot"></div>
-          <div className="loader-dot"></div>
+    <div className="splash-screen-whatsapp">
+      <div className="splash-content-whatsapp">
+        <div className="splash-main">
+          <img 
+            src="/logo.jpg" 
+            alt="Eat Neo" 
+            className="splash-logo-whatsapp"
+          />
+          <h1 className="splash-title-whatsapp">EAT NEO</h1>
+          <p className="splash-subtitle">Fast Food</p>
+        </div>
+        
+        <div className="splash-footer">
+          <div className="splash-spinner"></div>
+          <p className="splash-footer-text">de EAT NEO FAST FOOD</p>
         </div>
       </div>
     </div>

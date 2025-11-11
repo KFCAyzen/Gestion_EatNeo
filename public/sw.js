@@ -1,7 +1,7 @@
-const CACHE_NAME = 'eatneo-v2.0';
-const STATIC_CACHE = 'eatneo-static-v2.0';
-const DYNAMIC_CACHE = 'eatneo-dynamic-v2.0';
-const OFFLINE_CACHE = 'eatneo-offline-v2.0';
+const CACHE_NAME = 'eatneo-v2.1';
+const STATIC_CACHE = 'eatneo-static-v2.1';
+const DYNAMIC_CACHE = 'eatneo-dynamic-v2.1';
+const OFFLINE_CACHE = 'eatneo-offline-v2.1';
 
 const CORE_ASSETS = [
   '/',

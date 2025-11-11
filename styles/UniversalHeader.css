@@ -32,6 +32,24 @@
   margin: 0 auto;
 }
 
+.universal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.universal-logo {
+  display: flex;
+  align-items: center;
+}
+
+.universal-logo img {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
 .universal-back-btn {
   background: rgba(255,255,255,0.15);
   border: 1px solid rgba(255,255,255,0.2);
