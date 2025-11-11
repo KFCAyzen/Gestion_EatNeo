@@ -1266,12 +1266,26 @@
 }
 
 .search-input-styled {
-  padding-left: 40px;
+  padding: 10px 12px 10px 40px;
   width: 100%;
-  padding: 10px;
   border: 1px solid #ddd;
   border-radius: 6px;
   font-size: 14px;
+}
+
+.search-input-styled::placeholder {
+  padding-left: 28px;
+}
+
+.search-input-styled:focus,
+.search-input-styled:not(:placeholder-shown) {
+  padding-left: 12px;
+}
+
+.search-input-styled:not(:placeholder-shown) + .search-icon-container,
+.search-input-styled:focus + .search-icon-container {
+  opacity: 0;
+  visibility: hidden;
 }
 
 .search-icon-container {
@@ -1459,17 +1473,26 @@
 }
 
 .search-input-with-icon {
-  padding-left: 40px;
+  padding: 10px 12px 10px 40px;
   width: 100%;
-  padding: 10px;
   border: 1px solid #ddd;
   border-radius: 6px;
   font-size: 14px;
 }
 
-.search-input-with-icon:not(:placeholder-shown) + .search-icon-absolute {
+.search-input-with-icon::placeholder {
+  padding-left: 28px;
+}
+
+.search-input-with-icon:not(:placeholder-shown) + .search-icon-absolute,
+.search-input-with-icon:focus + .search-icon-absolute {
   opacity: 0;
   visibility: hidden;
+}
+
+.search-input-with-icon:focus,
+.search-input-with-icon:not(:placeholder-shown) {
+  padding-left: 12px;
 }
 
 .search-icon-absolute {
@@ -1480,6 +1503,7 @@
   pointer-events: none;
   transition: opacity 0.2s ease, visibility 0.2s ease;
   opacity: 0.6;
+  z-index: 1;
 }
 
 .action-button {

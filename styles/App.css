@@ -51,7 +51,7 @@ html, body {
 
  @media (max-width: 768px) {
   .title {
-    margin-bottom: 40px;
+    margin-bottom: 80px;
   }
  }
  .title-left {
@@ -1546,6 +1546,11 @@ footer{
     left: 0 !important;
     right: 0 !important;
     z-index: 1001 !important;
+    transition: transform 0.3s ease !important;
+  }
+  
+  .mobile-header.hidden {
+    transform: translateY(-100%) !important;
   }
   
   .title {
@@ -1561,12 +1566,12 @@ footer{
   }
   
   .app {
-    padding-top: 56px !important;
+    padding-top: 100px !important;
   }
   
   .search-container {
-    margin-top: 10px !important;
-    padding-top: 10px !important;
+    margin-top: 30px !important;
+    padding-top: 30px !important;
   }
 }
 
@@ -1677,5 +1682,15 @@ footer{
 @media (max-width: 1024px) {
   .desktop-menu-container {
     display: none !important;
+  }
+}
+/* Espacement spécifique pour le back-office sur mobile */
+@media (max-width: 768px) {
+  .admin-container {
+    padding-top: 40px !important;
+  }
+  
+  .admin-tabs {
+    margin-top: 40px !important;
   }
 }

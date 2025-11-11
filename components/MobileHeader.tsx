@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const BackIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -44,6 +44,35 @@ const LogoutIcon = () => (
 export default function MobileHeader({ title, showBackButton = true, onBack, showNotifications, showAdmin, user, onAdminClick, onLogout }: MobileHeaderProps) {
   const router = useRouter()
   const [showMenu, setShowMenu] = useState(false)
+  const [isHidden, setIsHidden] = useState(false)
+  const [lastScrollY, setLastScrollY] = useState(0)
+  const [scrollTimeout, setScrollTimeout] = useState<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+      
+      // Masquer pendant le scroll
+      if (Math.abs(currentScrollY - lastScrollY) > 5) {
+        setIsHidden(true)
+      }
+      
+      // Réapparaître après arrêt du scroll
+      if (scrollTimeout) clearTimeout(scrollTimeout)
+      const timeout = setTimeout(() => {
+        setIsHidden(false)
+      }, 150)
+      setScrollTimeout(timeout)
+      
+      setLastScrollY(currentScrollY)
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      if (scrollTimeout) clearTimeout(scrollTimeout)
+    }
+  }, [lastScrollY, scrollTimeout])
 
   const handleBack = () => {
     if (onBack) {
@@ -69,7 +98,7 @@ export default function MobileHeader({ title, showBackButton = true, onBack, sho
   }
 
   return (
-    <div className="mobile-header">
+    <div className={`mobile-header ${isHidden ? 'hidden' : ''}`}>
       <div className="mobile-header-content">
         {showBackButton && (
           <button className="mobile-back-btn" onClick={handleBack}>

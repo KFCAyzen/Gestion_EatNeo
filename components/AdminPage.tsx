@@ -1802,21 +1802,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
             <SearchIcon />
           </div>
         </div>
-        <button
-          onClick={backupCurrentData}
-          className="action-button green"
-        >
-          Sauvegarder les données
-        </button>
-        <label className="action-button blue" style={{ cursor: 'pointer' }}>
-          Restaurer sauvegarde
-          <input
-            type="file"
-            accept=".json"
-            onChange={restoreFromBackup}
-            style={{ display: 'none' }}
-          />
-        </label>
+
       </div>
 
       {/* Debug info */}
