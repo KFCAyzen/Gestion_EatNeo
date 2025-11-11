@@ -56,7 +56,15 @@ html, body {
   }
   
   .app {
-    padding-top: 70px !important;
+    padding-top: 54px !important;
+  }
+  
+  .admin-container {
+    padding-top: 60px !important;
+  }
+  
+  .admin-tabs {
+    margin-top: 10px !important;
   }
  }
 

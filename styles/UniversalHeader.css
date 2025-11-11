@@ -3,9 +3,9 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 60px;
+  height: 44px;
   background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
   z-index: 1000;
   transition: transform 0.3s ease;
   display: none;
@@ -33,28 +33,40 @@
 }
 
 .universal-back-btn {
-  background: none;
-  border: none;
-  padding: 8px;
-  border-radius: 8px;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 6px 10px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 36px;
+  height: 32px;
 }
 
 .universal-back-btn:hover {
-  background-color: rgba(255,255,255,0.1);
+  background-color: rgba(255,255,255,0.25);
+  border-color: rgba(255,255,255,0.4);
+  transform: translateY(-1px);
 }
 
 .universal-header-title {
   color: white;
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 600;
   margin: 0;
   flex: 1;
   text-align: center;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* Masquer le titre sur PWA desktop */
+@media (display-mode: standalone) and (min-width: 769px) {
+  .universal-header-title {
+    display: none;
+  }
 }
 
 .universal-header-actions {
@@ -68,19 +80,23 @@
 }
 
 .universal-menu-btn {
-  background: none;
-  border: none;
-  padding: 8px;
-  border-radius: 8px;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 6px 10px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 36px;
+  height: 32px;
 }
 
 .universal-menu-btn:hover {
-  background-color: rgba(255,255,255,0.1);
+  background-color: rgba(255,255,255,0.25);
+  border-color: rgba(255,255,255,0.4);
+  transform: translateY(-1px);
 }
 
 .universal-dropdown {
@@ -88,30 +104,34 @@
   top: 100%;
   right: 0;
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
   min-width: 180px;
   overflow: hidden;
-  margin-top: 8px;
+  margin-top: 6px;
+  border: 1px solid rgba(0,0,0,0.1);
 }
 
 .universal-dropdown button {
   width: 100%;
-  padding: 12px 16px;
+  padding: 10px 16px;
   border: none;
   background: none;
   text-align: left;
   cursor: pointer;
-  transition: background-color 0.2s;
-  color: #333;
+  transition: all 0.2s;
+  color: #2e7d32;
   font-size: 14px;
+  font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .universal-dropdown button:hover {
-  background-color: #f5f5f5;
+  background-color: rgba(46, 125, 50, 0.08);
+  color: #1b5e20;
+  transform: translateX(2px);
 }
 
 .universal-dropdown button:first-child {
