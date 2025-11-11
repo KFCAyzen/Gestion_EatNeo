@@ -10,8 +10,17 @@ interface BeforeInstallPromptEvent extends Event {
 export default function PWAInstaller() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showInstallButton, setShowInstallButton] = useState(false)
+  const [isPWA, setIsPWA] = useState(false)
 
   useEffect(() => {
+    // Détecter si l'app est déjà installée (PWA)
+    const checkPWA = () => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+      setIsPWA(isStandalone)
+    }
+    
+    checkPWA()
+    
     const handler = (e: Event) => {
       e.preventDefault()
       setDeferredPrompt(e as BeforeInstallPromptEvent)
@@ -42,7 +51,8 @@ export default function PWAInstaller() {
     }
   }
 
-  if (!showInstallButton) return null
+  // Ne pas afficher le bouton si l'app est déjà installée (PWA)
+  if (!showInstallButton || isPWA) return null
 
   return (
     <div style={{

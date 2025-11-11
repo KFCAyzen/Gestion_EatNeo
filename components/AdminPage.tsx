@@ -1754,7 +1754,12 @@ export default function AdminPage({ userRole }: AdminPageProps) {
 
   return (
     <div className="admin-container">
-      <h1>Back Office - Administration</h1>
+      <div className="admin-header">
+        <div className="admin-logo-container">
+          <img src="/logo.png" alt="EAT NEO" className="admin-logo" />
+        </div>
+        <h1 className="admin-title">Back Office - Administration</h1>
+      </div>
       
       {/* Onglets */}
       <AdminTabs 

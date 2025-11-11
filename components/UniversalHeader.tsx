@@ -5,14 +5,14 @@ import { useState, useEffect } from 'react'
 
 const BackIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <path d="M15 18L9 12L15 6" stroke="#2e7d32" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M15 18L9 12L15 6" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 )
 
 const RefreshIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <path d="M3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21C9.61386 21 7.50201 19.8924 6.12132 18.1213" stroke="#2e7d32" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M3 16V12H7" stroke="#2e7d32" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21C9.61386 21 7.50201 19.8924 6.12132 18.1213" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M3 16V12H7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 )
 
@@ -90,9 +90,9 @@ export default function UniversalHeader({ title, showBackButton = true, onBack, 
           <div className="universal-menu-container">
             <button className="universal-menu-btn" onClick={() => setShowMenu(!showMenu)}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="5" r="1" fill="#2e7d32"/>
-                <circle cx="12" cy="12" r="1" fill="#2e7d32"/>
-                <circle cx="12" cy="19" r="1" fill="#2e7d32"/>
+                <circle cx="12" cy="5" r="1" fill="white"/>
+                <circle cx="12" cy="12" r="1" fill="white"/>
+                <circle cx="12" cy="19" r="1" fill="white"/>
               </svg>
             </button>
             {showMenu && (

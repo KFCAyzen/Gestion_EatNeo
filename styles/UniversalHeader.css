@@ -16,6 +16,10 @@
   .universal-header {
     display: block;
   }
+  
+  body {
+    padding-top: 44px;
+  }
 }
 
 .universal-header.hidden {
@@ -32,23 +36,7 @@
   margin: 0 auto;
 }
 
-.universal-header-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
 
-.universal-logo {
-  display: flex;
-  align-items: center;
-}
-
-.universal-logo img {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  object-fit: cover;
-}
 
 .universal-back-btn {
   background: rgba(255,255,255,0.15);
@@ -144,6 +132,10 @@
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.universal-dropdown button svg {
+  stroke: #2e7d32;
 }
 
 .universal-dropdown button:hover {

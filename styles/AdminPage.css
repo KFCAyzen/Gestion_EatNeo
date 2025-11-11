@@ -10,6 +10,51 @@
   color: #2c3e50;
 }
 
+/* ====== HEADER ADMIN ====== */
+.admin-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.admin-logo-container {
+  display: flex;
+  align-items: center;
+}
+
+.admin-logo {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.admin-title {
+  text-align: left;
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0;
+  color: #2c3e50;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background: linear-gradient(135deg, #FF6B35, #F7931E);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Masquer le titre et logo sur les versions natives PWA */
+@media (display-mode: standalone) {
+  .admin-title {
+    display: none;
+  }
+  
+  .admin-logo-container {
+    display: none;
+  }
+}
+
 /* TITRES */
 .admin-container h1 {
   text-align: center;
