@@ -13,6 +13,7 @@ export default function OfflinePreloader({ children }: OfflinePreloaderProps) {
   const [showLoader, setShowLoader] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [isFirstLaunch, setIsFirstLaunch] = useState(false)
+  const [installProgress, setInstallProgress] = useState({ completed: 0, total: 0 })
 
   useEffect(() => {
     const checkFirstLaunch = () => {
@@ -26,8 +27,30 @@ export default function OfflinePreloader({ children }: OfflinePreloaderProps) {
       }
     }
 
+    // Écouter les messages du service worker
+    const handleSWMessage = (event: MessageEvent) => {
+      const { type, completed, total } = event.data
+      
+      if (type === 'INSTALL_START') {
+        setInstallProgress({ completed: 0, total })
+      } else if (type === 'INSTALL_PROGRESS') {
+        setInstallProgress({ completed, total })
+      } else if (type === 'INSTALL_COMPLETE') {
+        setTimeout(() => {
+          if (isFirstLaunch) {
+            handleLoaderComplete()
+          }
+        }, 1000)
+      }
+    }
+
+    navigator.serviceWorker?.addEventListener('message', handleSWMessage)
     checkFirstLaunch()
-  }, [])
+
+    return () => {
+      navigator.serviceWorker?.removeEventListener('message', handleSWMessage)
+    }
+  }, [isFirstLaunch])
 
   const handleLoaderComplete = () => {
     setShowLoader(false)
@@ -41,7 +64,7 @@ export default function OfflinePreloader({ children }: OfflinePreloaderProps) {
   }
 
   if (showLoader) {
-    return <OfflineLoader onComplete={handleLoaderComplete} />
+    return <OfflineLoader onComplete={handleLoaderComplete} progress={installProgress} />
   }
 
   if (showModal) {

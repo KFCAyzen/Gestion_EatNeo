@@ -4,59 +4,78 @@ import { useState, useEffect } from 'react'
 
 interface OfflineLoaderProps {
   onComplete: () => void
+  progress?: { completed: number; total: number }
 }
 
-export default function OfflineLoader({ onComplete }: OfflineLoaderProps) {
+export default function OfflineLoader({ onComplete, progress: swProgress }: OfflineLoaderProps) {
   const [progress, setProgress] = useState(0)
   const [currentTask, setCurrentTask] = useState('Initialisation...')
   const [isComplete, setIsComplete] = useState(false)
 
   useEffect(() => {
-    const tasks = [
-      { name: 'Chargement des scripts...', duration: 800 },
-      { name: 'Mise en cache des images...', duration: 1200 },
-      { name: 'Préparation des données...', duration: 600 },
-      { name: 'Configuration offline...', duration: 400 }
-    ]
-
-    let currentProgress = 0
-    let taskIndex = 0
-
-    const runTasks = () => {
-      if (taskIndex < tasks.length) {
-        const task = tasks[taskIndex]
-        setCurrentTask(task.name)
-        
-        const increment = 100 / tasks.length
-        const steps = 20
-        const stepDuration = task.duration / steps
-        
-        let step = 0
-        const interval = setInterval(() => {
-          step++
-          const taskProgress = (step / steps) * increment
-          setProgress(currentProgress + taskProgress)
-          
-          if (step >= steps) {
-            clearInterval(interval)
-            currentProgress += increment
-            taskIndex++
-            setTimeout(runTasks, 100)
-          }
-        }, stepDuration)
-      } else {
+    if (swProgress && swProgress.total > 0) {
+      // Utiliser les données réelles du service worker
+      const realProgress = (swProgress.completed / swProgress.total) * 100
+      setProgress(realProgress)
+      
+      if (swProgress.completed === 0) {
+        setCurrentTask('Téléchargement des ressources...')
+      } else if (realProgress < 50) {
+        setCurrentTask(`Mise en cache... (${swProgress.completed}/${swProgress.total})`)
+      } else if (realProgress < 90) {
+        setCurrentTask(`Finalisation... (${swProgress.completed}/${swProgress.total})`)
+      } else if (realProgress >= 100) {
         setCurrentTask('Prêt pour utilisation offline!')
-        setProgress(100)
-        setTimeout(() => {
-          setIsComplete(true)
-          setTimeout(onComplete, 500)
-        }, 800)
+        setIsComplete(true)
       }
-    }
+    } else {
+      // Fallback avec simulation si pas de données SW
+      const tasks = [
+        { name: 'Chargement des scripts...', duration: 800 },
+        { name: 'Mise en cache des images...', duration: 1200 },
+        { name: 'Préparation des données...', duration: 600 },
+        { name: 'Configuration offline...', duration: 400 }
+      ]
 
-    const timer = setTimeout(runTasks, 500)
-    return () => clearTimeout(timer)
-  }, [onComplete])
+      let currentProgress = 0
+      let taskIndex = 0
+
+      const runTasks = () => {
+        if (taskIndex < tasks.length) {
+          const task = tasks[taskIndex]
+          setCurrentTask(task.name)
+          
+          const increment = 100 / tasks.length
+          const steps = 20
+          const stepDuration = task.duration / steps
+          
+          let step = 0
+          const interval = setInterval(() => {
+            step++
+            const taskProgress = (step / steps) * increment
+            setProgress(currentProgress + taskProgress)
+            
+            if (step >= steps) {
+              clearInterval(interval)
+              currentProgress += increment
+              taskIndex++
+              setTimeout(runTasks, 100)
+            }
+          }, stepDuration)
+        } else {
+          setCurrentTask('Prêt pour utilisation offline!')
+          setProgress(100)
+          setTimeout(() => {
+            setIsComplete(true)
+            setTimeout(onComplete, 500)
+          }, 800)
+        }
+      }
+
+      const timer = setTimeout(runTasks, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [onComplete, swProgress])
 
   return (
     <div className="offline-loader">
@@ -100,7 +119,12 @@ export default function OfflineLoader({ onComplete }: OfflineLoaderProps) {
               style={{ width: `${progress}%` }}
             />
           </div>
-          <span className="progress-text">{Math.round(progress)}%</span>
+          <span className="progress-text">
+            {swProgress && swProgress.total > 0 
+              ? `${swProgress.completed}/${swProgress.total}` 
+              : `${Math.round(progress)}%`
+            }
+          </span>
         </div>
         
         {isComplete && (

@@ -1,6 +1,6 @@
-const CACHE_NAME = 'eatneo-hybrid-v7.0';
-const STATIC_CACHE = 'eatneo-static-v7.0';
-const DYNAMIC_CACHE = 'eatneo-dynamic-v7.0';
+const CACHE_NAME = 'eatneo-hybrid-v7.1';
+const STATIC_CACHE = 'eatneo-static-v7.1';
+const DYNAMIC_CACHE = 'eatneo-dynamic-v7.1';
 
 // Ressources complètes à télécharger
 const ALL_RESOURCES = [
@@ -29,32 +29,66 @@ const ALL_RESOURCES = [
 
 let isOnline = true;
 
-// Installation - Téléchargement complet
+// Installation - Téléchargement complet avec indicateur
 self.addEventListener('install', event => {
-  console.log('SW v7.0: Installation - Mode hybride online/offline');
+  console.log('SW v7.1: Installation - Mode hybride online/offline');
   
   event.waitUntil(
-    caches.open(STATIC_CACHE)
-      .then(cache => {
-        return Promise.allSettled(
-          ALL_RESOURCES.map(async (resource) => {
-            try {
-              const response = await fetch(resource, { cache: 'no-cache' });
-              if (response.ok) {
-                await cache.put(resource, response);
-                return true;
-              }
-            } catch (error) {
-              console.warn('Cache failed:', resource);
+    (async () => {
+      const cache = await caches.open(STATIC_CACHE);
+      let completed = 0;
+      const total = ALL_RESOURCES.length;
+      
+      // Notifier le début de l'installation
+      const clients = await self.clients.matchAll();
+      clients.forEach(client => {
+        client.postMessage({
+          type: 'INSTALL_START',
+          total: total
+        });
+      });
+      
+      const results = await Promise.allSettled(
+        ALL_RESOURCES.map(async (resource) => {
+          try {
+            const response = await fetch(resource, { cache: 'no-cache' });
+            if (response.ok) {
+              await cache.put(resource, response.clone());
+              completed++;
+              
+              // Notifier le progrès
+              const clients = await self.clients.matchAll();
+              clients.forEach(client => {
+                client.postMessage({
+                  type: 'INSTALL_PROGRESS',
+                  completed: completed,
+                  total: total,
+                  resource: resource
+                });
+              });
+              
+              return true;
             }
-            return false;
-          })
-        );
-      })
-      .then(() => {
-        console.log('SW: Application mise en cache - Prête offline');
-        return self.skipWaiting();
-      })
+          } catch (error) {
+            console.warn('Cache failed:', resource);
+          }
+          return false;
+        })
+      );
+      
+      // Notifier la fin de l'installation
+      const finalClients = await self.clients.matchAll();
+      finalClients.forEach(client => {
+        client.postMessage({
+          type: 'INSTALL_COMPLETE',
+          completed: completed,
+          total: total
+        });
+      });
+      
+      console.log('SW: Application mise en cache - Prête offline');
+      return self.skipWaiting();
+    })()
   );
 });
 
@@ -64,12 +98,12 @@ self.addEventListener('activate', event => {
     Promise.all([
       caches.keys().then(names => 
         Promise.all(names.map(name => 
-          !name.includes('v7.0') ? caches.delete(name) : null
+          !name.includes('v7.1') ? caches.delete(name) : null
         ))
       ),
       self.clients.claim()
     ]).then(() => {
-      console.log('SW v7.0: Activé - Mode hybride');
+      console.log('SW v7.1: Activé - Mode hybride');
       startSyncProcess();
     })
   );
@@ -252,19 +286,21 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 4. NEXT.JS ASSETS - Cache First avec mise à jour
+  // 4. NEXT.JS ASSETS - Cache First avec gestion des chunks
   if (url.pathname.startsWith('/_next/') || request.url.match(/\.(css|js)$/)) {
     event.respondWith(
       caches.match(request)
         .then(cachedResponse => {
           if (cachedResponse) {
-            // Mise à jour en arrière-plan
+            // Mise à jour en arrière-plan sans cloner si offline
             if (isOnline) {
               fetch(request)
                 .then(networkResponse => {
-                  if (networkResponse.ok) {
+                  if (networkResponse.ok && networkResponse.body) {
+                    const responseClone = networkResponse.clone();
                     caches.open(STATIC_CACHE)
-                      .then(cache => cache.put(request, networkResponse.clone()));
+                      .then(cache => cache.put(request, responseClone))
+                      .catch(() => {});
                   }
                 })
                 .catch(() => {});
@@ -272,18 +308,27 @@ self.addEventListener('fetch', event => {
             return cachedResponse;
           }
           
+          // Si pas en cache, essayer le réseau
           return fetch(request)
             .then(networkResponse => {
-              if (networkResponse.ok) {
+              if (networkResponse.ok && networkResponse.body) {
+                const responseClone = networkResponse.clone();
                 caches.open(STATIC_CACHE)
-                  .then(cache => cache.put(request, networkResponse.clone()));
+                  .then(cache => cache.put(request, responseClone))
+                  .catch(() => {});
               }
               return networkResponse;
             })
             .catch(() => {
+              // Fallback pour chunks manquants
               const contentType = request.url.endsWith('.css') ? 'text/css' : 'application/javascript';
-              return new Response('/* Offline fallback */', { 
-                headers: { 'Content-Type': contentType } 
+              const fallbackContent = request.url.endsWith('.css') 
+                ? '/* Offline CSS fallback */'
+                : '// Offline JS fallback - redirect to home\nif (typeof window !== "undefined") { window.location.href = "/"; }';
+              
+              return new Response(fallbackContent, { 
+                headers: { 'Content-Type': contentType },
+                status: 200
               });
             });
         })
@@ -291,13 +336,15 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 5. AUTRES REQUÊTES - Network First
+  // 5. AUTRES REQUÊTES - Network First avec gestion des clones
   event.respondWith(
     fetch(request)
       .then(networkResponse => {
-        if (networkResponse.ok) {
+        if (networkResponse.ok && networkResponse.body) {
+          const responseClone = networkResponse.clone();
           caches.open(DYNAMIC_CACHE)
-            .then(cache => cache.put(request, networkResponse.clone()));
+            .then(cache => cache.put(request, responseClone))
+            .catch(() => {});
         }
         return networkResponse;
       })
@@ -334,4 +381,4 @@ self.addEventListener('sync', event => {
   }
 });
 
-console.log('SW v7.0: Mode hybride - Online/Offline avec synchronisation');
+console.log('SW v7.1: Mode hybride - Online/Offline avec synchronisation');
