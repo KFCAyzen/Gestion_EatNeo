@@ -14,7 +14,9 @@
 /* Afficher seulement sur PWA */
 @media (display-mode: standalone) and (min-width: 769px) {
   .universal-header {
-    display: block;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
   }
   
   body {
@@ -27,6 +29,13 @@
   
   .search-container {
     margin-top: 0;
+  }
+}
+
+/* Règle de sécurité pour PWA */
+@media (display-mode: standalone) {
+  .universal-header {
+    display: block !important;
   }
 }
 

@@ -206,8 +206,7 @@ export default function AppContent() {
 
 
   return (
-    <>
-      <OfflinePreloader />
+    <OfflinePreloader>
       {/* CONDITIONAL HEADERS */}
       {!isDesktop && (
         <MobileHeader 
@@ -395,8 +394,7 @@ export default function AppContent() {
       <NotificationManager />
       <OfflineIndicator />
       <SyncStatus />
-
-    </>
+    </OfflinePreloader>
   );
 }
 
