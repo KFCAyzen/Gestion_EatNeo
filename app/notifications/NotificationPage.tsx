@@ -74,7 +74,7 @@ export default function NotificationsPage() {
       
       const oldLogs = logs.filter(log => {
         if (!log.timestamp) return false;
-        const logDate = log.timestamp.toDate ? log.timestamp.toDate() : new Date(log.timestamp);
+        const logDate = log.timestamp.toDate ? log.timestamp.toDate() : new Date(log.timestamp as any);
         return logDate < thirtyOneDaysAgo;
       });
 

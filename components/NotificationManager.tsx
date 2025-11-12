@@ -20,7 +20,7 @@ interface Notification {
 export default function NotificationManager() {
   const { requestPermission, sendNotification, permission } = usePushNotifications();
   const { user } = useAuth();
-  const { isOnline, pendingOrders } = useOfflineSync();
+  const { isOnline, pendingCount } = useOfflineSync();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   
   // Initialiser les notifications de commandes
@@ -66,10 +66,10 @@ export default function NotificationManager() {
 
   // Afficher un indicateur hors ligne si nécessaire
   useEffect(() => {
-    if (!isOnline && pendingOrders.length > 0) {
-      console.log(`Mode hors ligne: ${pendingOrders.length} commande(s) en attente`);
+    if (!isOnline && pendingCount > 0) {
+      console.log(`Mode hors ligne: ${pendingCount} commande(s) en attente`);
     }
-  }, [isOnline, pendingOrders]);
+  }, [isOnline, pendingCount]);
 
   // Nettoyage automatique des notifications anciennes (31 jours)
   useEffect(() => {
