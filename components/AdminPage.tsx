@@ -2160,23 +2160,11 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                     
                     <input
                       type="number"
-                      value={item.stock || 0}
-                      onChange={(e) => {
-                        const value = parseInt(e.target.value) || 0;
-                        setPendingStockChange({
-                          itemId: String(item.id),
-                          newStock: value,
-                          collection: "Boissons"
-                        });
-                      }}
-                      onKeyPress={(e) => {
-                        if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') {
-                          e.preventDefault();
-                        }
-                      }}
+                      defaultValue={item.stock || 0}
                       className="stock-input-complex"
                       min="0"
                       placeholder="0"
+                      id={`stock-input-boisson-${item.id}`}
                     />
                     
                     <button 
@@ -2200,29 +2188,26 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                   
                   {/* Boutons d'action */}
                   <div className="stock-actions-row">
-                    {pendingStockChange?.itemId === String(item.id) ? (
-                      <>
-                        <button
-                          onClick={confirmStockChange}
-                          className="stock-confirm-btn"
-                        >
-                          Confirmer
-                        </button>
-                        <button
-                          onClick={cancelStockChange}
-                          className="stock-cancel-btn"
-                        >
-                          Annuler
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => handleDelete("Boissons", String(item.id))}
-                        className="ingredient-btn-delete"
-                      >
-                        Supprimer
-                      </button>
-                    )}
+                    <button
+                      onClick={async () => {
+                        const input = document.getElementById(`stock-input-boisson-${item.id}`) as HTMLInputElement;
+                        if (input) {
+                          const newStock = parseInt(input.value) || 0;
+                          if (newStock !== (item.stock || 0)) {
+                            await updateStock("Boissons", String(item.id), newStock);
+                          }
+                        }
+                      }}
+                      className="stock-confirm-btn"
+                    >
+                      Confirmer
+                    </button>
+                    <button
+                      onClick={() => handleDelete("Boissons", String(item.id))}
+                      className="ingredient-btn-delete"
+                    >
+                      Supprimer
+                    </button>
                   </div>
                 </div>
               );
@@ -2293,23 +2278,11 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                     
                     <input
                       type="number"
-                      value={item.stock || 0}
-                      onChange={(e) => {
-                        const value = parseInt(e.target.value) || 0;
-                        setPendingStockChange({
-                          itemId: String(item.id),
-                          newStock: value,
-                          collection: "Plats"
-                        });
-                      }}
-                      onKeyPress={(e) => {
-                        if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') {
-                          e.preventDefault();
-                        }
-                      }}
+                      defaultValue={item.stock || 0}
                       className="stock-input-complex"
                       min="0"
                       placeholder="0"
+                      id={`stock-input-plat-${item.id}`}
                     />
                     
                     <button 
@@ -2333,29 +2306,26 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                   
                   {/* Boutons d'action */}
                   <div className="stock-actions-row">
-                    {pendingStockChange?.itemId === String(item.id) ? (
-                      <>
-                        <button
-                          onClick={confirmStockChange}
-                          className="stock-confirm-btn"
-                        >
-                          Confirmer
-                        </button>
-                        <button
-                          onClick={cancelStockChange}
-                          className="stock-cancel-btn"
-                        >
-                          Annuler
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => handleDelete("Plats", String(item.id))}
-                        className="ingredient-btn-delete"
-                      >
-                        Supprimer
-                      </button>
-                    )}
+                    <button
+                      onClick={async () => {
+                        const input = document.getElementById(`stock-input-plat-${item.id}`) as HTMLInputElement;
+                        if (input) {
+                          const newStock = parseInt(input.value) || 0;
+                          if (newStock !== (item.stock || 0)) {
+                            await updateStock("Plats", String(item.id), newStock);
+                          }
+                        }
+                      }}
+                      className="stock-confirm-btn"
+                    >
+                      Confirmer
+                    </button>
+                    <button
+                      onClick={() => handleDelete("Plats", String(item.id))}
+                      className="ingredient-btn-delete"
+                    >
+                      Supprimer
+                    </button>
                   </div>
                 </div>
               );
