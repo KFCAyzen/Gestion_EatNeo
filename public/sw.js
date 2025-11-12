@@ -1,20 +1,26 @@
-const CACHE_NAME = 'eatneo-hybrid-v7.1';
-const STATIC_CACHE = 'eatneo-static-v7.1';
-const DYNAMIC_CACHE = 'eatneo-dynamic-v7.1';
+const CACHE_NAME = 'eatneo-hybrid-v7.2';
+const STATIC_CACHE = 'eatneo-static-v7.2';
+const DYNAMIC_CACHE = 'eatneo-dynamic-v7.2';
+
+// Base Firebase Storage
+const FIREBASE_BASE = 'https://firebasestorage.googleapis.com/v0/b/menu-et-gestion-stock-ea-14886.firebasestorage.app/o/images%2F';
+
+// Images Firebase à mettre en cache
+const FIREBASE_IMAGES = [
+  'bouillon.jpeg', 'poulet_braisé.jpeg', 'poisson.jpeg', 'plantain-tapé.jpeg', 'taro.jpeg',
+  'ndolé.jpg', 'saucisse.jpg', 'panné.png', 'foie.jpg', 'barBraisé.jpeg', 'barCalada.jpeg',
+  'carpe.jpeg', 'thé-citron.jpeg', 'thé-menthe.jpeg', 'thé-vert.jpeg', 'tasse-lait.jpeg',
+  'omelette.jpeg', 'omelette-sardine.jpeg', 'omelette-saucisson.webp', 'poulet-yassa.jpeg',
+  'frite.jpeg', 'pomme-vapeur.webp', 'plantain-vapeur.jpeg', 'platain-frie.webp',
+  'Ndole-poisson-fume.jpg', 'pomme-poisson.jpeg', 'pomme-viande.jpeg', 'Riz-pilaf-au-Thermomix.jpg',
+  'rognons-de-boeuf.webp', 'emince-de-boeuf.jpeg', 'tripes.jpeg', 'eru.jpeg'
+].map(img => `${FIREBASE_BASE}${encodeURIComponent(img)}?alt=media`);
 
 // Ressources complètes à télécharger
 const ALL_RESOURCES = [
   '/', '/boissons', '/panier', '/admin', '/historique', '/notifications',
   '/manifest.json', '/logo.jpg', '/icon-192x192.png', '/icon-512x512.png',
-  '/poulet_DG.jpg', '/fanta.jpg', '/reaktor.jpg', '/bouillon.jpeg', '/poulet_braisé.jpeg',
-  '/poisson.jpeg', '/plantain-tapé.jpeg', '/taro.jpeg', '/ndolé.jpg', '/saucisse.jpg',
-  '/panné.png', '/foie.jpg', '/barBraisé.jpeg', '/barCalada.jpeg', '/carpe.jpeg',
-  '/thé-citron.jpeg', '/thé-menthe.jpeg', '/thé-vert.jpeg', '/tasse-lait.jpeg',
-  '/omelette.jpeg', '/omelette-sardine.jpeg', '/omelette-saucisson.webp',
-  '/poulet-yassa.jpeg', '/frite.jpeg', '/pomme-vapeur.webp', '/plantain-vapeur.jpeg',
-  '/platain-frie.webp', '/Ndole-poisson-fume.jpg', '/pomme-poisson.jpeg',
-  '/pomme-viande.jpeg', '/Riz-pilaf-au-Thermomix.jpg', '/rognons-de-boeuf.webp',
-  '/emince-de-boeuf.jpeg', '/tripes.jpeg', '/eru.jpeg',
+  '/poulet_DG.jpg', '/fanta.jpg', '/reaktor.jpg',
   '/icons8-utilisateur-50.png', '/icons8-profile-50.png', '/icons8-déconnexion-100.png',
   '/icons8-multiplier-100.png', '/icons8-poubelle-64.png', '/icons8-bar-alimentaire-50.png',
   '/icons8-food-bar-50.png', '/icons8-search-50.png', '/icons8-verre-à-vin-50.png',
@@ -24,14 +30,15 @@ const ALL_RESOURCES = [
   '/icons8-flèche-haut-100.png', '/icons8-facebook-100.png', '/icons8-tiktok-50.png',
   '/icons8-requirements-50.png', '/icons8-requirements-50 (1).png',
   '/icons8-passé-100.png', '/icons8-passé-100 (1).png', '/icons8-checklist-50.png',
-  '/icons8-checklist-50 (1).png', '/icons8-arrière-50.png'
+  '/icons8-checklist-50 (1).png', '/icons8-arrière-50.png',
+  ...FIREBASE_IMAGES
 ];
 
 let isOnline = true;
 
 // Installation - Téléchargement complet avec indicateur
 self.addEventListener('install', event => {
-  console.log('SW v7.1: Installation - Mode hybride online/offline');
+  console.log('SW v7.2: Installation - Mode hybride online/offline');
   
   event.waitUntil(
     (async () => {
@@ -98,12 +105,12 @@ self.addEventListener('activate', event => {
     Promise.all([
       caches.keys().then(names => 
         Promise.all(names.map(name => 
-          !name.includes('v7.1') ? caches.delete(name) : null
+          !name.includes('v7.2') ? caches.delete(name) : null
         ))
       ),
       self.clients.claim()
     ]).then(() => {
-      console.log('SW v7.1: Activé - Mode hybride');
+      console.log('SW v7.2: Activé - Mode hybride');
       startSyncProcess();
     })
   );
@@ -258,8 +265,8 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 3. IMAGES - Cache First
-  if (request.url.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/)) {
+  // 3. IMAGES - Cache First avec fallback amélioré
+  if (request.url.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/) || request.url.includes('firebasestorage.googleapis.com')) {
     event.respondWith(
       caches.match(request)
         .then(cachedResponse => {
@@ -267,19 +274,27 @@ self.addEventListener('fetch', event => {
           
           return fetch(request)
             .then(networkResponse => {
-              if (networkResponse.ok) {
-                caches.open(DYNAMIC_CACHE)
-                  .then(cache => cache.put(request, networkResponse.clone()));
+              if (networkResponse.ok && networkResponse.body) {
+                const responseClone = networkResponse.clone();
+                caches.open(STATIC_CACHE)
+                  .then(cache => cache.put(request, responseClone))
+                  .catch(() => {});
               }
               return networkResponse;
             })
             .catch(() => {
+              // Fallback SVG pour images manquantes
               return new Response(`
-                <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">
-                  <rect width="200" height="200" fill="#f0f0f0" stroke="#ccc"/>
-                  <text x="100" y="100" text-anchor="middle" fill="#999" font-size="14">Offline</text>
+                <svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150">
+                  <rect width="200" height="150" fill="#f5f5f5" stroke="#ddd" stroke-width="2" rx="8"/>
+                  <circle cx="100" cy="60" r="20" fill="#ccc"/>
+                  <path d="M60 100 L100 80 L140 100 L180 90 L180 130 L20 130 Z" fill="#e0e0e0"/>
+                  <text x="100" y="140" text-anchor="middle" fill="#999" font-size="12" font-family="Arial">Image offline</text>
                 </svg>
-              `, { headers: { 'Content-Type': 'image/svg+xml' } });
+              `, { 
+                headers: { 'Content-Type': 'image/svg+xml' },
+                status: 200
+              });
             });
         })
     );
@@ -381,4 +396,4 @@ self.addEventListener('sync', event => {
   }
 });
 
-console.log('SW v7.1: Mode hybride - Online/Offline avec synchronisation');
+console.log('SW v7.2: Mode hybride - Online/Offline avec synchronisation');
