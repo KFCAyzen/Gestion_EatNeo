@@ -16,13 +16,17 @@ export default function PWAInstaller() {
     // Détecter si l'app est déjà installée (PWA)
     const checkPWA = () => {
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-      setIsPWA(isStandalone)
+      const isInWebAppiOS = (window.navigator as any).standalone === true
+      const isInstalled = isStandalone || isInWebAppiOS
+      setIsPWA(isInstalled)
+      console.log('PWA Detection:', { isStandalone, isInWebAppiOS, isInstalled })
     }
     
     checkPWA()
     
     const handler = (e: Event) => {
       e.preventDefault()
+      console.log('beforeinstallprompt event fired')
       setDeferredPrompt(e as BeforeInstallPromptEvent)
       setShowInstallButton(true)
     }
@@ -36,23 +40,52 @@ export default function PWAInstaller() {
         .catch(() => console.log('Erreur Service Worker'))
     }
 
-    return () => window.removeEventListener('beforeinstallprompt', handler)
+    // Fallback: afficher le bouton après 3 secondes si pas d'événement
+    const fallbackTimer = setTimeout(() => {
+      if (!showInstallButton && !isPWA) {
+        console.log('Fallback: showing install button')
+        setShowInstallButton(true)
+      }
+    }, 3000)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler)
+      clearTimeout(fallbackTimer)
+    }
   }, [])
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return
+    if (!deferredPrompt) {
+      console.log('No deferred prompt available')
+      // Fallback: ouvrir les instructions d'installation
+      alert('Pour installer l\'application:\n\n1. Cliquez sur le menu du navigateur (⋮)\n2. Sélectionnez "Installer l\'application"\n3. Confirmez l\'installation')
+      return
+    }
 
-    deferredPrompt.prompt()
-    const { outcome } = await deferredPrompt.userChoice
-    
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null)
-      setShowInstallButton(false)
+    try {
+      deferredPrompt.prompt()
+      const { outcome } = await deferredPrompt.userChoice
+      console.log('Install prompt result:', outcome)
+      
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null)
+        setShowInstallButton(false)
+      }
+    } catch (error) {
+      console.error('Install error:', error)
     }
   }
 
   // Ne pas afficher le bouton si l'app est déjà installée (PWA)
-  if (!showInstallButton || isPWA) return null
+  if (isPWA) {
+    console.log('PWA detected, hiding install button')
+    return null
+  }
+  
+  if (!showInstallButton) {
+    console.log('Install button not shown yet')
+    return null
+  }
 
   return (
     <div style={{
