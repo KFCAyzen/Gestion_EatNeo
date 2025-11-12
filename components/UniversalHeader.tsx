@@ -80,11 +80,15 @@ export default function UniversalHeader({ title, showBackButton = true, onBack, 
   return (
     <div className={`universal-header ${isHidden ? 'hidden' : ''}`}>
       <div className="universal-header-content">
-        {showBackButton && (
-          <button className="universal-back-btn" onClick={handleBack}>
-            <BackIcon />
-          </button>
-        )}
+        <div className="universal-header-left">
+          {showBackButton ? (
+            <button className="universal-back-btn" onClick={handleBack}>
+              <BackIcon />
+            </button>
+          ) : (
+            <div style={{ width: '44px' }}></div>
+          )}
+        </div>
         <h1 className="universal-header-title">{title}</h1>
         <div className="universal-header-actions">
           <div className="universal-menu-container">

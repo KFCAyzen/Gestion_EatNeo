@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, Timestamp, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../components/firebase';
 import Link from 'next/link';
 import '../../styles/NotificationsPage.css';
@@ -65,6 +65,41 @@ export default function NotificationsPage() {
       unsubscribeLogs();
     };
   }, []);
+
+  // Nettoyage automatique des logs anciens (31 jours)
+  useEffect(() => {
+    const cleanupOldLogs = async () => {
+      const thirtyOneDaysAgo = new Date();
+      thirtyOneDaysAgo.setDate(thirtyOneDaysAgo.getDate() - 31);
+      
+      const oldLogs = logs.filter(log => {
+        if (!log.timestamp) return false;
+        const logDate = log.timestamp.toDate ? log.timestamp.toDate() : new Date(log.timestamp);
+        return logDate < thirtyOneDaysAgo;
+      });
+
+      for (const log of oldLogs) {
+        try {
+          await deleteDoc(doc(db, 'activity_logs', log.id));
+        } catch (error) {
+          console.error('Erreur lors de la suppression du log:', error);
+        }
+      }
+
+      if (oldLogs.length > 0) {
+        console.log(`${oldLogs.length} log(s) ancien(s) supprimé(s)`);
+      }
+    };
+
+    // Exécuter le nettoyage une fois par jour
+    const lastLogsCleanup = localStorage.getItem('lastLogsCleanup');
+    const today = new Date().toDateString();
+    
+    if (lastLogsCleanup !== today && logs.length > 0) {
+      cleanupOldLogs();
+      localStorage.setItem('lastLogsCleanup', today);
+    }
+  }, [logs]);
 
   const filteredNotifications = notifications.filter(notif => {
     if (filter === 'unread') return !notif.read;

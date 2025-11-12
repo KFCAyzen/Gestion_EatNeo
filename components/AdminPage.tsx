@@ -9,6 +9,8 @@ import type { MenuItem } from "./types";
 import { useRealtimeCollection } from '@/hooks/useRealtimeCollection'
 import { useNotifications } from '../hooks/useNotifications';
 import { useActivityLogger } from '../hooks/useActivityLogger';
+import { useOfflineSync } from '../hooks/useOfflineSync';
+import OfflineAdmin from './OfflineAdmin';
 import { Toast } from './Toast';
 import { Modal } from './Modal';
 import { AdminTabs } from './AdminTabs';
@@ -97,6 +99,9 @@ export default function AdminPage({ userRole }: AdminPageProps) {
   // Système de notifications
   const { toasts, modal, showToast, removeToast, showModal, closeModal } = useNotifications();
   const { logActivity, logNotification } = useActivityLogger();
+  
+  // Système hors ligne
+  const { isOnline } = useOfflineSync();
   
 
   const [showAddBoisson, setShowAddBoisson] = useState(false);
@@ -1253,6 +1258,41 @@ export default function AdminPage({ userRole }: AdminPageProps) {
     );
   };
 
+  // Fonction pour réinitialiser toutes les données sauf stock et articles
+  const resetAppData = async () => {
+    showModal(
+      "Réinitialiser les données",
+      "⚠️ ATTENTION: Cette action supprimera TOUTES les commandes, mouvements de stock et historiques. Les articles et leur stock seront préservés. Cette action est irréversible.",
+      "warning",
+      async () => {
+        try {
+          const collectionsToReset = ['commandes', 'mouvements_stock', 'ingredients', 'notifications', 'activities'];
+          let totalDeleted = 0;
+          
+          for (const collectionName of collectionsToReset) {
+            try {
+              const snapshot = await getDocs(collection(db, collectionName));
+              for (const docSnapshot of snapshot.docs) {
+                await deleteDoc(doc(db, collectionName, docSnapshot.id));
+                totalDeleted++;
+              }
+            } catch (error) {
+              console.log(`Collection ${collectionName} n'existe pas ou est vide`);
+            }
+          }
+          
+          showToast(`${totalDeleted} éléments supprimés. Articles et stock préservés.`, 'success');
+          closeModal();
+        } catch (error) {
+          console.error('Erreur lors de la réinitialisation:', error);
+          showToast('Erreur lors de la réinitialisation', 'error');
+          closeModal();
+        }
+      },
+      closeModal
+    );
+  };
+
   // Fonction pour ajouter des données de test
   const addTestData = async () => {
     if (!window.confirm('Ajouter des données fictives de test ? Cela créera des commandes, ingrédients et mouvements de stock.')) return;
@@ -1751,6 +1791,11 @@ export default function AdminPage({ userRole }: AdminPageProps) {
       </div>
     );
   }
+  
+  // Mode hors ligne
+  if (!isOnline) {
+    return <OfflineAdmin />;
+  }
 
   return (
     <div className="admin-container">
@@ -1996,6 +2041,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
             onResetLowStock={resetLowStock}
             onAddBoisson={() => setShowAddBoisson(true)}
             onExportStockReport={exportStockReport}
+            onResetAppData={resetAppData}
             boissonsCount={boissons.length}
             lowStockCount={stockStats.boissons.low}
             outOfStockCount={stockStats.boissons.out}

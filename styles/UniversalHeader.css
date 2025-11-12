@@ -11,14 +11,22 @@
   display: none;
 }
 
-/* Afficher sur desktop (web et PWA) */
-@media (min-width: 769px) {
+/* Afficher seulement sur PWA */
+@media (display-mode: standalone) and (min-width: 769px) {
   .universal-header {
     display: block;
   }
   
   body {
     padding-top: 44px;
+  }
+  
+  .title {
+    display: none !important;
+  }
+  
+  .search-container {
+    margin-top: 0;
   }
 }
 
@@ -34,6 +42,12 @@
   padding: 0 16px;
   max-width: 1200px;
   margin: 0 auto;
+}
+
+.universal-header-left {
+  display: flex;
+  align-items: center;
+  min-width: 44px;
 }
 
 

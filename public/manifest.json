@@ -1,16 +1,22 @@
 {
   "name": "Eat Neo Fast Food",
   "short_name": "Eat Neo",
-  "version": "1.1.0",
-  "description": "Application de commande en ligne pour Eat Neo Fast Food - Fonctionne hors ligne",
+  "version": "3.0.0",
+  "description": "Application de commande en ligne pour Eat Neo Fast Food - Fonctionne complètement hors ligne avec toutes les fonctionnalités",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#2e7d32",
   "theme_color": "#2e7d32",
   "orientation": "any",
   "scope": "/",
   "prefer_related_applications": false,
-  "display_override": ["standalone", "minimal-ui"],
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
   "icons": [
     {
       "src": "/logo.jpg",
@@ -31,9 +37,12 @@
       "purpose": "maskable"
     }
   ],
-  "categories": ["food", "business"],
+  "categories": ["food", "business", "lifestyle"],
   "lang": "fr",
   "dir": "ltr",
+  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
+  "offline_enabled": true,
+  "related_applications": [],
   "shortcuts": [
     {
       "name": "Menu",

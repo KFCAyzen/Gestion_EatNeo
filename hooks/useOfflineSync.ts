@@ -1,96 +1,136 @@
-import { useState, useEffect } from 'react';
+'use client'
 
-interface OfflineOrder {
-  id: string;
-  items: any[];
-  client: {
-    nom: string;
-    telephone: string;
-  };
-  localisation: string;
-  total: string;
-  timestamp: number;
+import { useState, useEffect, useCallback } from 'react'
+import { db } from '@/components/firebase'
+import { collection, addDoc, Timestamp } from 'firebase/firestore'
+
+interface OfflineData {
+  id: string
+  type: 'order' | 'notification' | 'activity'
+  data: any
+  timestamp: number
+  synced: boolean
 }
 
 export function useOfflineSync() {
-  const [isOnline, setIsOnline] = useState(true);
-  const [pendingOrders, setPendingOrders] = useState<OfflineOrder[]>([]);
+  const [isOnline, setIsOnline] = useState(true)
+  const [pendingSync, setPendingSync] = useState<OfflineData[]>([])
+  const [isSyncing, setIsSyncing] = useState(false)
 
+  // Détecter le statut de connexion
   useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      syncPendingOrders();
-    };
+    const updateOnlineStatus = () => {
+      setIsOnline(navigator.onLine)
+    }
 
-    const handleOffline = () => {
-      setIsOnline(false);
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    // Vérifier l'état initial
-    setIsOnline(navigator.onLine);
-
-    // Charger les commandes en attente
-    loadPendingOrders();
+    window.addEventListener('online', updateOnlineStatus)
+    window.addEventListener('offline', updateOnlineStatus)
+    updateOnlineStatus()
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+      window.removeEventListener('online', updateOnlineStatus)
+      window.removeEventListener('offline', updateOnlineStatus)
+    }
+  }, [])
 
-  const loadPendingOrders = () => {
-    const stored = localStorage.getItem('pendingOrders');
+  // Charger les données en attente au démarrage
+  useEffect(() => {
+    const stored = localStorage.getItem('offlineData')
     if (stored) {
-      setPendingOrders(JSON.parse(stored));
+      setPendingSync(JSON.parse(stored))
     }
-  };
+  }, [])
 
-  const saveOrderOffline = (order: OfflineOrder) => {
-    const updated = [...pendingOrders, order];
-    setPendingOrders(updated);
-    localStorage.setItem('pendingOrders', JSON.stringify(updated));
-    
-    // Enregistrer pour la synchronisation en arrière-plan
-    if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
-      navigator.serviceWorker.ready.then(registration => {
-        return (registration as any).sync.register('background-sync');
-      });
+  // Sauvegarder les données en attente
+  const saveOfflineData = useCallback((data: OfflineData[]) => {
+    localStorage.setItem('offlineData', JSON.stringify(data))
+    setPendingSync(data)
+  }, [])
+
+  // Ajouter des données hors ligne
+  const addOfflineData = useCallback((type: OfflineData['type'], data: any) => {
+    const offlineItem: OfflineData = {
+      id: `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      type,
+      data,
+      timestamp: Date.now(),
+      synced: false
     }
-  };
 
-  const syncPendingOrders = async () => {
-    if (pendingOrders.length === 0) return;
+    const current = JSON.parse(localStorage.getItem('offlineData') || '[]')
+    const updated = [...current, offlineItem]
+    saveOfflineData(updated)
+
+    return offlineItem.id
+  }, [saveOfflineData])
+
+  // Synchroniser les données
+  const syncData = useCallback(async () => {
+    if (!isOnline || isSyncing || pendingSync.length === 0) return
+
+    setIsSyncing(true)
+    const syncedIds: string[] = []
 
     try {
-      for (const order of pendingOrders) {
-        // Simuler l'envoi de la commande
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        console.log('Commande synchronisée:', order.id);
+      for (const item of pendingSync) {
+        if (item.synced) continue
+
+        try {
+          switch (item.type) {
+            case 'order':
+              await addDoc(collection(db, 'commandes'), {
+                ...item.data,
+                timestamp: Timestamp.fromMillis(item.timestamp),
+                syncedAt: Timestamp.now()
+              })
+              break
+            case 'notification':
+              await addDoc(collection(db, 'notifications'), {
+                ...item.data,
+                timestamp: Timestamp.fromMillis(item.timestamp)
+              })
+              break
+            case 'activity':
+              await addDoc(collection(db, 'activity_logs'), {
+                ...item.data,
+                timestamp: Timestamp.fromMillis(item.timestamp)
+              })
+              break
+          }
+          syncedIds.push(item.id)
+        } catch (error) {
+          console.error(`Erreur sync ${item.type}:`, error)
+        }
       }
-      
-      // Vider les commandes en attente
-      setPendingOrders([]);
-      localStorage.removeItem('pendingOrders');
-      
-      // Notification de succès
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('EAT NEO - Synchronisation', {
-          body: `${pendingOrders.length} commande(s) synchronisée(s)`,
-          icon: '/icon-192x192.png'
-        });
+
+      // Supprimer les éléments synchronisés
+      const remaining = pendingSync.filter(item => !syncedIds.includes(item.id))
+      saveOfflineData(remaining)
+
+      if (syncedIds.length > 0) {
+        console.log(`${syncedIds.length} élément(s) synchronisé(s)`)
       }
     } catch (error) {
-      console.error('Erreur lors de la synchronisation:', error);
+      console.error('Erreur de synchronisation:', error)
+    } finally {
+      setIsSyncing(false)
     }
-  };
+  }, [isOnline, isSyncing, pendingSync, saveOfflineData])
+
+  // Synchroniser automatiquement quand on revient en ligne
+  useEffect(() => {
+    if (isOnline && pendingSync.length > 0) {
+      const timer = setTimeout(syncData, 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [isOnline, pendingSync.length, syncData])
 
   return {
     isOnline,
-    pendingOrders,
-    saveOrderOffline,
-    syncPendingOrders
-  };
+    pendingSync,
+    isSyncing,
+    addOfflineData,
+    syncData,
+    pendingCount: pendingSync.filter(item => !item.synced).length
+  }
 }

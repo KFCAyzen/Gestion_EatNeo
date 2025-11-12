@@ -1690,15 +1690,15 @@ footer{
   transform: rotate(180deg);
 }
 
-/* Afficher le menu desktop seulement sur desktop */
-@media (min-width: 1025px) {
+/* Afficher le menu desktop sur toutes les tailles d'écran desktop */
+@media (min-width: 769px) {
   .desktop-menu-container {
     display: block !important;
   }
 }
 
-/* Masquer le menu desktop sur mobile et tablette */
-@media (max-width: 1024px) {
+/* Masquer le menu desktop sur mobile */
+@media (max-width: 768px) {
   .desktop-menu-container {
     display: none !important;
   }

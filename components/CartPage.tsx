@@ -8,6 +8,8 @@ import { db } from './firebase'
 import '@/styles/CartPage.css'
 import { images } from './imagesFallback'
 import { useNotifications } from '../hooks/useNotifications'
+import { useOfflineOrders } from '../hooks/useOfflineOrders'
+import { useOfflineSync } from '../hooks/useOfflineSync'
 import { Toast } from './Toast'
 import { Modal } from './Modal'
 
@@ -25,6 +27,10 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
   
   // Système de notifications
   const { toasts, modal, showToast, removeToast, showModal, closeModal } = useNotifications();
+  
+  // Système hors ligne
+  const { createOrder } = useOfflineOrders();
+  const { isOnline, pendingCount } = useOfflineSync();
   interface Commande {
     id: string;
     items: Array<{
@@ -142,7 +148,7 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
     0
   );
 
-  // Commander via WhatsApp et sauvegarder dans Firebase
+  // Commander via WhatsApp et sauvegarder
   const handleCommander = async () => {
     if (cartItems.length === 0) {
       showToast("Ton panier est vide.", 'warning');
@@ -155,22 +161,30 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
     }
 
     try {
-      // Sauvegarder la commande dans Firebase
+      // Préparer les données de commande
       const commandeData = {
         items: cartItems.map(item => ({
           nom: String(item.nom || ''),
           prix: String(getPrixString(item) || ''),
           quantité: Number(item.quantité || 1)
         })),
-        total: Number(totalPrix || 0),
-        clientPrenom: String(prenom.trim() || 'Client'),
-        numeroTable: String(numeroTable.trim()),
-        localisation: String(localisation || "Non spécifiée"),
-        dateCommande: serverTimestamp(),
-        statut: String('en_attente')
+        total: String(formatPrix(totalPrix)),
+        clientName: String(prenom.trim() || 'Client'),
+        clientPhone: '',
+        localisation: String(numeroTable.trim()),
+        status: 'en_attente'
       };
 
-      await addDoc(collection(db, 'commandes'), commandeData);
+      // Sauvegarder (en ligne ou hors ligne)
+      if (isOnline) {
+        await addDoc(collection(db, 'commandes'), {
+          ...commandeData,
+          dateCommande: serverTimestamp()
+        });
+      } else {
+        await createOrder(commandeData);
+        showToast(`Commande sauvegardée hors ligne. ${pendingCount + 1} commande(s) en attente de synchronisation.`, 'info');
+      }
       
       // Commande enregistrée avec succès
 
@@ -203,10 +217,30 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
       localStorage.removeItem("cart");
       // Ne pas vider nom/prénom pour permettre le suivi des commandes
       
-      showToast("Commande envoyée avec succès !", 'success');
+      showToast(isOnline ? "Commande envoyée avec succès !" : "Commande sauvegardée hors ligne !", 'success');
     } catch (error) {
       console.error("Erreur lors de l'enregistrement de la commande:", error);
-      showToast("Erreur lors de l'enregistrement. La commande WhatsApp va quand même s'ouvrir.", 'error');
+      
+      // Fallback: sauvegarder hors ligne même en cas d'erreur
+      try {
+        const commandeData = {
+          items: cartItems.map(item => ({
+            nom: String(item.nom || ''),
+            prix: String(getPrixString(item) || ''),
+            quantité: Number(item.quantité || 1)
+          })),
+          total: String(formatPrix(totalPrix)),
+          clientName: String(prenom.trim() || 'Client'),
+          clientPhone: '',
+          localisation: String(numeroTable.trim()),
+          status: 'en_attente'
+        };
+        
+        await createOrder(commandeData);
+        showToast("Commande sauvegardée hors ligne en raison d'un problème de connexion.", 'warning');
+      } catch (offlineError) {
+        showToast("Erreur lors de l'enregistrement. La commande WhatsApp va quand même s'ouvrir.", 'error');
+      }
       
       // Envoyer quand même via WhatsApp en cas d'erreur Firebase
       const message = encodeURIComponent(

@@ -5,7 +5,7 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useAuth } from '@/hooks/useAuth';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { useOrderNotifications } from '@/hooks/useOrderNotifications';
-import { collection, query, orderBy, onSnapshot, where } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, where, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
 
 interface Notification {
@@ -70,6 +70,41 @@ export default function NotificationManager() {
       console.log(`Mode hors ligne: ${pendingOrders.length} commande(s) en attente`);
     }
   }, [isOnline, pendingOrders]);
+
+  // Nettoyage automatique des notifications anciennes (31 jours)
+  useEffect(() => {
+    const cleanupOldNotifications = async () => {
+      const thirtyOneDaysAgo = new Date();
+      thirtyOneDaysAgo.setDate(thirtyOneDaysAgo.getDate() - 31);
+      
+      const oldNotifications = notifications.filter(notif => {
+        if (!notif.timestamp) return false;
+        const notifDate = notif.timestamp.toDate ? notif.timestamp.toDate() : new Date(notif.timestamp);
+        return notifDate < thirtyOneDaysAgo;
+      });
+
+      for (const notif of oldNotifications) {
+        try {
+          await deleteDoc(doc(db, 'notifications', notif.id));
+        } catch (error) {
+          console.error('Erreur lors de la suppression de la notification:', error);
+        }
+      }
+
+      if (oldNotifications.length > 0) {
+        console.log(`${oldNotifications.length} notification(s) ancienne(s) supprimée(s)`);
+      }
+    };
+
+    // Exécuter le nettoyage une fois par jour
+    const lastCleanup = localStorage.getItem('lastNotificationCleanup');
+    const today = new Date().toDateString();
+    
+    if (lastCleanup !== today && notifications.length > 0) {
+      cleanupOldNotifications();
+      localStorage.setItem('lastNotificationCleanup', today);
+    }
+  }, [notifications]);
 
   return null;
 }

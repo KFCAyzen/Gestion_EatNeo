@@ -82,6 +82,8 @@ import MobileHeader from './MobileHeader'
 import UniversalHeader from './UniversalHeader'
 import BottomBar from './BottomBar'
 import DesktopMenu from './DesktopMenu'
+import SyncStatus from './SyncStatus'
+import OfflinePreloader from './OfflinePreloader'
 import { usePWADetection } from '../hooks/usePWADetection'
 
 export default function AppContent() {
@@ -89,12 +91,13 @@ export default function AppContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { user, login, logout, isAdmin } = useAuth()
-  const { isPWADesktop } = usePWADetection()
+  const { isDesktop } = usePWADetection()
   const [cartItems, setCartItems] = useState<MenuItem[]>([]);
   const [table, setTable] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [showScrollUp, setShowScrollUp] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+
   const notificationCount = useNotificationCount();
 
   const getPageTitle = () => {
@@ -200,28 +203,13 @@ export default function AppContent() {
     return () => document.body.classList.remove('admin-page')
   }, [pathname])
 
+
+
   return (
     <>
+      <OfflinePreloader />
       {/* CONDITIONAL HEADERS */}
-      {isPWADesktop ? (
-        <UniversalHeader 
-          title={getPageTitle()}
-          showBackButton={pathname !== '/' && pathname !== '/boissons'}
-          onBack={() => {
-            if (pathname === '/admin') {
-              router.push('/')
-            } else {
-              router.back()
-            }
-          }}
-          user={user}
-          onAdminClick={() => user ? router.push('/admin') : setShowLogin(true)}
-          onLogout={() => {
-            logout()
-            router.push('/')
-          }}
-        />
-      ) : (
+      {!isDesktop && (
         <MobileHeader 
           title={getPageTitle()}
           showBackButton={pathname !== '/' && pathname !== '/boissons'}
@@ -263,6 +251,7 @@ export default function AppContent() {
               </div>
             </div>
             <div className="title-right">
+              <DesktopMenu cartItemsCount={cartItems.length} />
               <Link href="/notifications" className="notification-link">
                 <NotificationIcon count={notificationCount} />
               </Link>
@@ -310,6 +299,7 @@ export default function AppContent() {
                   </button>
                 </>
               ) : null}
+
             </div>
           </>
         )}
@@ -404,6 +394,7 @@ export default function AppContent() {
       <PWAInstaller />
       <NotificationManager />
       <OfflineIndicator />
+      <SyncStatus />
 
     </>
   );

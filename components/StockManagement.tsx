@@ -16,6 +16,7 @@ interface StockManagementProps {
   onResetLowStock: () => void;
   onAddBoisson: () => void;
   onExportStockReport: () => void;
+  onResetAppData: () => void;
   boissonsCount: number;
   lowStockCount: number;
   outOfStockCount: number;
@@ -37,6 +38,7 @@ export const StockManagement = ({
   onResetLowStock,
   onAddBoisson,
   onExportStockReport,
+  onResetAppData,
   boissonsCount,
   lowStockCount,
   outOfStockCount,
@@ -166,6 +168,10 @@ export const StockManagement = ({
         <button onClick={onExportStockReport} className="stock-action-button purple stock-action-button-flex">
           <DownloadIcon />
           Exporter PDF
+        </button>
+        
+        <button onClick={onResetAppData} className="stock-action-button red">
+          Réinitialiser Données
         </button>
       </div>
     </>

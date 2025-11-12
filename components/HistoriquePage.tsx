@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react'
 import { collection, query, orderBy, onSnapshot, Timestamp } from 'firebase/firestore'
 import { db } from './firebase'
 import { images } from './imagesFallback'
+import { useOfflineOrders } from '../hooks/useOfflineOrders'
+import { useOfflineSync } from '../hooks/useOfflineSync'
 import jsPDF from 'jspdf'
 import '@/styles/HistoriquePage.css'
 
@@ -25,6 +27,10 @@ interface Commande {
 const HistoriquePage: React.FC = () => {
   const [commandes, setCommandes] = useState<Commande[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Données hors ligne
+  const { orders: offlineOrders } = useOfflineOrders();
+  const { isOnline } = useOfflineSync();
 
   const [dataLoading, setDataLoading] = useState(true);
   const [expandedCommandes, setExpandedCommandes] = useState<Set<string>>(new Set());
@@ -37,28 +43,48 @@ const HistoriquePage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const q = query(
-      collection(db, 'commandes'), 
-      orderBy('dateCommande', 'desc')
-    );
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const commandesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+    if (isOnline) {
+      const q = query(
+        collection(db, 'commandes'), 
+        orderBy('dateCommande', 'desc')
+      );
+      
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const commandesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Commande[];
+        
+        // Filtrer seulement les commandes livrées
+        const commandesLivrees = commandesData.filter(cmd => cmd.statut === 'livree');
+        setCommandes(commandesLivrees);
+        setLoading(false);
+      });
+
+      return () => unsubscribe();
+    } else {
+      // Mode hors ligne : utiliser les commandes locales
+      const localCommandes = offlineOrders.map(order => ({
+        id: order.id,
+        items: order.items,
+        total: typeof order.total === 'string' ? 
+          parseInt(order.total.replace(/[^\d]/g, '')) : order.total,
+        clientNom: order.clientName.split(' ').slice(1).join(' ') || '',
+        clientPrenom: order.clientName.split(' ')[0] || order.clientName,
+        localisation: order.localisation,
+        dateCommande: { toDate: () => new Date(order.timestamp) } as Timestamp,
+        statut: order.status as any
       })) as Commande[];
       
-      // Filtrer seulement les commandes livrées
-      const commandesLivrees = commandesData.filter(cmd => cmd.statut === 'livree');
-      setCommandes(commandesLivrees);
+      setCommandes(localCommandes);
       setLoading(false);
-    });
+    }
+  }, [isOnline, offlineOrders]);
 
-    return () => unsubscribe();
-  }, []);
-
-  // Toutes les commandes sont déjà livrées, pas besoin de filtrer par statut
-  const commandesFiltrees = commandes;
+  // En mode hors ligne, afficher toutes les commandes locales
+  const commandesFiltrees = isOnline ? 
+    commandes : 
+    commandes; // Déjà filtrées ci-dessus
 
   // Commandes de la semaine
   const getCommandesSemaine = () => {
@@ -251,6 +277,18 @@ const HistoriquePage: React.FC = () => {
           fontSize: 'clamp(1.5rem, 4vw, 2rem)'
         }}>
           Historique des Commandes
+          {!isOnline && (
+            <span style={{
+              fontSize: '0.6em',
+              background: '#ff9800',
+              color: 'white',
+              padding: '2px 8px',
+              borderRadius: '10px',
+              marginLeft: '10px'
+            }}>
+              Hors ligne
+            </span>
+          )}
         </h1>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button 

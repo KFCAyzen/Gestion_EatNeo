@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { db } from '@/components/firebase'
 import { collection, onSnapshot } from 'firebase/firestore'
 import type { MenuItem } from '@/components/types'
+import { menuItems } from '@/components/types'
 
 // Cache global pour éviter les requêtes multiples
 const collectionsCache = new Map<string, MenuItem[]>()
@@ -23,9 +24,20 @@ export function useRealtimeCollection(collectionName: string) {
       setLoading(false);
     }
     
+    // Timeout pour mode hors ligne
+    const offlineTimeout = setTimeout(() => {
+      if (loading) {
+        console.log('Mode hors ligne détecté, utilisation des données locales');
+        setItems(menuItems);
+        setLoading(false);
+        setError(null);
+      }
+    }, 3000);
+    
     const unsubscribe = onSnapshot(
       collectionRef,
       (snapshot) => {
+        clearTimeout(offlineTimeout);
         // Optimisation: Traitement batch des documents
         const docs: MenuItem[] = [];
         snapshot.docs.forEach((docSnap) => {
@@ -50,9 +62,12 @@ export function useRealtimeCollection(collectionName: string) {
         setError(null);
       },
       (err) => {
+        clearTimeout(offlineTimeout);
         console.error(`Error listening to ${collectionName}:`, err);
-        setError(`Erreur de chargement: ${err.message}`);
+        // En cas d'erreur, utiliser les données locales
+        setItems(menuItems);
         setLoading(false);
+        setError(null);
       }
     );
     
@@ -62,6 +77,7 @@ export function useRealtimeCollection(collectionName: string) {
     subscriptionsCache.set(collectionName, existingSubs);
     
     return () => {
+      clearTimeout(offlineTimeout);
       unsubscribe();
       // Nettoyer la souscription du cache
       const subs = subscriptionsCache.get(collectionName) || [];

@@ -1,15 +1,40 @@
-const CACHE_NAME = 'eatneo-v2.1';
-const STATIC_CACHE = 'eatneo-static-v2.1';
-const DYNAMIC_CACHE = 'eatneo-dynamic-v2.1';
-const OFFLINE_CACHE = 'eatneo-offline-v2.1';
+const CACHE_NAME = 'eatneo-v3.0';
+const STATIC_CACHE = 'eatneo-static-v3.0';
+const DYNAMIC_CACHE = 'eatneo-dynamic-v3.0';
+const OFFLINE_CACHE = 'eatneo-offline-v3.0';
 
+// Ressources critiques pour le fonctionnement hors ligne
 const CORE_ASSETS = [
   '/',
   '/manifest.json',
   '/logo.jpg',
-  '/icon-192x192.png'
+  '/icon-192x192.png',
+  '/icon-512x512.png',
+  '/offline.html'
 ];
 
+// Toutes les pages de l'application
+const APP_PAGES = [
+  '/',
+  '/boissons',
+  '/panier',
+  '/admin',
+  '/historique',
+  '/notifications'
+];
+
+// Ressources CSS et JS critiques
+const STATIC_RESOURCES = [
+  '/styles/index.css',
+  '/styles/App.css',
+  '/styles/SplashScreen.css',
+  '/styles/UniversalHeader.css',
+  '/styles/AdminPage.css',
+  '/styles/CartPage.css',
+  '/styles/NotificationsPage.css'
+];
+
+// Images du menu et icônes
 const MENU_IMAGES = [
   '/poulet_DG.jpg', '/fanta.jpg', '/reaktor.jpg', '/icons8-utilisateur-50.png',
   '/icons8-profile-50.png', '/icons8-déconnexion-100.png', '/icons8-multiplier-100.png',
@@ -31,58 +56,148 @@ const MENU_IMAGES = [
   '/tripes.jpeg', '/eru.jpeg'
 ];
 
-const PAGES = [
-  '/admin', '/boissons', '/historique', '/logs', '/notifications', '/panier'
+// Toutes les ressources à mettre en cache lors de l'installation
+const ALL_CACHE_RESOURCES = [
+  ...CORE_ASSETS,
+  ...APP_PAGES,
+  ...STATIC_RESOURCES,
+  ...MENU_IMAGES
 ];
 
-// Installation du Service Worker
+
+
+// Installation du Service Worker - Cache TOUT lors de l'installation
 self.addEventListener('install', event => {
+  console.log('Service Worker: Installation démarrée - Mise en cache de toutes les ressources');
+  
   event.waitUntil(
-    Promise.all([
-      caches.open(STATIC_CACHE).then(cache => cache.addAll(CORE_ASSETS)),
-      caches.open(DYNAMIC_CACHE).then(cache => cache.addAll(MENU_IMAGES)),
-      caches.open(OFFLINE_CACHE).then(cache => cache.addAll(PAGES))
-    ])
-    .then(() => self.skipWaiting())
-    .catch(error => console.error('Cache install error:', error))
+    caches.open(STATIC_CACHE)
+      .then(cache => {
+        console.log('Service Worker: Mise en cache de', ALL_CACHE_RESOURCES.length, 'ressources');
+        
+        // Essayer de mettre en cache toutes les ressources
+        return Promise.allSettled(
+          ALL_CACHE_RESOURCES.map(async (resource) => {
+            try {
+              const response = await fetch(resource, { 
+                cache: 'no-cache',
+                mode: 'cors',
+                credentials: 'same-origin'
+              });
+              
+              if (response.ok) {
+                await cache.put(resource, response);
+                console.log('Cached:', resource);
+              } else {
+                console.warn('Failed to fetch:', resource, response.status);
+              }
+            } catch (error) {
+              console.warn('Error caching:', resource, error.message);
+            }
+          })
+        );
+      })
+      .then((results) => {
+        const successful = results.filter(r => r.status === 'fulfilled').length;
+        const failed = results.filter(r => r.status === 'rejected').length;
+        console.log(`Service Worker: Installation terminée - ${successful} ressources mises en cache, ${failed} échecs`);
+        
+        // Forcer l'activation immédiate
+        return self.skipWaiting();
+      })
+      .catch(error => {
+        console.error('Service Worker: Erreur d\'installation:', error);
+        // Continuer même en cas d'erreur
+        return self.skipWaiting();
+      })
   );
 });
 
 // Activation du Service Worker
 self.addEventListener('activate', event => {
+  console.log('Service Worker: Activation démarrée');
+  
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
+    Promise.all([
+      // Nettoyer les anciens caches
+      caches.keys().then(cacheNames => {
+        return Promise.all(
+          cacheNames.map(cacheName => {
+            if (!cacheName.includes('v3.0')) {
+              console.log('Service Worker: Suppression ancien cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
+      
+      // Prendre le contrôle immédiatement
+      self.clients.claim()
+    ])
+    .then(() => {
+      console.log('Service Worker: Activation terminée - Application prête hors ligne');
+      
+      // Notifier tous les clients que l'app est prête
+      return self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'SW_READY',
+            message: 'Application prête pour utilisation hors ligne'
+          });
+        });
+      });
+    })
   );
 });
 
-// Stratégie de cache optimisée
-self.addEventListener('fetch', event => {
-  const { request } = event;
-  const url = new URL(request.url);
+
   
-  if (request.method !== 'GET') return;
-  
-  // Cache First pour assets critiques
-  if (CORE_ASSETS.some(asset => url.pathname === asset) || 
-      MENU_IMAGES.some(img => url.pathname === img)) {
+  // Cache First pour toutes les ressources mises en cache
+  if (ALL_CACHE_RESOURCES.some(resource => url.pathname === resource)) {
     event.respondWith(
       caches.match(request)
-        .then(response => response || fetch(request)
-          .then(networkResponse => {
-            caches.open(STATIC_CACHE)
-              .then(cache => cache.put(request, networkResponse.clone()));
-            return networkResponse;
-          })
-          .catch(() => new Response('Offline', { status: 503 }))
-        )
+        .then(response => {
+          if (response) {
+            return response;
+          }
+          
+          // Si pas en cache, essayer le réseau
+          return fetch(request)
+            .then(networkResponse => {
+              if (networkResponse.ok) {
+                caches.open(STATIC_CACHE)
+                  .then(cache => cache.put(request, networkResponse.clone()));
+              }
+              return networkResponse;
+            })
+            .catch(() => {
+              // Fallback pour les ressources critiques
+              if (url.pathname === '/') {
+                return new Response(`
+                  <!DOCTYPE html>
+                  <html>
+                  <head>
+                    <title>EAT NEO - Hors Ligne</title>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                  </head>
+                  <body>
+                    <div style="text-align: center; padding: 50px; font-family: Arial;">
+                      <h1>EAT NEO</h1>
+                      <p>Application disponible hors ligne</p>
+                      <p>Chargement en cours...</p>
+                      <script>window.location.reload();</script>
+                    </div>
+                  </body>
+                  </html>
+                `, { 
+                  status: 200,
+                  headers: { 'Content-Type': 'text/html' }
+                });
+              }
+              return new Response('Resource not available offline', { status: 503 });
+            });
+        })
     );
     return;
   }
@@ -132,7 +247,10 @@ self.addEventListener('fetch', event => {
       .then(response => {
         if (response) return response;
         
-        return fetch(request)
+        return fetch(request, { 
+          cache: 'no-cache',
+          signal: AbortSignal.timeout(5000) // Timeout de 5 secondes
+        })
           .then(networkResponse => {
             if (networkResponse.ok) {
               caches.open(OFFLINE_CACHE)
@@ -143,12 +261,35 @@ self.addEventListener('fetch', event => {
           .catch(() => {
             // Fallback pour pages
             if (url.pathname.startsWith('/')) {
-              return caches.match('/').then(response => 
-                response || new Response('App offline', { 
-                  status: 503,
+              return caches.match('/').then(response => {
+                if (response) return response;
+                // Retourner une page offline basique
+                return new Response(`
+                  <!DOCTYPE html>
+                  <html>
+                  <head>
+                    <title>EAT NEO - Mode Hors Ligne</title>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    <style>
+                      body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+                      .offline { color: #2e7d32; }
+                    </style>
+                  </head>
+                  <body>
+                    <div class="offline">
+                      <h1>EAT NEO</h1>
+                      <p>Mode hors ligne activé</p>
+                      <p>L'application fonctionne avec les données locales</p>
+                      <button onclick="window.location.reload()">Actualiser</button>
+                    </div>
+                  </body>
+                  </html>
+                `, { 
+                  status: 200,
                   headers: { 'Content-Type': 'text/html' }
-                })
-              );
+                });
+              });
             }
             return new Response('Offline', { status: 503 });
           });
@@ -197,6 +338,58 @@ self.addEventListener('notificationclick', event => {
     );
   }
 });
+
+// Gestion des messages des clients
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  
+  if (event.data && event.data.type === 'GET_VERSION') {
+    event.ports[0].postMessage({ version: CACHE_NAME });
+  }
+});
+
+// Pré-chargement des ressources critiques
+self.addEventListener('fetch', event => {
+  // Intercepter les requêtes pour les ressources critiques
+  if (event.request.destination === 'document') {
+    event.respondWith(
+      caches.match(event.request)
+        .then(response => {
+          if (response) {
+            return response;
+          }
+          
+          return fetch(event.request)
+            .then(networkResponse => {
+              // Mettre en cache les nouvelles pages
+              if (networkResponse.ok) {
+                caches.open(STATIC_CACHE)
+                  .then(cache => cache.put(event.request, networkResponse.clone()));
+              }
+              return networkResponse;
+            })
+            .catch(() => {
+              // Retourner la page offline si disponible
+              return caches.match('/offline.html')
+                .then(offlineResponse => {
+                  return offlineResponse || new Response(
+                    'Application hors ligne - Veuillez réessayer plus tard',
+                    { status: 503, statusText: 'Service Unavailable' }
+                  );
+                });
+            });
+        })
+    );
+    return;
+  }
+  
+  // Continuer avec la logique existante pour les autres requêtes
+  const { request } = event;
+  const url = new URL(request.url);
+  
+  if (request.method !== 'GET') return;
 
 // Synchronisation optimisée
 self.addEventListener('sync', event => {
