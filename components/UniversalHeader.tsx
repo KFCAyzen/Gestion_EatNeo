@@ -16,6 +16,12 @@ const RefreshIcon = () => (
   </svg>
 )
 
+const CartIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+    <path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V17C17 18.1 16.1 19 15 19H9C7.9 19 7 18.1 7 17V13M9 21C9.6 21 10 20.6 10 20S9.6 19 9 19 8 19.4 8 20 8.4 21 9 21ZM20 21C20.6 21 21 20.6 21 20S20.6 19 20 19 19 19.4 19 20 19.4 21 20 21Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+)
+
 interface UniversalHeaderProps {
   title: string
   showBackButton?: boolean
@@ -62,6 +68,9 @@ export default function UniversalHeader({ title, showBackButton = true, onBack, 
   const handleMenuAction = (action: string) => {
     setShowMenu(false)
     switch (action) {
+      case 'cart':
+        router.push('/panier')
+        break
       case 'notifications':
         router.push('/notifications')
         break
@@ -101,6 +110,10 @@ export default function UniversalHeader({ title, showBackButton = true, onBack, 
             </button>
             {showMenu && (
               <div className="universal-dropdown">
+                <button onClick={() => handleMenuAction('cart')}>
+                  <CartIcon />
+                  Panier
+                </button>
                 <button onClick={() => handleMenuAction('refresh')}>
                   <RefreshIcon />
                   Actualiser
