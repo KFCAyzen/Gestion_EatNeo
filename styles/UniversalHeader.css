@@ -11,8 +11,8 @@
   display: none;
 }
 
-/* Afficher seulement sur PWA desktop */
-@media (display-mode: standalone) and (min-width: 769px) {
+/* Afficher sur desktop (web et PWA) */
+@media (min-width: 769px) {
   .universal-header {
     display: block;
   }
@@ -68,10 +68,19 @@
   text-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
-/* Masquer le titre sur PWA desktop */
+/* Styles spécifiques PWA desktop */
 @media (display-mode: standalone) and (min-width: 769px) {
   .universal-header-title {
-    display: none;
+    font-size: 14px;
+    font-weight: 500;
+    text-shadow: none;
+  }
+}
+
+/* Styles pour toutes les versions desktop */
+@media (min-width: 769px) {
+  .universal-header-content {
+    justify-content: space-between;
   }
 }
 

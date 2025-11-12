@@ -18,6 +18,8 @@ export default function RootLayout({
     <html lang="fr">
       <head>
         <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" href="/logo.jpg" />
+        <link rel="shortcut icon" href="/logo.jpg" />
         <meta name="theme-color" content="#2e7d32" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

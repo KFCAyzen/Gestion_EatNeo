@@ -69,7 +69,7 @@ export default function PWAInstaller() {
       fontSize: '14px',
       fontWeight: '600'
     }} onClick={handleInstall}>
-      📱 Installer l'app
+Installer l'app
     </div>
   )
 }
