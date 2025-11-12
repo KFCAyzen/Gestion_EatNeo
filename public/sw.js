@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eatneo-complete-v1.0';
+const CACHE_NAME = 'eatneo-complete-v1.1';
 
 // Ressources essentielles pour fonctionnement complet offline
 const ESSENTIAL_RESOURCES = [
@@ -102,6 +102,19 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   
   const url = new URL(event.request.url);
+  
+  // Ignorer les domaines externes (Firebase, Analytics, etc.)
+  const externalDomains = [
+    'firebase.googleapis.com',
+    'www.google-analytics.com', 
+    'firestore.googleapis.com',
+    'firebasestorage.googleapis.com'
+  ];
+  
+  if (externalDomains.some(domain => url.hostname.includes(domain))) {
+    return; // Laisser le navigateur gérer ces requêtes
+  }
+  
   if (url.origin !== self.location.origin) return;
   
   event.respondWith(
