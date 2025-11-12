@@ -1,6 +1,6 @@
-const CACHE_NAME = 'eatneo-hybrid-v7.2';
-const STATIC_CACHE = 'eatneo-static-v7.2';
-const DYNAMIC_CACHE = 'eatneo-dynamic-v7.2';
+const CACHE_NAME = 'eatneo-hybrid-v7.3';
+const STATIC_CACHE = 'eatneo-static-v7.3';
+const DYNAMIC_CACHE = 'eatneo-dynamic-v7.3';
 
 // Base Firebase Storage
 const FIREBASE_BASE = 'https://firebasestorage.googleapis.com/v0/b/menu-et-gestion-stock-ea-14886.firebasestorage.app/o/images%2F';
@@ -38,7 +38,7 @@ let isOnline = true;
 
 // Installation - Téléchargement complet avec indicateur
 self.addEventListener('install', event => {
-  console.log('SW v7.2: Installation - Mode hybride online/offline');
+  console.log('SW v7.3: Installation - Mode hybride online/offline');
   
   event.waitUntil(
     (async () => {
@@ -105,12 +105,12 @@ self.addEventListener('activate', event => {
     Promise.all([
       caches.keys().then(names => 
         Promise.all(names.map(name => 
-          !name.includes('v7.2') ? caches.delete(name) : null
+          !name.includes('v7.3') ? caches.delete(name) : null
         ))
       ),
       self.clients.claim()
     ]).then(() => {
-      console.log('SW v7.2: Activé - Mode hybride');
+      console.log('SW v7.3: Activé - Mode hybride');
       startSyncProcess();
     })
   );
@@ -140,10 +140,13 @@ function checkOnlineStatus() {
   });
 }
 
-// Synchronisation des données offline
+// Synchronisation des données offline et nouveaux articles
 async function syncOfflineData() {
   try {
     const clients = await self.clients.matchAll();
+    
+    // Synchroniser les nouveaux articles et images
+    await syncNewMenuItems();
     
     for (const client of clients) {
       client.postMessage({
@@ -158,12 +161,91 @@ async function syncOfflineData() {
   }
 }
 
+// Synchroniser les nouveaux articles du menu
+async function syncNewMenuItems() {
+  try {
+    console.log('SW: Synchronisation des nouveaux articles...');
+    
+    // Récupérer les articles depuis Firebase
+    const response = await fetch('https://firestore.googleapis.com/v1/projects/menu-et-gestion-stock-ea-14886/databases/(default)/documents/menu/articles', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      console.log('SW: Impossible de récupérer les articles, utilisation du cache');
+      return;
+    }
+    
+    const data = await response.json();
+    const articles = data.documents || [];
+    
+    // Extraire les nouvelles images à mettre en cache
+    const newImages = [];
+    const cache = await caches.open(STATIC_CACHE);
+    
+    for (const article of articles) {
+      const fields = article.fields || {};
+      const imageUrl = fields.image?.stringValue;
+      
+      if (imageUrl && (imageUrl.includes('firebasestorage.googleapis.com') || imageUrl.startsWith('/'))) {
+        // Vérifier si l'image n'est pas déjà en cache
+        const cachedImage = await cache.match(imageUrl);
+        if (!cachedImage) {
+          newImages.push(imageUrl);
+        }
+      }
+    }
+    
+    // Mettre en cache les nouvelles images
+    if (newImages.length > 0) {
+      console.log(`SW: Mise en cache de ${newImages.length} nouvelles images`);
+      
+      const imagePromises = newImages.map(async (imageUrl) => {
+        try {
+          const imageResponse = await fetch(imageUrl);
+          if (imageResponse.ok) {
+            await cache.put(imageUrl, imageResponse.clone());
+            console.log(`SW: Image mise en cache: ${imageUrl}`);
+          }
+        } catch (error) {
+          console.warn(`SW: Erreur cache image ${imageUrl}:`, error);
+        }
+      });
+      
+      await Promise.allSettled(imagePromises);
+      
+      // Notifier les clients des nouvelles images
+      const clients = await self.clients.matchAll();
+      clients.forEach(client => {
+        client.postMessage({
+          type: 'NEW_IMAGES_CACHED',
+          count: newImages.length,
+          images: newImages
+        });
+      });
+    }
+    
+  } catch (error) {
+    console.error('SW: Erreur synchronisation articles:', error);
+  }
+}
+
 // Processus de synchronisation périodique
 function startSyncProcess() {
   // Vérifier la connexion toutes les 30 secondes
   setInterval(() => {
     checkOnlineStatus();
   }, 30000);
+  
+  // Synchroniser les nouveaux articles toutes les 5 minutes quand online
+  setInterval(() => {
+    if (isOnline) {
+      syncNewMenuItems();
+    }
+  }, 300000); // 5 minutes
   
   // Vérification initiale
   checkOnlineStatus();
@@ -387,6 +469,33 @@ self.addEventListener('message', event => {
       event.ports[0]?.postMessage({ online });
     });
   }
+  
+  if (event.data?.type === 'SYNC_MENU') {
+    // Synchronisation manuelle des articles
+    syncNewMenuItems();
+  }
+  
+  if (event.data?.type === 'CACHE_IMAGE') {
+    // Mettre en cache une image spécifique
+    const imageUrl = event.data.imageUrl;
+    if (imageUrl) {
+      caches.open(STATIC_CACHE)
+        .then(cache => fetch(imageUrl))
+        .then(response => {
+          if (response.ok) {
+            return caches.open(STATIC_CACHE).then(cache => 
+              cache.put(imageUrl, response.clone())
+            );
+          }
+        })
+        .then(() => {
+          console.log(`SW: Image mise en cache manuellement: ${imageUrl}`);
+        })
+        .catch(error => {
+          console.error(`SW: Erreur cache manuel image:`, error);
+        });
+    }
+  }
 });
 
 // Synchronisation en arrière-plan
@@ -396,4 +505,4 @@ self.addEventListener('sync', event => {
   }
 });
 
-console.log('SW v7.2: Mode hybride - Online/Offline avec synchronisation');
+console.log('SW v7.3: Mode hybride - Online/Offline avec synchronisation');

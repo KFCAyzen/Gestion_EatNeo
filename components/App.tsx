@@ -85,6 +85,7 @@ import DesktopMenu from './DesktopMenu'
 import SyncStatus from './SyncStatus'
 import OfflinePreloader from './OfflinePreloader'
 import { usePWADetection } from '../hooks/usePWADetection'
+import { useMenuSync } from '../hooks/useMenuSync'
 
 export default function AppContent() {
   const pathname = usePathname()
@@ -92,6 +93,7 @@ export default function AppContent() {
   const router = useRouter()
   const { user, login, logout, isAdmin } = useAuth()
   const { isDesktop } = usePWADetection()
+  const { newItemsCount, isOnline, syncMenu, cacheImage } = useMenuSync()
   const [cartItems, setCartItems] = useState<MenuItem[]>([]);
   const [table, setTable] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -413,6 +415,25 @@ export default function AppContent() {
       <NotificationManager />
       <OfflineIndicator />
       <SyncStatus />
+      
+      {/* Notification des nouveaux articles */}
+      {newItemsCount > 0 && (
+        <div style={{
+          position: 'fixed',
+          top: '70px',
+          right: '20px',
+          background: '#4caf50',
+          color: 'white',
+          padding: '8px 16px',
+          borderRadius: '20px',
+          fontSize: '14px',
+          fontWeight: '500',
+          zIndex: 1001,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+        }}>
+          {newItemsCount} nouvelles images mises en cache
+        </div>
+      )}
     </OfflinePreloader>
   );
 }
