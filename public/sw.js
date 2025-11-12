@@ -1,6 +1,6 @@
-const CACHE_NAME = 'eatneo-hybrid-v7.3';
-const STATIC_CACHE = 'eatneo-static-v7.3';
-const DYNAMIC_CACHE = 'eatneo-dynamic-v7.3';
+const CACHE_NAME = 'eatneo-hybrid-v7.4';
+const STATIC_CACHE = 'eatneo-static-v7.4';
+const DYNAMIC_CACHE = 'eatneo-dynamic-v7.4';
 
 // Base Firebase Storage
 const FIREBASE_BASE = 'https://firebasestorage.googleapis.com/v0/b/menu-et-gestion-stock-ea-14886.firebasestorage.app/o/images%2F';
@@ -38,7 +38,7 @@ let isOnline = true;
 
 // Installation - Téléchargement complet avec indicateur
 self.addEventListener('install', event => {
-  console.log('SW v7.3: Installation - Mode hybride online/offline');
+  console.log('SW v7.4: Installation - Mode hybride online/offline');
   
   event.waitUntil(
     (async () => {
@@ -105,12 +105,12 @@ self.addEventListener('activate', event => {
     Promise.all([
       caches.keys().then(names => 
         Promise.all(names.map(name => 
-          !name.includes('v7.3') ? caches.delete(name) : null
+          !name.includes('v7.4') ? caches.delete(name) : null
         ))
       ),
       self.clients.claim()
     ]).then(() => {
-      console.log('SW v7.3: Activé - Mode hybride');
+      console.log('SW v7.4: Activé - Mode hybride');
       startSyncProcess();
     })
   );
@@ -267,7 +267,7 @@ self.addEventListener('fetch', event => {
 
   // STRATÉGIES PAR TYPE DE RESSOURCE
 
-  // 1. PAGES - Cache First avec mise à jour en arrière-plan
+  // 1. PAGES - Cache First avec fallback vers accueil
   if (url.pathname === '/' || 
       ['/boissons', '/panier', '/admin', '/historique', '/notifications'].includes(url.pathname)) {
     event.respondWith(
@@ -279,9 +279,11 @@ self.addEventListener('fetch', event => {
             if (isOnline) {
               fetch(request)
                 .then(networkResponse => {
-                  if (networkResponse.ok) {
+                  if (networkResponse.ok && networkResponse.body) {
+                    const responseClone = networkResponse.clone();
                     caches.open(STATIC_CACHE)
-                      .then(cache => cache.put(request, networkResponse.clone()));
+                      .then(cache => cache.put(request, responseClone))
+                      .catch(() => {});
                   }
                 })
                 .catch(() => {});
@@ -292,21 +294,57 @@ self.addEventListener('fetch', event => {
           // Si pas en cache, essayer le réseau
           return fetch(request)
             .then(networkResponse => {
-              if (networkResponse.ok) {
+              if (networkResponse.ok && networkResponse.body) {
+                const responseClone = networkResponse.clone();
                 caches.open(STATIC_CACHE)
-                  .then(cache => cache.put(request, networkResponse.clone()));
+                  .then(cache => cache.put(request, responseClone))
+                  .catch(() => {});
               }
               return networkResponse;
             })
             .catch(() => {
+              // Fallback vers la page d'accueil si elle est en cache
+              if (url.pathname !== '/') {
+                return caches.match('/')
+                  .then(homeResponse => {
+                    if (homeResponse) {
+                      console.log(`SW: Redirection ${url.pathname} -> / (offline)`);
+                      return homeResponse;
+                    }
+                    // Si même l'accueil n'est pas en cache, page offline minimale
+                    return new Response(`
+                      <!DOCTYPE html>
+                      <html>
+                      <head>
+                        <title>EAT NEO - Offline</title>
+                        <meta name="viewport" content="width=device-width, initial-scale=1">
+                      </head>
+                      <body style="font-family:Arial;text-align:center;padding:20px;background:#f5f5f5;">
+                        <div style="max-width:400px;margin:0 auto;padding:40px 20px;background:white;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+                          <h1 style="color:#2e7d32;margin-bottom:20px;">🍽️ EAT NEO</h1>
+                          <p style="color:#666;margin-bottom:30px;">Application en mode offline</p>
+                          <button onclick="window.location.reload()" style="background:#2e7d32;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;font-size:16px;">Réessayer</button>
+                        </div>
+                      </body>
+                      </html>
+                    `, { headers: { 'Content-Type': 'text/html' } });
+                  });
+              }
+              
+              // Pour la page d'accueil, page offline simple
               return new Response(`
                 <!DOCTYPE html>
                 <html>
-                <head><title>EAT NEO - Offline</title></head>
-                <body style="font-family:Arial;text-align:center;padding:50px;background:#2e7d32;color:white;">
-                  <h1>🍽️ EAT NEO</h1>
-                  <p>Mode offline - Redirection vers l'accueil</p>
-                  <script>setTimeout(() => window.location.href='/', 2000);</script>
+                <head>
+                  <title>EAT NEO - Offline</title>
+                  <meta name="viewport" content="width=device-width, initial-scale=1">
+                </head>
+                <body style="font-family:Arial;text-align:center;padding:20px;background:#f5f5f5;">
+                  <div style="max-width:400px;margin:0 auto;padding:40px 20px;background:white;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+                    <h1 style="color:#2e7d32;margin-bottom:20px;">🍽️ EAT NEO</h1>
+                    <p style="color:#666;margin-bottom:30px;">Application en mode offline</p>
+                    <button onclick="window.location.reload()" style="background:#2e7d32;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;font-size:16px;">Réessayer</button>
+                  </div>
                 </body>
                 </html>
               `, { headers: { 'Content-Type': 'text/html' } });
@@ -505,4 +543,4 @@ self.addEventListener('sync', event => {
   }
 });
 
-console.log('SW v7.3: Mode hybride - Online/Offline avec synchronisation');
+console.log('SW v7.4: Mode hybride - Online/Offline avec synchronisation');
