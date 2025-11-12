@@ -1,6 +1,6 @@
-const CACHE_NAME = 'eatneo-hybrid-v7.5';
-const STATIC_CACHE = 'eatneo-static-v7.5';
-const DYNAMIC_CACHE = 'eatneo-dynamic-v7.5';
+const CACHE_NAME = 'eatneo-hybrid-v7.6';
+const STATIC_CACHE = 'eatneo-static-v7.6';
+const DYNAMIC_CACHE = 'eatneo-dynamic-v7.6';
 
 // Base Firebase Storage
 const FIREBASE_BASE = 'https://firebasestorage.googleapis.com/v0/b/menu-et-gestion-stock-ea-14886.firebasestorage.app/o/images%2F';
@@ -16,11 +16,10 @@ const FIREBASE_IMAGES = [
   'rognons-de-boeuf.webp', 'emince-de-boeuf.jpeg', 'tripes.jpeg', 'eru.jpeg'
 ].map(img => `${FIREBASE_BASE}${encodeURIComponent(img)}?alt=media`);
 
-// Ressources complètes à télécharger
-const ALL_RESOURCES = [
-  '/', '/boissons', '/panier', '/admin', '/historique', '/notifications',
-  '/manifest.json', '/logo.jpg', '/icon-192x192.png', '/icon-512x512.png',
-  '/poulet_DG.jpg', '/fanta.jpg', '/reaktor.jpg',
+// Images locales importantes pour fallback
+const LOCAL_IMAGES = [
+  '/poulet_DG.jpg', '/fanta.jpg', '/reaktor.jpg', '/logo.jpg',
+  '/icon-192x192.png', '/icon-512x512.png',
   '/icons8-utilisateur-50.png', '/icons8-profile-50.png', '/icons8-déconnexion-100.png',
   '/icons8-multiplier-100.png', '/icons8-poubelle-64.png', '/icons8-bar-alimentaire-50.png',
   '/icons8-food-bar-50.png', '/icons8-search-50.png', '/icons8-verre-à-vin-50.png',
@@ -31,6 +30,23 @@ const ALL_RESOURCES = [
   '/icons8-requirements-50.png', '/icons8-requirements-50 (1).png',
   '/icons8-passé-100.png', '/icons8-passé-100 (1).png', '/icons8-checklist-50.png',
   '/icons8-checklist-50 (1).png', '/icons8-arrière-50.png',
+  // Images menu principales
+  '/bouillon.jpeg', '/poulet_braisé.jpeg', '/poisson.jpeg', '/plantain-tapé.jpeg',
+  '/taro.jpeg', '/ndolé.jpg', '/saucisse.jpg', '/panné.png', '/foie.jpg',
+  '/barBraisé.jpeg', '/barCalada.jpeg', '/carpe.jpeg', '/thé-citron.jpeg',
+  '/thé-menthe.jpeg', '/thé-vert.jpeg', '/tasse-lait.jpeg', '/omelette.jpeg',
+  '/omelette-sardine.jpeg', '/omelette-saucisson.webp', '/poulet-yassa.jpeg',
+  '/frite.jpeg', '/pomme-vapeur.webp', '/plantain-vapeur.jpeg', '/platain-frie.webp',
+  '/Ndole-poisson-fume.jpg', '/pomme-poisson.jpeg', '/pomme-viande.jpeg',
+  '/Riz-pilaf-au-Thermomix.jpg', '/rognons-de-boeuf.webp', '/emince-de-boeuf.jpeg',
+  '/tripes.jpeg', '/eru.jpeg'
+];
+
+// Ressources complètes à télécharger
+const ALL_RESOURCES = [
+  '/', '/boissons', '/panier', '/admin', '/historique', '/notifications',
+  '/manifest.json',
+  ...LOCAL_IMAGES,
   ...FIREBASE_IMAGES
 ];
 
@@ -38,7 +54,7 @@ let isOnline = true;
 
 // Installation - Téléchargement complet avec indicateur
 self.addEventListener('install', event => {
-  console.log('SW v7.5: Installation - Mode hybride online/offline');
+  console.log('SW v7.6: Installation - Mode hybride online/offline avec fallbacks images');
   
   event.waitUntil(
     (async () => {
@@ -105,12 +121,12 @@ self.addEventListener('activate', event => {
     Promise.all([
       caches.keys().then(names => 
         Promise.all(names.map(name => 
-          !name.includes('v7.5') ? caches.delete(name) : null
+          !name.includes('v7.6') ? caches.delete(name) : null
         ))
       ),
       self.clients.claim()
     ]).then(() => {
-      console.log('SW v7.5: Activé - Mode hybride');
+      console.log('SW v7.6: Activé - Mode hybride avec fallbacks images');
       startSyncProcess();
     })
   );
@@ -365,14 +381,18 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 3. IMAGES - Cache First avec fallback amélioré
+  // 3. IMAGES - Cache First avec fallbacks locaux pour mobile
   if (request.url.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/) || request.url.includes('firebasestorage.googleapis.com')) {
     event.respondWith(
       caches.match(request)
         .then(cachedResponse => {
-          if (cachedResponse) return cachedResponse;
+          if (cachedResponse) {
+            console.log(`SW: Image servie depuis le cache: ${request.url}`);
+            return cachedResponse;
+          }
           
-          return fetch(request)
+          // Essayer d'abord le réseau avec timeout court
+          return fetch(request, { signal: AbortSignal.timeout(3000) })
             .then(networkResponse => {
               if (networkResponse.ok && networkResponse.body) {
                 const responseClone = networkResponse.clone();
@@ -382,7 +402,28 @@ self.addEventListener('fetch', event => {
               }
               return networkResponse;
             })
-            .catch(() => {
+            .catch(async () => {
+              // Fallback vers image locale si disponible
+              const imageName = request.url.split('/').pop()?.split('?')[0];
+              if (imageName) {
+                // Essayer plusieurs variantes du nom de fichier
+                const possibleNames = [
+                  `/${imageName}`,
+                  `/${imageName.replace(/%20/g, '-')}`,
+                  `/${imageName.replace(/%20/g, '_')}`,
+                  `/${imageName.replace(/\s+/g, '-')}`,
+                  `/${imageName.replace(/\s+/g, '_')}`
+                ];
+                
+                for (const localUrl of possibleNames) {
+                  const localResponse = await caches.match(localUrl);
+                  if (localResponse) {
+                    console.log(`SW: Fallback vers image locale: ${localUrl}`);
+                    return localResponse;
+                  }
+                }
+              }
+              
               // Fallback SVG pour images manquantes
               return new Response(`
                 <svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150">
@@ -523,4 +564,4 @@ self.addEventListener('sync', event => {
   }
 });
 
-console.log('SW v7.5: Mode hybride - Online/Offline avec synchronisation');
+console.log('SW v7.6: Mode hybride - Online/Offline avec fallbacks images pour mobile');
