@@ -207,7 +207,26 @@ export default function AppContent() {
 
   return (
     <OfflinePreloader>
-      {/* CONDITIONAL HEADERS */}
+      {/* PWA DESKTOP/TABLET HEADER */}
+      <UniversalHeader 
+        title={getPageTitle()}
+        showBackButton={pathname !== '/' && pathname !== '/boissons'}
+        onBack={() => {
+          if (pathname === '/admin') {
+            router.push('/')
+          } else {
+            router.back()
+          }
+        }}
+        user={user}
+        onAdminClick={() => user ? router.push('/admin') : setShowLogin(true)}
+        onLogout={() => {
+          logout()
+          router.push('/')
+        }}
+      />
+      
+      {/* MOBILE HEADER */}
       {!isDesktop && (
         <MobileHeader 
           title={getPageTitle()}
