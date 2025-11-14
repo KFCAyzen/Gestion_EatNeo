@@ -81,11 +81,9 @@ const ExpenseManager: React.FC = () => {
         try {
           await deleteDoc(doc(db, 'depenses', id))
           showToast('Dépense supprimée !', 'success')
-          closeModal()
         } catch (error) {
           console.error('Erreur:', error)
           showToast('Erreur lors de la suppression', 'error')
-          closeModal()
         }
       },
       closeModal
@@ -368,6 +366,7 @@ NIU: P067500122904X | Email: eatneo@gmail.com | Tél: 696 032 113
           type={modal.type}
           onConfirm={modal.onConfirm}
           onCancel={modal.onCancel}
+          onClose={closeModal}
         />
       )}
     </div>

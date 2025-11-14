@@ -197,5 +197,13 @@ export const images = {
   historique: getImageUrl('icons8-passe-100%20(1).png', historique),
   commandesActif: getImageUrl('icons8-checklist-50.png', commandesActif),
   commandes: getImageUrl('icons8-checklist-50%20(1).png', commandes),
-  backArrow: getImageUrl('icons8-arriere-50.png', backArrow)
+  backArrow: getImageUrl('icons8-arriere-50.png', backArrow),
+  supplementViande: getImageUrl('viande-de-boeuf-frit.jpg'),
+  supplementPoisson: getImageUrl('poisson-frit.jpg'),
+  solBraise: getImageUrl('soll-braise.jpeg'),
+  macereauBraise: getImageUrl('macereau-braise.jfif'),
+  pouletFrit: getImageUrl('poulet-frit.jfif'),
+  crudites: getImageUrl('Plat_de_crudités.jpg'),
+  ndoleMiondo: getImageUrl('ndole-miondo-1.webp'),
+  cafeDiet: getImageUrl('cafe-diet.jpg')
 };

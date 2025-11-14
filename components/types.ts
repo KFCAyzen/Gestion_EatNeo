@@ -15,6 +15,113 @@ export type MenuItem = {
   stock?: number;     //  Champ pour la gestion de stock
 };
 
+export type Ingredient = {
+  id: string | number;
+  nom: string;
+  quantite: number;
+  unite: string;
+  seuilAlerte: number;
+  prixUnitaire?: number;
+};
+
+export type Recipe = {
+  [dishName: string]: {
+    [ingredientName: string]: number;
+  };
+};
+
+export const dishRecipes: Recipe = {
+  "Haricot viande": {
+    "Viande de boeuf": 0.5
+  },
+  "Sauce d'arachide": {
+    "Viande de boeuf": 1
+  },
+  "Ndolé Viande": {
+    "Viande de boeuf": 1,
+    "Arachides": 1,
+    "Ndolé": 1
+  },
+  "Ndolé au poisson Fumé": {
+    "Poissons": 0.5,
+    "Arachides": 1,
+    "Ndolé": 1
+  },
+  "Riz sauté viande": {
+    "Viande de boeuf": 0.5
+  },
+  "Macaroni Viande": {
+    "Viande de boeuf": 0.5
+  },
+  "Spaghetti viande": {
+    "Viande de boeuf": 0.5
+  },
+  "Légumes sautés": {
+    "Viande de boeuf": 1
+  },
+  "Tasse de lait": {
+    "Oeufs": 2,
+    "Nido": 1,
+    "Nescafe": 0.5
+  },
+  "Omelette Nature": {
+    "Oeufs": 2,
+    "Nido": 1,
+    "Nescafe": 0.5
+  },
+  "Omelette Sardine": {
+    "Oeufs": 2,
+    "Nido": 1,
+    "Nescafe": 0.5
+  },
+  "Omelette Saucisson": {
+    "Oeufs": 2,
+    "Nido": 1,
+    "Nescafe": 0.5
+  },
+  "Crudité": {
+    "Oeufs": 1
+  },
+  "Tasse, Omelette, Crudité, Pain": {
+    "Oeufs": 2,
+    "Nido": 1,
+    "Nescafe": 0.5
+  },
+  "Pain - avec Avocat": {
+    "Oeufs": 2,
+    "Top milk": 2,
+    "Nescafe": 0.5
+  },
+  "Haricot simple": {},
+  "Ndolé Poissons": {
+    "Poissons": 0.5,
+    "Arachides": 1,
+    "Ndolé": 1
+  },
+  "Supplement de viande": {
+    "Viande de boeuf": 1
+  },
+  "Supplement Poisson": {
+    "Poissons": 0.5
+  }
+};
+
+export const initialIngredients: Ingredient[] = [
+  { id: 1, nom: "Viande de porc", quantite: 10, unite: "portions", seuilAlerte: 3 },
+  { id: 2, nom: "Viande de boeuf", quantite: 20, unite: "portions", seuilAlerte: 3 },
+  { id: 3, nom: "Arachides", quantite: 15, unite: "portions", seuilAlerte: 5 },
+  { id: 4, nom: "Boulettes", quantite: 20, unite: "portions", seuilAlerte: 5 },
+  { id: 5, nom: "Saucisses", quantite: 15, unite: "portions", seuilAlerte: 5 },
+  { id: 6, nom: "Oeufs", quantite: 30, unite: "pièces", seuilAlerte: 10 },
+  { id: 7, nom: "Nido", quantite: 20, unite: "sachets", seuilAlerte: 5 },
+  { id: 8, nom: "Ndolé", quantite: 12, unite: "portions", seuilAlerte: 4 },
+  { id: 9, nom: "Légumes", quantite: 25, unite: "portions", seuilAlerte: 8 },
+  { id: 10, nom: "Poissons", quantite: 15, unite: "pièces", seuilAlerte: 5 },
+  { id: 11, nom: "Poulet", quantite: 12, unite: "portions", seuilAlerte: 4 },
+  { id: 12, nom: "Top milk", quantite: 15, unite: "sachets", seuilAlerte: 5 },
+  { id: 13, nom: "Nescafe", quantite: 10, unite: "sachets", seuilAlerte: 3 }
+];
+
 export const menuItems: MenuItem[] = [
   {
     id: 1,
@@ -22,8 +129,8 @@ export const menuItems: MenuItem[] = [
     prix: "4000 FCFA",
     image: pouletDG,
     description: "Poulet frit mijoté avec plantains mûrs, légumes et épices.",
-    catégorie: ["Plats principaux", "Plats chaud"],
-    filtre: ["Plats principaux", "Plats chaud"],
+    catégorie: ["Plats principaux", "Plats chaud", "Grillades & Poêlés"],
+    filtre: ["Plats principaux", "Plats chaud", "Grillades & Poêlés"],
   },
   {
     id: 2,
@@ -127,7 +234,7 @@ export const menuItems: MenuItem[] = [
   {
     id: 11,
     nom: "Ndolé au poisson Fumé",
-    prix: "2500 FCFA",
+    prix: [{label: "Poissons", value: "2500 FCFA", selected: true}],
     image: images.ndoléFumé,
     description: "Ndolé revisité avec poisson fumée, goût intense et rustique.",
     catégorie: ["Plats chaud", "Plats traditionnels", "Plats principaux"],
@@ -154,8 +261,9 @@ export const menuItems: MenuItem[] = [
   {
     id: 14,
     nom: "Bar Braisé",
-    prix: [{label: "Moyen", value: "7000 FCFA", selected: true},
-      {label: "Gros", value: "8000 FCFA"}
+    prix: [{label: "Gros", value: "3500 FCFA", selected: true},
+      {label: "Moyen", value: "3000 FCFA"},
+      {label: "Petit", value: "2000 FCFA"}
     ],
     image: images.barBraisé,
     description: "Filet de bar rôti à la braise, peau croustillante chaire tendre.",
@@ -176,11 +284,54 @@ export const menuItems: MenuItem[] = [
   {
     id: 16,
     nom: "Carpe Braisé",
-    prix: [{label: "Moyen", value: "4000 FCFA", selected: true},
-      {label: "Gros", value: "5000 FCFA"}
+    prix: [{label: "Gros", value: "4000 FCFA", selected: true},
+      {label: "Moyen", value: "3000 FCFA"},
+      {label: "Petit", value: "2000 FCFA"}
     ],
     image: images.carpe,
-    description: "Carpe entière grillé, parfumée aux herbes et condiments locaux.",
+    description: "Carpe fraîche grillée à la braise, accompagnée d'épices locales.",
+    catégorie: ["Grillades & Poêlés"],
+    filtre: ["Grillades & Poêlés"],
+  },
+  {
+    id: 62,
+    nom: "Supplement de viande",
+    prix: "500 FCFA",
+    image: images.supplementViande,
+    description: "Supplément de viande de bœuf pour accompagner vos plats.",
+    catégorie: ["Suppléments"],
+    filtre: ["Suppléments"],
+  },
+  {
+    id: 63,
+    nom: "Supplement Poisson",
+    prix: "500 FCFA",
+    image: images.supplementPoisson,
+    description: "Supplément de poisson pour enrichir vos plats.",
+    catégorie: ["Suppléments"],
+    filtre: ["Suppléments"],
+  },
+  {
+    id: 64,
+    nom: "Sol Braisé",
+    prix: [{label: "Gros", value: "5000 FCFA", selected: true},
+      {label: "Moyen", value: "4000 FCFA"},
+      {label: "Petit", value: "3500 FCFA"}
+    ],
+    image: images.solBraise,
+    description: "Sol frais grillé à la braise avec épices locales.",
+    catégorie: ["Grillades & Poêlés"],
+    filtre: ["Grillades & Poêlés"],
+  },
+  {
+    id: 65,
+    nom: "Macereau Braisé",
+    prix: [{label: "Gros", value: "2500 FCFA", selected: true},
+      {label: "Moyen", value: "2000 FCFA"},
+      {label: "Petit", value: "1500 FCFA"}
+    ],
+    image: images.macereauBraise,
+    description: "Macereau grillé à la braise, savoureux et parfumé.",
     catégorie: ["Grillades & Poêlés"],
     filtre: ["Grillades & Poêlés"],
   },
@@ -196,7 +347,8 @@ export const menuItems: MenuItem[] = [
   {
     id: 18,
     nom: "Omelette Nature",
-    prix: "1500 FCFA",
+    prix: [{label: "Avec Avocat", value: "1500 FCFA", selected: true},
+      {label: "Sans Avocat", value: "1000 FCFA"}],
     image: images.omlette,
     description: "Omelette simple aux oeufs battus, légère et moelleuse.",
     catégorie: ["Petit Déjeuner"],
@@ -205,7 +357,8 @@ export const menuItems: MenuItem[] = [
   {
     id: 19,
     nom: "Omelette Sardine",
-    prix: "2000 FCFA",
+    prix: [{label: "Avec Avocat", value: "2000 FCFA", selected: true},
+      {label: "Sans Avocat", value: "1000 FCFA"}],
     image: images.omletteSardine,
     description: "Omelette garnie de sardines et dépices douces.",
     catégorie: ["Petit Déjeuner"],
@@ -214,7 +367,8 @@ export const menuItems: MenuItem[] = [
   {
     id: 20,
     nom: "Omelette Saucisson",
-    prix: "2000 FCFA",
+    prix: [{label: "Avec Avocat", value: "2000 FCFA", selected: true},
+      {label: "Sans Avocat", value: "1000 FCFA"}],
     image: images.omletteSaucisson,
     description: "Omelette généreuse au saucisson, parfaite pour les gourmands.",
     catégorie: ["Petit Déjeuner"],
@@ -223,11 +377,22 @@ export const menuItems: MenuItem[] = [
   {
     id: 21,
     nom: "Tasse de lait",
-    prix: "500 FCFA",
+    prix: [{label: "Avec Avocat", value: "500 FCFA", selected: true},
+      {label: "Sans Avocat", value: "1000 FCFA"}],
     image: images.tasse,
     description: "Lait chaud servi nature, doux et reconfortant.",
     catégorie: ["Boissons chaudes"],
     filtre: ["Boissons chaudes"],
+  },
+  {
+    id: 61,
+    nom: "Tasse, Omelette, Crudité, Pain",
+    prix: [{label: "Avec Avocat", value: "1500 FCFA", selected: true},
+      {label: "Sans Avocat", value: "1000 FCFA"}],
+    image: images.omlette,
+    description: "Plat complet avec tasse de lait, omelette, crudités et pain.",
+    catégorie: ["Petit Déjeuner"],
+    filtre: ["Petit Déjeuner"],
   },
   {
     id: 22,
@@ -271,8 +436,8 @@ export const menuItems: MenuItem[] = [
     prix: "",
     image: images.plantainFrie,
     description: "Plantains frit et dorés à l'huile.",
-    catégorie: ["Accompagnements"],
-    filtre: ["Accompagnements"],
+    catégorie: ["Accompagnements", "Grillades & Poêlés"],
+    filtre: ["Accompagnements", "Grillades & Poêlés"],
   },
   {
     id: 28,
@@ -289,8 +454,8 @@ export const menuItems: MenuItem[] = [
     prix: "",
     image: images.frite,
     description: "Pommes de terre frit et dorés à l'huile.",
-    catégorie: ["Accompagnements"],
-    filtre: ["Accompagnements"],
+    catégorie: ["Accompagnements", "Grillades & Poêlés"],
+    filtre: ["Accompagnements", "Grillades & Poêlés"],
   },
   {
     id: 30,
@@ -329,10 +494,12 @@ export const menuItems: MenuItem[] = [
     catégorie: ["Petit Déjeuner"],
     filtre: ["Petit Déjeuner"],
   },
+
   {
     id: 35,
     nom: "Crudité",
-    prix: "1000 FCFA",
+    prix: [{label: "Avec Avocat", value: "1000 FCFA", selected: true},
+      {label: "Sans Avocat", value: "1000 FCFA"}],
     image: "https://firebasestorage.googleapis.com/v0/b/menu-et-gestion-stock-ea-14886.firebasestorage.app/o/images%2Fcrudit%C3%A9.jpeg?alt=media&token=2fb99f3f-f4f1-4150-b7d2-9a06afb84a5f",
     description: "Assortiment de légumes frais et croquants",
     catégorie: ["Petit Déjeuner"],
@@ -348,6 +515,16 @@ export const menuItems: MenuItem[] = [
     filtre: ["Petit Déjeuner"],
   },
   {
+    id: 60,
+    nom: "Pain - avec Avocat",
+    prix: [{label: "Avec Avocat", value: "1500 FCFA", selected: true},
+      {label: "Sans Avocat", value: "1000 FCFA"}],
+    image: images.omlette,
+    description: "Pain accompagné d'avocat frais et d'œufs",
+    catégorie: ["Petit Déjeuner"],
+    filtre: ["Petit Déjeuner"],
+  },
+  {
     id: 37,
     nom: "Haricot viande",
     prix: "1000 FCFA",
@@ -357,13 +534,32 @@ export const menuItems: MenuItem[] = [
     filtre: ["Petit Déjeuner"],
   },
   {
+    id: 58,
+    nom: "Haricot simple",
+    prix: "1000 FCFA",
+    image: "https://firebasestorage.googleapis.com/v0/b/menu-et-gestion-stock-ea-14886.firebasestorage.app/o/images%2Fharicot-viande.jpeg?alt=media&token=8f203209-87bd-4f99-a991-a1916083d704",
+    description: "Haricots mijotés sans viande, version simple",
+    catégorie: ["Petit Déjeuner"],
+    filtre: ["Petit Déjeuner"],
+  },
+  {
+    id: 59,
+    nom: "Ndolé Poissons",
+    prix: "2500 FCFA",
+    image: images.ndoléFumé,
+    description: "Ndolé aux poissons frais, riche en saveurs",
+    catégorie: ["Plats chaud", "Plats traditionnels", "Plats principaux"],
+    filtre: ["Plats chaud", "Plats traditionnels", "Plats principaux"],
+  },
+
+  {
     id: 38,
     nom: "Poulet grillé",
     prix: "3000 FCFA",
     image: images.pouletBraisé,
     description: "Poulet grillé aux épices locales, tendre et juteux",
-    catégorie: ["Grillades"],
-    filtre: ["Grillades"],
+    catégorie: ["Grillades", "Grillades & Poêlés"],
+    filtre: ["Grillades", "Grillades & Poêlés"],
   },
   {
     id: 39,
@@ -371,8 +567,8 @@ export const menuItems: MenuItem[] = [
     prix: "3500 FCFA",
     image: "https://firebasestorage.googleapis.com/v0/b/menu-et-gestion-stock-ea-14886.firebasestorage.app/o/images%2Fporc-grille.jpeg?alt=media&token=4ed6f063-d034-43bd-ad11-cf66101ade1a",
     description: "Porc grillé tendre et savoureux aux herbes",
-    catégorie: ["Grillades"],
-    filtre: ["Grillades"],
+    catégorie: ["Grillades", "Grillades & Poêlés"],
+    filtre: ["Grillades", "Grillades & Poêlés"],
   },
   {
     id: 40,
@@ -380,8 +576,8 @@ export const menuItems: MenuItem[] = [
     prix: "3500 FCFA",
     image: images.saucisse,
     description: "Saucisses artisanales grillées aux épices",
-    catégorie: ["Grillades"],
-    filtre: ["Grillades"],
+    catégorie: ["Grillades", "Grillades & Poêlés"],
+    filtre: ["Grillades", "Grillades & Poêlés"],
   },
   {
     id: 41,
@@ -389,8 +585,8 @@ export const menuItems: MenuItem[] = [
     prix: "2500 FCFA",
     image: "https://firebasestorage.googleapis.com/v0/b/menu-et-gestion-stock-ea-14886.firebasestorage.app/o/images%2Fboulettes.jpeg?alt=media&token=3dc47e25-e94e-4bf5-836b-5bfec86ddb53",
     description: "Boulettes de viande grillées, moelleuses et parfumées",
-    catégorie: ["Grillades"],
-    filtre: ["Grillades"],
+    catégorie: ["Grillades", "Grillades & Poêlés"],
+    filtre: ["Grillades", "Grillades & Poêlés"],
   },
   {
     id: 42,

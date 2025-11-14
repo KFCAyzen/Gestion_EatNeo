@@ -18,6 +18,7 @@ import { MenuForm } from './MenuForm';
 import { StockManagement } from './StockManagement';
 import { MouvementsStock } from './MouvementsStock';
 import ProfitAnalysis from './ProfitAnalysis';
+import IngredientsStock from './IngredientsStock';
 import { LoadingSpinner, SearchIcon, EditIcon, DeleteIcon, EyeIcon, EyeOffIcon, PlusIcon, MinusIcon, HistoryIcon } from './Icons';
 import '@/styles/AdminPage.css'
 import { menuItems, drinksItems } from "./types";
@@ -85,7 +86,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
   const [editingCollection, setEditingCollection] = useState<"Plats" | "Boissons" | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [activeTab, setActiveTab] = useState<'menu' | 'commandes' | 'stock' | 'historique' | 'rentabilite'>('menu');
-  const [stockView, setStockView] = useState<'boissons' | 'plats'>('boissons');
+  const [stockView, setStockView] = useState<'boissons' | 'ingredients'>('boissons');
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out' | 'ok'>('all');
   const [historiqueView, setHistoriqueView] = useState<'commandes' | 'mouvements'>('commandes');
   const [periodFilter, setPeriodFilter] = useState('month');
@@ -94,6 +95,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
   const [stockSearchTerm, setStockSearchTerm] = useState('');
   const [commandesPeriodFilter, setCommandesPeriodFilter] = useState('month');
   const [pendingStockChange, setPendingStockChange] = useState<{itemId: string, newStock: number, collection: string} | null>(null);
+  const [tempStocks, setTempStocks] = useState<{[key: string]: number}>({});
   const [isResetting, setIsResetting] = useState(false);
   
   // Système de notifications
@@ -2046,10 +2048,6 @@ export default function AdminPage({ userRole }: AdminPageProps) {
             lowStockCount={stockStats.boissons.low}
             outOfStockCount={stockStats.boissons.out}
             okStockCount={stockStats.boissons.ok}
-            platsCount={plats.length}
-            lowPlatsCount={stockStats.plats.low}
-            outOfStockPlatsCount={stockStats.plats.out}
-            okPlatsCount={stockStats.plats.ok}
           />
 
 
@@ -2141,15 +2139,12 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                     {userRole === 'admin' && (
                       <button 
                         type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const newStock = Math.max(0, (item.stock || 0) - 1);
-                          setPendingStockChange({
-                            itemId: String(item.id),
-                            newStock,
-                            collection: "Boissons"
-                          });
+                        onClick={() => {
+                          const currentStock = tempStocks[String(item.id)] ?? (item.stock || 0);
+                          setTempStocks(prev => ({
+                            ...prev,
+                            [String(item.id)]: Math.max(0, currentStock - 1)
+                          }));
                         }}
                         className="stock-btn-minus-hover"
                         title="Diminuer le stock (Admin seulement)"
@@ -2160,24 +2155,26 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                     
                     <input
                       type="number"
-                      defaultValue={item.stock || 0}
+                      value={tempStocks[String(item.id)] ?? (item.stock || 0)}
+                      onChange={(e) => {
+                        setTempStocks(prev => ({
+                          ...prev,
+                          [String(item.id)]: parseInt(e.target.value) || 0
+                        }));
+                      }}
                       className="stock-input-complex"
                       min="0"
                       placeholder="0"
-                      id={`stock-input-boisson-${item.id}`}
                     />
                     
                     <button 
                       type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const newStock = (item.stock || 0) + 1;
-                        setPendingStockChange({
-                          itemId: String(item.id),
-                          newStock,
-                          collection: "Boissons"
-                        });
+                      onClick={() => {
+                        const currentStock = tempStocks[String(item.id)] ?? (item.stock || 0);
+                        setTempStocks(prev => ({
+                          ...prev,
+                          [String(item.id)]: currentStock + 1
+                        }));
                       }}
                       className="stock-btn-plus-hover"
                       title="Augmenter le stock"
@@ -2188,20 +2185,22 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                   
                   {/* Boutons d'action */}
                   <div className="stock-actions-row">
-                    <button
-                      onClick={async () => {
-                        const input = document.getElementById(`stock-input-boisson-${item.id}`) as HTMLInputElement;
-                        if (input) {
-                          const newStock = parseInt(input.value) || 0;
-                          if (newStock !== (item.stock || 0)) {
-                            await updateStock("Boissons", String(item.id), newStock);
-                          }
-                        }
-                      }}
-                      className="stock-confirm-btn"
-                    >
-                      Confirmer
-                    </button>
+                    {tempStocks[String(item.id)] !== undefined && tempStocks[String(item.id)] !== (item.stock || 0) && (
+                      <button
+                        onClick={async () => {
+                          const newStock = tempStocks[String(item.id)];
+                          await updateStock("Boissons", String(item.id), newStock);
+                          setTempStocks(prev => {
+                            const updated = { ...prev };
+                            delete updated[String(item.id)];
+                            return updated;
+                          });
+                        }}
+                        className="stock-confirm-btn"
+                      >
+                        Confirmer
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDelete("Boissons", String(item.id))}
                       className="ingredient-btn-delete"
@@ -2216,122 +2215,9 @@ export default function AdminPage({ userRole }: AdminPageProps) {
             </>
           )}
 
-          {/* Gestion des Plats */}
-          {stockView === 'plats' && (
-            <>
-              <h3 className="stock-section-title">Plats ({plats.length})</h3>
-              
-              <div className="stock-grid-container">
-            {filteredStockPlats.map(item => {
-              const stockLevel = item.stock || 0;
-              const isOutOfStock = stockLevel === 0;
-              const isLowStock = stockLevel <= 5 && stockLevel > 0;
-              
-              return (
-                <div key={item.id} className={`stock-card-complex ${isOutOfStock ? 'out-of-stock' : isLowStock ? 'low-stock' : 'normal-stock'}`}>
-                  {/* Badge de statut */}
-                  <div className={`stock-badge-complex ${isOutOfStock ? 'out-of-stock' : isLowStock ? 'low-stock' : 'normal-stock'}`}>
-                    {isOutOfStock ? 'Rupture' : isLowStock ? 'Faible' : 'OK'}
-                  </div>
-                  
-                  {/* Image et nom */}
-                  <div className="stock-header-complex">
-                    {item.image && (
-                      <div className="stock-image-complex">
-                        <img 
-                          src={item.image} 
-                          alt={item.nom} 
-                        />
-                      </div>
-                    )}
-                    <div className="stock-info-complex">
-                      <h4 className="stock-title-complex">
-                        {item.nom}
-                      </h4>
-                      <p className="stock-text-complex">
-                        Stock actuel: <span className={`stock-level-complex ${isOutOfStock ? 'out-of-stock' : isLowStock ? 'low-stock' : 'normal-stock'}`}>{stockLevel}</span> unités
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {/* Contrôles de stock */}
-                  <div className="stock-controls-complex">
-                    {userRole === 'admin' && (
-                      <button 
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const newStock = Math.max(0, (item.stock || 0) - 1);
-                          setPendingStockChange({
-                            itemId: String(item.id),
-                            newStock,
-                            collection: "Plats"
-                          });
-                        }}
-                        className="stock-btn-minus-hover"
-                        title="Diminuer le stock (Admin seulement)"
-                      >
-                        <MinusIcon />
-                      </button>
-                    )}
-                    
-                    <input
-                      type="number"
-                      defaultValue={item.stock || 0}
-                      className="stock-input-complex"
-                      min="0"
-                      placeholder="0"
-                      id={`stock-input-plat-${item.id}`}
-                    />
-                    
-                    <button 
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const newStock = (item.stock || 0) + 1;
-                        setPendingStockChange({
-                          itemId: String(item.id),
-                          newStock,
-                          collection: "Plats"
-                        });
-                      }}
-                      className="stock-btn-plus-hover"
-                      title="Augmenter le stock"
-                    >
-                      <PlusIcon />
-                    </button>
-                  </div>
-                  
-                  {/* Boutons d'action */}
-                  <div className="stock-actions-row">
-                    <button
-                      onClick={async () => {
-                        const input = document.getElementById(`stock-input-plat-${item.id}`) as HTMLInputElement;
-                        if (input) {
-                          const newStock = parseInt(input.value) || 0;
-                          if (newStock !== (item.stock || 0)) {
-                            await updateStock("Plats", String(item.id), newStock);
-                          }
-                        }
-                      }}
-                      className="stock-confirm-btn"
-                    >
-                      Confirmer
-                    </button>
-                    <button
-                      onClick={() => handleDelete("Plats", String(item.id))}
-                      className="ingredient-btn-delete"
-                    >
-                      Supprimer
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-            </>
+          {/* Gestion des Ingrédients */}
+          {stockView === 'ingredients' && (
+            <IngredientsStock />
           )}
     </div>
   )}
@@ -2497,6 +2383,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
           type={modal.type}
           onConfirm={modal.onConfirm}
           onCancel={modal.onCancel}
+          onClose={closeModal}
         />
       )}
     </div>

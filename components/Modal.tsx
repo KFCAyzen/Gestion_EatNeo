@@ -8,10 +8,18 @@ interface ModalProps {
   type: 'warning' | 'error' | 'info';
   onConfirm: () => void;
   onCancel?: () => void;
+  onClose?: () => void;
 }
 
-export function Modal({ isOpen, title, message, type, onConfirm, onCancel }: ModalProps) {
+export function Modal({ isOpen, title, message, type, onConfirm, onCancel, onClose }: ModalProps) {
   if (!isOpen) return null;
+
+  const handleConfirm = () => {
+    onConfirm();
+    if (onClose) {
+      onClose();
+    }
+  };
 
   return (
     <div className="modal-overlay">
@@ -19,7 +27,7 @@ export function Modal({ isOpen, title, message, type, onConfirm, onCancel }: Mod
         <h3 className="modal-title">{title}</h3>
         <p className="modal-message">{message}</p>
         <div className="modal-actions">
-          <button onClick={onConfirm} className="modal-btn-confirm">
+          <button onClick={handleConfirm} className="modal-btn-confirm">
             Confirmer
           </button>
           {onCancel && (

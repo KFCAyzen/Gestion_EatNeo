@@ -29,7 +29,7 @@ export const AdminTabs = ({ activeTab, setActiveTab, commandesCount, userRole }:
         className={`admin-tab-btn ${activeTab === 'stock' ? 'active' : ''} admin-tab-btn-flex`}
       >
         <StockIcon active={activeTab === 'stock'} />
-        <span>Stock</span>
+        <span>Stock & Ingrédients</span>
       </button>
       {userRole === 'admin' && (
         <>

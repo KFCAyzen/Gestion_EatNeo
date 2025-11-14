@@ -12,6 +12,7 @@ import { useOfflineOrders } from '../hooks/useOfflineOrders'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { Toast } from './Toast'
 import { Modal } from './Modal'
+import { deductIngredientsFromOrder } from '../utils/stockUtils'
 
 type Props = {
   cartItems: MenuItem[];
@@ -136,15 +137,19 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
         setCartItems([]);
         localStorage.removeItem("cart");
         showToast("Panier vidé avec succès !", 'success');
-        closeModal();
       },
       closeModal
     );
   };
 
-  // Calcul du total
+  // Calcul du total avec réduction Voisin
+  const isVoisin = prenom.toLowerCase().trim() === 'voisin';
   const totalPrix = cartItems.reduce(
-    (acc, item) => acc + parsePrix(getPrixString(item)) * (item.quantité || 1),
+    (acc, item) => {
+      const prixUnitaire = parsePrix(getPrixString(item));
+      const prixAvecReduction = isVoisin ? Math.max(0, prixUnitaire - 500) : prixUnitaire;
+      return acc + prixAvecReduction * (item.quantité || 1);
+    },
     0
   );
 
@@ -181,6 +186,12 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
           ...commandeData,
           dateCommande: serverTimestamp()
         });
+        
+        // Déduire automatiquement les ingrédients
+        await deductIngredientsFromOrder(cartItems.map(item => ({
+          nom: item.nom,
+          quantité: item.quantité || 1
+        })));
       } else {
         await createOrder(commandeData);
         showToast(`Commande sauvegardée hors ligne. ${pendingCount + 1} commande(s) en attente de synchronisation.`, 'info');
@@ -200,8 +211,8 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
             .map((item, index) => 
               `${index + 1}. *${item.nom}*\n` +
               `   Quantité: ${item.quantité}\n` +
-              `   Prix unitaire: ${getPrixString(item)}\n` +
-              `   Sous-total: ${formatPrix(parsePrix(getPrixString(item)) * (item.quantité || 1))}\n`
+              `   Prix unitaire: ${isVoisin ? formatPrix(Math.max(0, parsePrix(getPrixString(item)) - 500)) + ' (Réduction Voisin)' : getPrixString(item)}\n` +
+              `   Sous-total: ${formatPrix((isVoisin ? Math.max(0, parsePrix(getPrixString(item)) - 500) : parsePrix(getPrixString(item))) * (item.quantité || 1))}\n`
             )
             .join("\n") +
           `${"─".repeat(30)}\n` +
@@ -254,8 +265,8 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
             .map((item, index) => 
               `${index + 1}. *${item.nom}*\n` +
               `   Quantité: ${item.quantité}\n` +
-              `   Prix unitaire: ${getPrixString(item)}\n` +
-              `   Sous-total: ${formatPrix(parsePrix(getPrixString(item)) * (item.quantité || 1))}\n`
+              `   Prix unitaire: ${isVoisin ? formatPrix(Math.max(0, parsePrix(getPrixString(item)) - 500)) + ' (Réduction Voisin)' : getPrixString(item)}\n` +
+              `   Sous-total: ${formatPrix((isVoisin ? Math.max(0, parsePrix(getPrixString(item)) - 500) : parsePrix(getPrixString(item))) * (item.quantité || 1))}\n`
             )
             .join("\n") +
           `${"─".repeat(30)}\n` +
@@ -307,11 +318,26 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
                     <div className="cart-item-info">
                       <h3>{item.nom}</h3>
                       <div className="cart-item-price">
-                        {getPrixLabel(item)} × {item.quantité}
+                        {isVoisin ? (
+                          <>
+                            <span style={{textDecoration: 'line-through', color: '#999'}}>{getPrixLabel(item)}</span>
+                            {' → '}
+                            <span style={{color: '#4caf50', fontWeight: 'bold'}}>
+                              {formatPrix(Math.max(0, parsePrix(getPrixString(item)) - 500))}
+                            </span>
+                            {' × '}{item.quantité}
+                          </>
+                        ) : (
+                          `${getPrixLabel(item)} × ${item.quantité}`
+                        )}
                       </div>
                     </div>
                     <div className="cart-item-total">
-                      {formatPrix(parsePrix(getPrixString(item)) * (item.quantité || 1))}
+                      {isVoisin ? (
+                        formatPrix(Math.max(0, parsePrix(getPrixString(item)) - 500) * (item.quantité || 1))
+                      ) : (
+                        formatPrix(parsePrix(getPrixString(item)) * (item.quantité || 1))
+                      )}
                     </div>
                   </div>
                   
@@ -332,6 +358,11 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
 
           <div className="cart-total">
             <h2>Total : {formatPrix(totalPrix)}</h2>
+            {isVoisin && (
+              <p style={{color: '#4caf50', fontSize: '14px', marginTop: '5px'}}>
+                🎉 Réduction Voisin appliquée : -500 FCFA par plat
+              </p>
+            )}
           </div>
 
           <div className="client-form">
@@ -418,6 +449,7 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
           type={modal.type}
           onConfirm={modal.onConfirm}
           onCancel={modal.onCancel}
+          onClose={closeModal}
         />
       )}
     </div>
