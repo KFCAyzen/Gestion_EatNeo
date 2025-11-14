@@ -6,9 +6,10 @@
   var isLegacy = false;
   var userAgent = navigator.userAgent;
   
-  // Android 4.x et versions antérieures
-  if (/Android [1-4]\./.test(userAgent)) {
-    isLegacy = true;
+  // Android 4.1 et versions antérieures spécifiquement
+  if (/Android [1-4]\.[0-1]/.test(userAgent)) {
+    window.location.href = '/legacy.html';
+    return;
   }
   
   // Chrome très ancien
