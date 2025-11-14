@@ -8,6 +8,7 @@ const ESSENTIAL_RESOURCES = [
   '/admin',
   '/historique',
   '/notifications',
+  '/offline.html',
   '/manifest.json',
   '/logo.jpg',
   '/icon-192x192.png',
@@ -132,11 +133,17 @@ self.addEventListener('fetch', event => {
             return response;
           })
           .catch(() => {
-            // Offline - servir accueil pour toutes les routes
+            // Offline - servir page offline pour navigateurs anciens
             if (url.pathname !== '/') {
-              return caches.match('/');
+              return caches.match('/offline.html').then(offlinePage => {
+                if (offlinePage) return offlinePage;
+                return caches.match('/');
+              });
             }
-            return new Response('Offline', { status: 503 });
+            return caches.match('/offline.html').then(offlinePage => {
+              if (offlinePage) return offlinePage;
+              return new Response('Offline', { status: 503 });
+            });
           });
       })
   );

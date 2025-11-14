@@ -8,22 +8,36 @@ export default function SplashScreen() {
   const [logoLoaded, setLogoLoaded] = useState(false)
 
   useEffect(() => {
+    // Vérifier si c'est un navigateur legacy
+    const isLegacyBrowser = /Android [1-4]\./.test(navigator.userAgent) || 
+                           typeof Promise === 'undefined' ||
+                           typeof fetch === 'undefined'
+    
     // Ne montrer le splash QUE si c'est le tout premier lancement
-    const hasEverStarted = localStorage.getItem('eatneo-ever-started')
+    const hasEverStarted = localStorage?.getItem('eatneo-ever-started')
     
     if (!hasEverStarted) {
-      // Précharger le logo
-      const img = new Image()
-      img.onload = () => setLogoLoaded(true)
-      img.onerror = () => setLogoLoaded(true)
-      img.src = '/logo.jpg'
+      // Précharger le logo avec fallback pour anciens navigateurs
+      if (typeof Image !== 'undefined') {
+        const img = new Image()
+        img.onload = () => setLogoLoaded(true)
+        img.onerror = () => setLogoLoaded(true)
+        img.src = '/logo.jpg'
+      } else {
+        setLogoLoaded(true)
+      }
       
       setIsVisible(true)
-      localStorage.setItem('eatneo-ever-started', 'true')
       
+      if (localStorage) {
+        localStorage.setItem('eatneo-ever-started', 'true')
+      }
+      
+      // Durée plus longue pour les navigateurs legacy
+      const duration = isLegacyBrowser ? 4000 : 2000
       const timer = setTimeout(() => {
         setIsVisible(false)
-      }, 2000)
+      }, duration)
 
       return () => clearTimeout(timer)
     }
@@ -47,6 +61,11 @@ export default function SplashScreen() {
         <div className="splash-footer">
           <div className="splash-spinner"></div>
           <p className="splash-footer-text">de EAT NEO FAST FOOD</p>
+          {/Android [1-4]\./.test(navigator.userAgent) && (
+            <p style={{fontSize: '12px', opacity: 0.7, marginTop: '10px'}}>
+              Mode compatibilité activé
+            </p>
+          )}
         </div>
       </div>
     </div>

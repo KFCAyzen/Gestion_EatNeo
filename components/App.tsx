@@ -84,6 +84,7 @@ import BottomBar from './BottomBar'
 import DesktopMenu from './DesktopMenu'
 import SyncStatus from './SyncStatus'
 import OfflinePreloader from './OfflinePreloader'
+import LegacySupport from './LegacySupport'
 import { usePWADetection } from '../hooks/usePWADetection'
 import { useMenuSync } from '../hooks/useMenuSync'
 
@@ -208,7 +209,8 @@ export default function AppContent() {
 
 
   return (
-    <OfflinePreloader>
+    <LegacySupport>
+      <OfflinePreloader>
       {/* PWA DESKTOP/TABLET HEADER */}
       <UniversalHeader 
         title={getPageTitle()}
@@ -434,7 +436,8 @@ export default function AppContent() {
           {newItemsCount} nouvelles images mises en cache
         </div>
       )}
-    </OfflinePreloader>
+      </OfflinePreloader>
+    </LegacySupport>
   );
 }
 
