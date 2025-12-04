@@ -35,7 +35,8 @@ const IngredientsStock: React.FC = () => {
       { nom: "Steak haché", quantite: 11, unite: "portions", seuilAlerte: 3 },
       { nom: "Brochette", quantite: 6, unite: "portions", seuilAlerte: 2 },
       { nom: "Poisson silure", quantite: 6, unite: "portions", seuilAlerte: 2 },
-      { nom: "Viande de chèvre", quantite: 17, unite: "portions", seuilAlerte: 5 }
+      { nom: "Viande de chèvre", quantite: 17, unite: "portions", seuilAlerte: 5 },
+      { nom: "Silure", quantite: 6, unite: "portions", seuilAlerte: 2 }
     ]
     
     for (const ingredient of newIngredients) {

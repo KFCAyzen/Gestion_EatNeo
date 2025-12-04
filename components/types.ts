@@ -126,7 +126,8 @@ export const initialIngredients: Ingredient[] = [
   { id: 14, nom: "Steak haché", quantite: 11, unite: "portions", seuilAlerte: 3 },
   { id: 15, nom: "Brochette", quantite: 6, unite: "portions", seuilAlerte: 2 },
   { id: 16, nom: "Poisson silure", quantite: 6, unite: "portions", seuilAlerte: 2 },
-  { id: 17, nom: "Viande de chèvre", quantite: 17, unite: "portions", seuilAlerte: 5 }
+  { id: 17, nom: "Viande de chèvre", quantite: 17, unite: "portions", seuilAlerte: 5 },
+  { id: 18, nom: "Silure", quantite: 6, unite: "portions", seuilAlerte: 2 }
 ];
 
 export const menuItems: MenuItem[] = [
