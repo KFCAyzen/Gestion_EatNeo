@@ -120,7 +120,23 @@ const IngredientsStock: React.FC = () => {
 
   return (
     <div style={{ padding: '20px' }}>
-      <h3>Ingrédients ({ingredients.length})</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3>Ingrédients ({ingredients.length})</h3>
+        <button 
+          onClick={addMissingIngredients}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: '#2196f3',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer',
+            fontSize: '14px'
+          }}
+        >
+          + Nouveaux ingrédients
+        </button>
+      </div>
       
       <div style={{ 
         display: 'grid', 
