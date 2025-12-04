@@ -661,6 +661,10 @@ export default function AdminPage({ userRole }: AdminPageProps) {
       showToast(editId ? "Item modifié avec succès !" : "Item ajouté avec succès !", 'success');
       // reset formulaire
       resetForm();
+    } catch (err) {
+      console.error(err);
+      alert(editId ? "Erreur lors de la modification" : "Erreur lors de l'ajout");
+    }
   };
 
   // Fonction pour réinitialiser le formulaire
