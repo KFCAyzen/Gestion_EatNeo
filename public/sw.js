@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eatneo-complete-v1.1';
+const CACHE_NAME = 'eatneo-complete-v1.2';
 
 // Ressources essentielles pour fonctionnement complet offline
 const ESSENTIAL_RESOURCES = [
