@@ -1,11 +1,17 @@
 import { useState } from 'react';
-import { UploadIcon, MinusIcon, Spinner } from './Icons';
+import { UploadIcon, MinusIcon, Spinner, PlusIcon } from './Icons';
 import { findSimilarCategory, formatPrice } from './utils';
+import { initialIngredients } from './types';
 
 interface PriceOption {
   label: string;
   value: string;
   selected?: boolean;
+}
+
+interface RecipeIngredient {
+  nom: string;
+  quantite: number;
 }
 
 interface MenuFormProps {
@@ -23,10 +29,14 @@ interface MenuFormProps {
   uploading: boolean;
   error: string | null;
   editId: string | null;
+  recipeIngredients: RecipeIngredient[];
+  setRecipeIngredients: (ingredients: RecipeIngredient[]) => void;
   onSubmit: (e: React.FormEvent) => void;
   onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDrop: (e: React.DragEvent<HTMLDivElement>) => void;
 }
+
+export type { RecipeIngredient };
 
 export const MenuForm = ({
   nom,
@@ -43,6 +53,8 @@ export const MenuForm = ({
   uploading,
   error,
   editId,
+  recipeIngredients,
+  setRecipeIngredients,
   onSubmit,
   onFileSelect,
   onDrop
@@ -60,6 +72,24 @@ export const MenuForm = ({
   };
   
   const removePriceOption = (index: number) => setPrix(prix.filter((_, i) => i !== index));
+
+  const addRecipeIngredient = () => {
+    setRecipeIngredients([...recipeIngredients, { nom: '', quantite: 1 }]);
+  };
+
+  const updateRecipeIngredient = (index: number, field: 'nom' | 'quantite', value: string | number) => {
+    const updated = [...recipeIngredients];
+    if (field === 'quantite') {
+      updated[index][field] = Number(value) || 0;
+    } else {
+      updated[index][field] = value as string;
+    }
+    setRecipeIngredients(updated);
+  };
+
+  const removeRecipeIngredient = (index: number) => {
+    setRecipeIngredients(recipeIngredients.filter((_, i) => i !== index));
+  };
 
   return (
     <form className="admin-form" onSubmit={onSubmit}>
@@ -141,6 +171,49 @@ export const MenuForm = ({
           />
         </div>
       </div>
+
+      {/* Section Ingrédients - uniquement pour les plats */}
+      {categorie === 'plats' && (
+        <div className="ingredients-section">
+          <p className="section-title">
+            <strong>Ingrédients nécessaires (optionnel) :</strong>
+          </p>
+          {recipeIngredients.map((ingredient, idx) => (
+            <div key={idx} className="ingredient-row">
+              <select
+                value={ingredient.nom}
+                onChange={e => updateRecipeIngredient(idx, 'nom', e.target.value)}
+                className="ingredient-select"
+              >
+                <option value="">Sélectionner un ingrédient</option>
+                {initialIngredients.map(ing => (
+                  <option key={ing.id} value={ing.nom}>{ing.nom}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                placeholder="Quantité"
+                value={ingredient.quantite}
+                onChange={e => updateRecipeIngredient(idx, 'quantite', e.target.value)}
+                className="ingredient-quantity"
+                min="0"
+                step="0.1"
+              />
+              <button 
+                type="button" 
+                onClick={() => removeRecipeIngredient(idx)} 
+                className="remove-ingredient-btn"
+              >
+                <MinusIcon />
+              </button>
+            </div>
+          ))}
+          <button type="button" onClick={addRecipeIngredient} className="add-ingredient-btn">
+            <PlusIcon />
+            Ajouter un ingrédient
+          </button>
+        </div>
+      )}
 
       <div
         className={`drop-zone-container ${uploading ? "uploading" : ""}`}

@@ -3079,6 +3079,115 @@
   font-size: 12px;
 }
 
+/* ====== STYLES POUR LA SECTION INGRÉDIENTS DU FORMULAIRE ====== */
+.ingredients-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: rgba(248, 249, 250, 0.8);
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.ingredient-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.ingredient-select {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.ingredient-select:focus {
+  border-color: #FF6B35;
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+  outline: none;
+}
+
+.ingredient-quantity {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.ingredient-quantity:focus {
+  border-color: #FF6B35;
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+  outline: none;
+}
+
+.remove-ingredient-btn {
+  width: 32px;
+  height: 32px;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.remove-ingredient-btn:hover {
+  background-color: #d32f2f;
+  transform: scale(1.05);
+}
+
+.add-ingredient-btn {
+  background: linear-gradient(135deg, #4caf50, #388e3c);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  align-self: flex-start;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.add-ingredient-btn:hover {
+  background: linear-gradient(135deg, #388e3c, #2e7d32);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+/* Responsive pour ingrédients du formulaire */
+@media (max-width: 768px) {
+  .ingredient-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .remove-ingredient-btn {
+    justify-self: center;
+    width: 100%;
+    height: 36px;
+  }
+  
+  .add-ingredient-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* Responsive pour mouvements */
 @media (max-width: 768px) {
   .mouvements-filters {

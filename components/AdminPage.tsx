@@ -14,7 +14,7 @@ import OfflineAdmin from './OfflineAdmin';
 import { Toast } from './Toast';
 import { Modal } from './Modal';
 import { AdminTabs } from './AdminTabs';
-import { MenuForm } from './MenuForm';
+import { MenuForm, type RecipeIngredient } from './MenuForm';
 import { StockManagement } from './StockManagement';
 import { MouvementsStock } from './MouvementsStock';
 import ProfitAnalysis from './ProfitAnalysis';
@@ -97,6 +97,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
   const [pendingStockChange, setPendingStockChange] = useState<{itemId: string, newStock: number, collection: string} | null>(null);
   const [tempStocks, setTempStocks] = useState<{[key: string]: number}>({});
   const [isResetting, setIsResetting] = useState(false);
+  const [recipeIngredients, setRecipeIngredients] = useState<{nom: string, quantite: number}[]>([]);
   
   // Système de notifications
   const { toasts, modal, showToast, removeToast, showModal, closeModal } = useNotifications();
@@ -650,6 +651,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
       setImageUrl("");
       setEditId(null);
       setEditingCollection(null);
+      setRecipeIngredients([]);
     } catch (err) {
       console.error(err);
       alert(editId ? "Erreur lors de la modification" : "Erreur lors de l’ajout");
@@ -1832,6 +1834,8 @@ export default function AdminPage({ userRole }: AdminPageProps) {
             uploading={uploading}
             error={error}
             editId={editId}
+            recipeIngredients={recipeIngredients}
+            setRecipeIngredients={setRecipeIngredients}
             onSubmit={handleSubmit}
             onFileSelect={handleFileSelect}
             onDrop={handleDrop}
