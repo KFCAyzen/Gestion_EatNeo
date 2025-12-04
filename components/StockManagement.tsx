@@ -15,6 +15,7 @@ interface StockManagementProps {
   onInitializeStock: () => void;
   onResetLowStock: () => void;
   onAddBoisson: () => void;
+  onAddIngredient: () => void;
   onExportStockReport: () => void;
   onResetAppData: () => void;
   boissonsCount: number;
@@ -34,6 +35,7 @@ export const StockManagement = ({
   onInitializeStock,
   onResetLowStock,
   onAddBoisson,
+  onAddIngredient,
   onExportStockReport,
   onResetAppData,
   boissonsCount,
@@ -125,6 +127,12 @@ export const StockManagement = ({
           <button onClick={onAddBoisson} className="stock-action-button light-green stock-action-button-flex">
             <PlusIcon />
             Ajouter boisson
+          </button>
+        )}
+        {stockView === 'ingredients' && (
+          <button onClick={onAddIngredient} className="stock-action-button light-green stock-action-button-flex">
+            <PlusIcon />
+            Ajouter ingrédient
           </button>
         )}
 

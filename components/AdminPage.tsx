@@ -2042,6 +2042,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
             onInitializeStock={initializeStock}
             onResetLowStock={resetLowStock}
             onAddBoisson={() => setShowAddBoisson(true)}
+            onAddIngredient={() => {/* TODO: Implémenter ajout ingrédient */}}
             onExportStockReport={exportStockReport}
             onResetAppData={resetAppData}
             boissonsCount={boissons.length}

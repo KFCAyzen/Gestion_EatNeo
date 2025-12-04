@@ -119,7 +119,10 @@ export const initialIngredients: Ingredient[] = [
   { id: 10, nom: "Poissons", quantite: 15, unite: "pièces", seuilAlerte: 5 },
   { id: 11, nom: "Poulet", quantite: 12, unite: "portions", seuilAlerte: 4 },
   { id: 12, nom: "Top milk", quantite: 15, unite: "sachets", seuilAlerte: 5 },
-  { id: 13, nom: "Nescafe", quantite: 10, unite: "sachets", seuilAlerte: 3 }
+  { id: 13, nom: "Nescafe", quantite: 10, unite: "sachets", seuilAlerte: 3 },
+  { id: 14, nom: "Steak haché", quantite: 11, unite: "portions", seuilAlerte: 3 },
+  { id: 15, nom: "Brochette", quantite: 6, unite: "portions", seuilAlerte: 2 },
+  { id: 16, nom: "Poisson silure", quantite: 6, unite: "portions", seuilAlerte: 2 }
 ];
 
 export const menuItems: MenuItem[] = [
