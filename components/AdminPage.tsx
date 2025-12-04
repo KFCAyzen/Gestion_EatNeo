@@ -98,6 +98,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
   const [tempStocks, setTempStocks] = useState<{[key: string]: number}>({});
   const [isResetting, setIsResetting] = useState(false);
   const [recipeIngredients, setRecipeIngredients] = useState<{nom: string, quantite: number}[]>([]);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   
   // Système de notifications
   const { toasts, modal, showToast, removeToast, showModal, closeModal } = useNotifications();
@@ -105,6 +106,22 @@ export default function AdminPage({ userRole }: AdminPageProps) {
   
   // Système hors ligne
   const { isOnline } = useOfflineSync();
+  
+  // Récupération des ingrédients
+  useEffect(() => {
+    const q = query(collection(db, 'ingredients'), orderBy('nom', 'asc'));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const ingredientsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Ingredient[];
+      
+      setIngredients(ingredientsData);
+    });
+
+    return () => unsubscribe();
+  }, []);
   
 
   const [showAddBoisson, setShowAddBoisson] = useState(false);
@@ -1836,6 +1853,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
             editId={editId}
             recipeIngredients={recipeIngredients}
             setRecipeIngredients={setRecipeIngredients}
+            availableIngredients={ingredients}
             onSubmit={handleSubmit}
             onFileSelect={handleFileSelect}
             onDrop={handleDrop}

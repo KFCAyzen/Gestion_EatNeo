@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { UploadIcon, MinusIcon, Spinner, PlusIcon } from './Icons';
 import { findSimilarCategory, formatPrice } from './utils';
-import { initialIngredients } from './types';
+import type { Ingredient } from './types';
 
 interface PriceOption {
   label: string;
@@ -31,6 +31,7 @@ interface MenuFormProps {
   editId: string | null;
   recipeIngredients: RecipeIngredient[];
   setRecipeIngredients: (ingredients: RecipeIngredient[]) => void;
+  availableIngredients: Ingredient[];
   onSubmit: (e: React.FormEvent) => void;
   onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDrop: (e: React.DragEvent<HTMLDivElement>) => void;
@@ -55,6 +56,7 @@ export const MenuForm = ({
   editId,
   recipeIngredients,
   setRecipeIngredients,
+  availableIngredients,
   onSubmit,
   onFileSelect,
   onDrop
@@ -186,7 +188,7 @@ export const MenuForm = ({
                 className="ingredient-select"
               >
                 <option value="">Sélectionner un ingrédient</option>
-                {initialIngredients.map(ing => (
+                {availableIngredients.map(ing => (
                   <option key={ing.id} value={ing.nom}>{ing.nom}</option>
                 ))}
               </select>
