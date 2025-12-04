@@ -660,15 +660,44 @@ export default function AdminPage({ userRole }: AdminPageProps) {
 
       showToast(editId ? "Item modifié avec succès !" : "Item ajouté avec succès !", 'success');
       // reset formulaire
-      setNom("");
-      setDescription("");
-      setPrix([]);
-      setCategorie("plats");
-      setFiltre(""); // Reset filtre
-      setImageUrl("");
-      setEditId(null);
-      setEditingCollection(null);
-      setRecipeIngredients([]);
+      resetForm();
+    } catch (err) {
+      console.error(err);
+      alert(editId ? "Erreur lors de la modification" : "Erreur lors de l'ajout");
+    }
+  };
+
+  // Fonction pour réinitialiser le formulaire
+  const resetForm = () => {
+    setNom("");
+    setDescription("");
+    setPrix([]);
+    setCategorie("plats");
+    setFiltre("");
+    setImageUrl("");
+    setEditId(null);
+    setEditingCollection(null);
+    setRecipeIngredients([]);
+    setError(null);
+  };
+
+  // Fonction pour annuler la modification
+  const cancelEdit = () => {
+    if (editId) {
+      showModal(
+        "Annuler la modification",
+        "Êtes-vous sûr de vouloir annuler les modifications ? Toutes les données saisies seront perdues.",
+        "warning",
+        () => {
+          resetForm();
+          showToast('Modification annulée', 'info');
+          closeModal();
+        },
+        closeModal
+      );
+    } else {
+      resetForm();
+    }
     } catch (err) {
       console.error(err);
       alert(editId ? "Erreur lors de la modification" : "Erreur lors de l’ajout");
@@ -1857,6 +1886,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
             onSubmit={handleSubmit}
             onFileSelect={handleFileSelect}
             onDrop={handleDrop}
+            onCancel={cancelEdit}
           />
 
       {/* Barre de recherche */}

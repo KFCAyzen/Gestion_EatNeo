@@ -35,6 +35,7 @@ interface MenuFormProps {
   onSubmit: (e: React.FormEvent) => void;
   onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDrop: (e: React.DragEvent<HTMLDivElement>) => void;
+  onCancel?: () => void;
 }
 
 export type { RecipeIngredient };
@@ -59,7 +60,8 @@ export const MenuForm = ({
   availableIngredients,
   onSubmit,
   onFileSelect,
-  onDrop
+  onDrop,
+  onCancel
 }: MenuFormProps) => {
   const addPriceOption = () => setPrix([...prix, { label: "", value: "" }]);
   
@@ -244,10 +246,30 @@ export const MenuForm = ({
       )}
       {error && <p className="error-text">{error}</p>}
 
-      <button type="submit" disabled={uploading} className="submit-button">
-        {uploading && <Spinner size={16} color="white" />}
-        {uploading ? "Upload..." : editId ? "Modifier" : "Ajouter"}
-      </button>
+      <div style={{ display: 'flex', gap: '10px' }}>
+        <button type="submit" disabled={uploading} className="submit-button" style={{ flex: 1 }}>
+          {uploading && <Spinner size={16} color="white" />}
+          {uploading ? "Upload..." : editId ? "Modifier" : "Ajouter"}
+        </button>
+        {(editId || nom || description || imageUrl) && onCancel && (
+          <button 
+            type="button" 
+            onClick={onCancel}
+            style={{
+              padding: '16px 24px',
+              backgroundColor: '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: '600'
+            }}
+          >
+            Annuler
+          </button>
+        )}
+      </div>
     </form>
   );
 };
