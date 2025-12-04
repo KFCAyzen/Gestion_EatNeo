@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { collection, addDoc, onSnapshot, updateDoc, doc } from 'firebase/firestore'
+import { collection, addDoc, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore'
 import { db } from './firebase'
 import { Ingredient, initialIngredients } from './types'
 import { PlusIcon, MinusIcon } from './Icons'
@@ -45,6 +45,12 @@ const IngredientsStock: React.FC = () => {
       if (!exists) {
         await addDoc(collection(db, 'ingredients'), ingredient)
       }
+    }
+  }
+
+  const deleteIngredient = async (id: string) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cet ingrédient ?')) {
+      await deleteDoc(doc(db, 'ingredients', id))
     }
   }
 
@@ -253,6 +259,22 @@ const IngredientsStock: React.FC = () => {
                 Confirmer
               </button>
             )}
+            
+            <button
+              onClick={() => deleteIngredient(String(ingredient.id))}
+              style={{
+                width: '100%',
+                marginTop: '10px',
+                padding: '8px',
+                backgroundColor: '#f44336',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Supprimer
+            </button>
           </div>
         ))}
       </div>
