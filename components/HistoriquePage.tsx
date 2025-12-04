@@ -107,7 +107,11 @@ const HistoriquePage: React.FC = () => {
   }).length;
 
   const formatPrix = (valeur: number): string => {
-    return valeur.toLocaleString('fr-FR') + ' FCFA';
+    if (valeur === 0) return '0 FCFA';
+    return valeur.toLocaleString('fr-FR', { 
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0 
+    }) + ' FCFA';
   };
 
   const formatPrixPDF = (valeur: number): string => {
@@ -360,7 +364,9 @@ const HistoriquePage: React.FC = () => {
         </div>
         <div className="historique-stat-card">
           <h3 className="historique-stat-title">Chiffre d'Affaires</h3>
-          <p className="historique-stat-value">{formatPrix(chiffreAffaires)}</p>
+          <p className="historique-stat-value" style={{ fontSize: 'clamp(1rem, 4vw, 1.8rem)' }}>
+            {formatPrix(chiffreAffaires)}
+          </p>
         </div>
         <div className="historique-stat-card">
           <h3 className="historique-stat-title">Aujourd'hui</h3>
