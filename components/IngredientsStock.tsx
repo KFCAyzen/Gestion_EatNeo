@@ -30,6 +30,23 @@ const IngredientsStock: React.FC = () => {
     }
   }
 
+  const addMissingIngredients = async () => {
+    const newIngredients = [
+      { nom: "Steak haché", quantite: 11, unite: "portions", seuilAlerte: 3 },
+      { nom: "Brochette", quantite: 6, unite: "portions", seuilAlerte: 2 },
+      { nom: "Poisson silure", quantite: 6, unite: "portions", seuilAlerte: 2 },
+      { nom: "Viande de chèvre", quantite: 17, unite: "portions", seuilAlerte: 5 }
+    ]
+    
+    for (const ingredient of newIngredients) {
+      // Vérifier si l'ingrédient existe déjà
+      const exists = ingredients.some(existing => existing.nom === ingredient.nom)
+      if (!exists) {
+        await addDoc(collection(db, 'ingredients'), ingredient)
+      }
+    }
+  }
+
   const updateTempQuantity = (id: string, newQuantity: number) => {
     setTempQuantities(prev => ({
       ...prev,
@@ -69,19 +86,34 @@ const IngredientsStock: React.FC = () => {
     return (
       <div style={{ textAlign: 'center', padding: '40px' }}>
         <p>Aucun ingrédient trouvé.</p>
-        <button 
-          onClick={initializeIngredients}
-          style={{
-            padding: '10px 20px',
-            backgroundColor: '#4caf50',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer'
-          }}
-        >
-          Initialiser les ingrédients
-        </button>
+        <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
+          <button 
+            onClick={initializeIngredients}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#4caf50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer'
+            }}
+          >
+            Initialiser tous les ingrédients
+          </button>
+          <button 
+            onClick={addMissingIngredients}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#2196f3',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer'
+            }}
+          >
+            Ajouter nouveaux ingrédients seulement
+          </button>
+        </div>
       </div>
     )
   }
