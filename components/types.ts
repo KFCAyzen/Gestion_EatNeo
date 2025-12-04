@@ -103,6 +103,9 @@ export const dishRecipes: Recipe = {
   },
   "Supplement Poisson": {
     "Poissons": 0.5
+  },
+  "Burger": {
+    "Steak haché": 1
   }
 };
 
@@ -122,7 +125,8 @@ export const initialIngredients: Ingredient[] = [
   { id: 13, nom: "Nescafe", quantite: 10, unite: "sachets", seuilAlerte: 3 },
   { id: 14, nom: "Steak haché", quantite: 11, unite: "portions", seuilAlerte: 3 },
   { id: 15, nom: "Brochette", quantite: 6, unite: "portions", seuilAlerte: 2 },
-  { id: 16, nom: "Poisson silure", quantite: 6, unite: "portions", seuilAlerte: 2 }
+  { id: 16, nom: "Poisson silure", quantite: 6, unite: "portions", seuilAlerte: 2 },
+  { id: 17, nom: "Viande de chèvre", quantite: 17, unite: "portions", seuilAlerte: 5 }
 ];
 
 export const menuItems: MenuItem[] = [
