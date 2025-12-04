@@ -21,7 +21,7 @@ import ProfitAnalysis from './ProfitAnalysis';
 import IngredientsStock from './IngredientsStock';
 import { LoadingSpinner, SearchIcon, EditIcon, DeleteIcon, EyeIcon, EyeOffIcon, PlusIcon, MinusIcon, HistoryIcon } from './Icons';
 import '@/styles/AdminPage.css'
-import { menuItems, drinksItems } from "./types";
+import { menuItems, drinksItems, dishRecipes } from "./types";
 import { findSimilarCategory, formatPrice } from './utils';
 
 
@@ -1902,11 +1902,27 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                   setEditingCollection("Plats");
                   setNom(item.nom || "");
                   setDescription(item.description || "");
-                  if (typeof item.prix === "string") setPrix([{ label: "", value: item.prix }]);
-                  else setPrix(item.prix as PriceOption[]);
+                  
+                  // Gestion complète des prix
+                  if (typeof item.prix === "string") {
+                    setPrix([{ label: "", value: item.prix }]);
+                  } else if (Array.isArray(item.prix)) {
+                    setPrix(item.prix.map(p => ({ ...p, selected: p.selected || false })));
+                  } else {
+                    setPrix([{ label: "", value: "" }]);
+                  }
+                  
                   setCategorie(item.catégorie?.[0] || "plats");
-                  setFiltre(item.filtre?.[0] || ""); // Charger le filtre
+                  setFiltre(item.filtre?.[0] || "");
                   setImageUrl(item.image || "");
+                  
+                  // Charger les ingrédients de la recette si ils existent
+                  const recipeIngredients = dishRecipes[item.nom] || {};
+                  const ingredientsList = Object.entries(recipeIngredients).map(([nom, quantite]) => ({
+                    nom,
+                    quantite: Number(quantite)
+                  }));
+                  setRecipeIngredients(ingredientsList);
                 }}
               >
                 <EditIcon />
@@ -1949,11 +1965,22 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                   setEditingCollection("Boissons");
                   setNom(item.nom || "");
                   setDescription(item.description || "");
-                  if (typeof item.prix === "string") setPrix([{ label: "", value: item.prix }]);
-                  else setPrix(item.prix as PriceOption[]);
+                  
+                  // Gestion complète des prix
+                  if (typeof item.prix === "string") {
+                    setPrix([{ label: "", value: item.prix }]);
+                  } else if (Array.isArray(item.prix)) {
+                    setPrix(item.prix.map(p => ({ ...p, selected: p.selected || false })));
+                  } else {
+                    setPrix([{ label: "", value: "" }]);
+                  }
+                  
                   setCategorie(item.catégorie?.[0] || "boissons");
-                  setFiltre(item.filtre?.[0] || ""); // Charger le filtre
+                  setFiltre(item.filtre?.[0] || "");
                   setImageUrl(item.image || "");
+                  
+                  // Réinitialiser les ingrédients pour les boissons
+                  setRecipeIngredients([]);
                 }}
               >
                 <EditIcon />
