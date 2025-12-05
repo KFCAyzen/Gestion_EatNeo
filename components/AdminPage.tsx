@@ -11,6 +11,8 @@ import { LoadingSpinner } from './Icons'
 import { MenuManagement } from './admin/MenuManagement'
 import { OrdersManagement } from './admin/OrdersManagement'
 import { StockManagementView } from './admin/StockManagementView'
+import { HistoriqueView } from './admin/HistoriqueView'
+import { RentabiliteView } from './admin/RentabiliteView'
 import { useAdminLogic } from './admin/useAdminLogic'
 import '@/styles/AdminPage.css'
 
@@ -129,6 +131,14 @@ export default function AdminPage({ userRole }: AdminPageProps) {
           onResetAppData={async () => {}}
           onAddBoisson={() => {}}
         />
+      )}
+
+      {activeTab === 'historique' && (
+        <HistoriqueView />
+      )}
+
+      {activeTab === 'rentabilite' && (
+        <RentabiliteView plats={plats} boissons={boissons} />
       )}
 
       {toasts.map(toast => (
