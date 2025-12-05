@@ -64,8 +64,15 @@ export function RentabiliteView({ plats, boissons }: RentabiliteViewProps) {
     }
 
     return commandes.filter(c => {
-      const commandeDate = c.dateCommande.toDate()
-      return commandeDate >= cutoffDate && c.statut === 'livree'
+      if (!c.dateCommande || typeof c.dateCommande.toDate !== 'function') {
+        return false
+      }
+      try {
+        const commandeDate = c.dateCommande.toDate()
+        return commandeDate >= cutoffDate && c.statut === 'livree'
+      } catch {
+        return false
+      }
     })
   }, [commandes, filtrePeriode])
 
@@ -126,11 +133,18 @@ export function RentabiliteView({ plats, boissons }: RentabiliteViewProps) {
     const evolution: Record<string, number> = {}
     
     commandesFiltrees.forEach(commande => {
-      const date = commande.dateCommande.toDate().toLocaleDateString('fr-FR')
-      if (!evolution[date]) {
-        evolution[date] = 0
+      if (!commande.dateCommande || typeof commande.dateCommande.toDate !== 'function') {
+        return
       }
-      evolution[date] += commande.total
+      try {
+        const date = commande.dateCommande.toDate().toLocaleDateString('fr-FR')
+        if (!evolution[date]) {
+          evolution[date] = 0
+        }
+        evolution[date] += commande.total
+      } catch {
+        // Ignorer les dates invalides
+      }
     })
     
     return Object.entries(evolution)

@@ -70,6 +70,9 @@ export function HistoriqueView() {
     }
 
     return filtered.filter(c => {
+      if (!c.dateCommande || typeof c.dateCommande.toDate !== 'function') {
+        return false
+      }
       const commandeDate = c.dateCommande.toDate()
       return commandeDate >= cutoffDate
     })
@@ -144,13 +147,16 @@ export function HistoriqueView() {
                 <div className="commande-info">
                   <h4>{commande.clientPrenom} {commande.clientNom}</h4>
                   <p className="commande-date">
-                    {commande.dateCommande.toDate().toLocaleDateString('fr-FR', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+                    {commande.dateCommande && typeof commande.dateCommande.toDate === 'function' 
+                      ? commande.dateCommande.toDate().toLocaleDateString('fr-FR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })
+                      : 'Date inconnue'
+                    }
                   </p>
                 </div>
                 <div className="commande-status">
