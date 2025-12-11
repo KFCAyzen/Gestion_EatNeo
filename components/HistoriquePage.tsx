@@ -99,12 +99,18 @@ const HistoriquePage: React.FC = () => {
   // Statistiques selon la période
   const commandesStats = periodeStats === 'semaine' ? getCommandesSemaine() : commandes;
   const totalCommandes = commandesStats.length;
-  const chiffreAffaires = commandesStats.reduce((acc, cmd) => acc + cmd.total, 0);
+  const chiffreAffaires = commandesStats.reduce((acc, cmd) => {
+    const total = typeof cmd.total === 'string' ? 
+      parseInt(cmd.total.replace(/[^\d]/g, '')) || 0 : 
+      cmd.total || 0;
+    return acc + total;
+  }, 0);
   const commandesAujourdhui = commandesStats.filter(cmd => {
     const today = new Date();
     const cmdDate = cmd.dateCommande.toDate();
     return cmdDate.toDateString() === today.toDateString();
   }).length;
+  const moyenneCommande = totalCommandes > 0 ? Math.round(chiffreAffaires / totalCommandes) : 0;
 
   const formatPrix = (valeur: number): string => {
     return valeur.toLocaleString('fr-FR') + ' FCFA';
@@ -143,7 +149,12 @@ const HistoriquePage: React.FC = () => {
   const genererPDF = (periode: 'tout' | 'semaine' = 'tout') => {
     const commandesPDF = periode === 'semaine' ? getCommandesSemaine() : commandes;
     const totalPDF = commandesPDF.length;
-    const chiffreAffairesPDF = commandesPDF.reduce((acc, cmd) => acc + cmd.total, 0);
+    const chiffreAffairesPDF = commandesPDF.reduce((acc, cmd) => {
+      const total = typeof cmd.total === 'string' ? 
+        parseInt(cmd.total.replace(/[^\d]/g, '')) || 0 : 
+        cmd.total || 0;
+      return acc + total;
+    }, 0);
     
     const doc = new jsPDF();
     
@@ -361,6 +372,10 @@ const HistoriquePage: React.FC = () => {
         <div className="historique-stat-card">
           <h3 className="historique-stat-title">Chiffre d'Affaires</h3>
           <p className="historique-stat-value">{formatPrix(chiffreAffaires)}</p>
+        </div>
+        <div className="historique-stat-card">
+          <h3 className="historique-stat-title">Moyenne/Commande</h3>
+          <p className="historique-stat-value">{formatPrix(moyenneCommande)}</p>
         </div>
         <div className="historique-stat-card">
           <h3 className="historique-stat-title">Aujourd'hui</h3>

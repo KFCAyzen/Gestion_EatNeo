@@ -2341,13 +2341,23 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                 <div className="historique-stat-card">
                   <h4 className="historique-stat-title">Chiffre d'Affaires</h4>
                   <p className="historique-stat-number orange small">
-                    {filteredHistorique.reduce((total, cmd) => total + cmd.total, 0).toLocaleString('fr-FR')} FCFA
+                    {filteredHistorique.reduce((total, cmd) => {
+                      const cmdTotal = typeof cmd.total === 'string' ? 
+                        parseInt(cmd.total.replace(/[^\d]/g, '')) || 0 : 
+                        cmd.total || 0;
+                      return total + cmdTotal;
+                    }, 0).toLocaleString('fr-FR')} FCFA
                   </p>
                 </div>
                 <div className="historique-stat-card">
                   <h4 className="historique-stat-title">Moyenne/Commande</h4>
                   <p className="historique-stat-number blue small">
-                    {filteredHistorique.length > 0 ? Math.round(filteredHistorique.reduce((total, cmd) => total + cmd.total, 0) / filteredHistorique.length).toLocaleString('fr-FR') : 0} FCFA
+                    {filteredHistorique.length > 0 ? Math.round(filteredHistorique.reduce((total, cmd) => {
+                      const cmdTotal = typeof cmd.total === 'string' ? 
+                        parseInt(cmd.total.replace(/[^\d]/g, '')) || 0 : 
+                        cmd.total || 0;
+                      return total + cmdTotal;
+                    }, 0) / filteredHistorique.length).toLocaleString('fr-FR') : 0} FCFA
                   </p>
                 </div>
               </div>
