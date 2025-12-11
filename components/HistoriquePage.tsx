@@ -101,8 +101,8 @@ const HistoriquePage: React.FC = () => {
   const totalCommandes = commandesStats.length;
   const chiffreAffaires = commandesStats.reduce((acc, cmd) => {
     const total = typeof cmd.total === 'string' ? 
-      parseInt(cmd.total.replace(/[^\d]/g, '')) || 0 : 
-      cmd.total || 0;
+      parseInt((cmd.total as string).replace(/[^\d]/g, '')) || 0 : 
+      (cmd.total as number) || 0;
     return acc + total;
   }, 0);
   const commandesAujourdhui = commandesStats.filter(cmd => {
@@ -151,8 +151,8 @@ const HistoriquePage: React.FC = () => {
     const totalPDF = commandesPDF.length;
     const chiffreAffairesPDF = commandesPDF.reduce((acc, cmd) => {
       const total = typeof cmd.total === 'string' ? 
-        parseInt(cmd.total.replace(/[^\d]/g, '')) || 0 : 
-        cmd.total || 0;
+        parseInt((cmd.total as string).replace(/[^\d]/g, '')) || 0 : 
+        (cmd.total as number) || 0;
       return acc + total;
     }, 0);
     

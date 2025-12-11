@@ -1,3 +1,4 @@
+import { Timestamp } from 'firebase/firestore';
 import { images } from './imagesFallback'
 
 const pouletDG = '/poulet_DG.jpg'
@@ -29,6 +30,40 @@ export type Recipe = {
     [ingredientName: string]: number;
   };
 };
+
+export type PriceOption = { label: string; value: string; selected?: boolean };
+
+export interface Commande {
+  id: string;
+  items: Array<{
+    nom: string;
+    prix: string;
+    quantité: number;
+  }>;
+  total: number;
+  clientNom: string;
+  clientPrenom: string;
+  localisation: string;
+  dateCommande: Timestamp;
+  statut: 'en_attente' | 'en_preparation' | 'prete' | 'livree';
+}
+
+export interface MouvementStock {
+  id: string;
+  item: string;
+  type: 'entree' | 'sortie' | 'ajustement';
+  quantite: number;
+  unite: string;
+  stockAvant: number;
+  stockApres: number;
+  description: string;
+  date: Timestamp;
+  categorie: 'boissons' | 'plats';
+}
+
+export interface AdminPageProps {
+  userRole: 'admin' | 'employee'
+}
 
 export const dishRecipes: Recipe = {
   "Haricot viande": {
