@@ -1,22 +1,23 @@
-// Script pour forcer la mise à jour du cache
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function(registrations) {
-    for(let registration of registrations) {
-      registration.unregister();
-    }
-  });
-  
-  // Vider tous les caches
-  if ('caches' in window) {
-    caches.keys().then(function(names) {
-      for (let name of names) {
-        caches.delete(name);
-      }
+// Force cache invalidation
+const CACHE_VERSION = Date.now();
+console.log('Cache version:', CACHE_VERSION);
+
+// Clear all caches
+if ('caches' in window) {
+  caches.keys().then(names => {
+    names.forEach(name => {
+      caches.delete(name);
     });
-  }
-  
-  // Recharger la page après un délai
-  setTimeout(() => {
+  });
+}
+
+// Force reload if version mismatch
+const currentVersion = localStorage.getItem('app-version');
+const newVersion = '1.0.' + CACHE_VERSION;
+
+if (currentVersion !== newVersion) {
+  localStorage.setItem('app-version', newVersion);
+  if (currentVersion) {
     window.location.reload(true);
-  }, 1000);
+  }
 }
