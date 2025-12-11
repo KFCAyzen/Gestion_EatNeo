@@ -6,7 +6,7 @@ import { collection, addDoc, doc, deleteDoc, getDoc, getDocs, setDoc, updateDoc,
 import { ref, deleteObject } from "firebase/storage";
 import { uploadImageFromBrowser } from "./upLoadFirebase";
 import type { MenuItem } from "./types";
-import { useRealtimeCollection } from '@/hooks/useRealtimeCollection'
+import { useRealtimeCollection } from '../hooks/useRealtimeCollection'
 import { useNotifications } from '../hooks/useNotifications';
 import { useActivityLogger } from '../hooks/useActivityLogger';
 import { useOfflineSync } from '../hooks/useOfflineSync';
@@ -20,7 +20,7 @@ import { MouvementsStock } from './MouvementsStock';
 import ProfitAnalysis from './ProfitAnalysis';
 import IngredientsStock from './IngredientsStock';
 import { LoadingSpinner, SearchIcon, EditIcon, DeleteIcon, EyeIcon, EyeOffIcon, PlusIcon, MinusIcon, HistoryIcon } from './Icons';
-import '@/styles/AdminPage.css'
+import '../styles/AdminPage.css'
 import { menuItems, drinksItems, dishRecipes } from "./types";
 import { findSimilarCategory, formatPrice } from './utils';
 

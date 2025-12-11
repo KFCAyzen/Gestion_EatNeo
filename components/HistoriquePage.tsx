@@ -7,7 +7,7 @@ import { images } from './imagesFallback'
 import { useOfflineOrders } from '../hooks/useOfflineOrders'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import jsPDF from 'jspdf'
-import '@/styles/HistoriquePage.css'
+import '../styles/HistoriquePage.css'
 
 interface Commande {
   id: string;
