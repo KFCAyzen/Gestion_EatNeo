@@ -5,7 +5,7 @@ import { db, storage } from "./firebase";
 import { collection, addDoc, doc, deleteDoc, getDoc, getDocs, setDoc, updateDoc, query, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
 import { ref, deleteObject } from "firebase/storage";
 import { uploadImageFromBrowser } from "./upLoadFirebase";
-import type { MenuItem, Ingredient, Commande, MouvementStock, AdminPageProps, PriceOption } from "./types";
+import type { MenuItem } from "./types";
 import { useRealtimeCollection } from '@/hooks/useRealtimeCollection'
 import { useNotifications } from '../hooks/useNotifications';
 import { useActivityLogger } from '../hooks/useActivityLogger';
@@ -21,19 +21,59 @@ import ProfitAnalysis from './ProfitAnalysis';
 import IngredientsStock from './IngredientsStock';
 import { LoadingSpinner, SearchIcon, EditIcon, DeleteIcon, EyeIcon, EyeOffIcon, PlusIcon, MinusIcon, HistoryIcon } from './Icons';
 import '@/styles/AdminPage.css'
-import { dishRecipes } from "./types";
+import { menuItems, drinksItems, dishRecipes } from "./types";
 import { findSimilarCategory, formatPrice } from './utils';
 
 
 
+interface Ingredient {
+  id: string;
+  nom: string;
+  quantite: number;
+  unite: string; // kg, L, pièces, etc.
+  prixUnitaire?: number;
+  seuilAlerte: number; // Seuil en dessous duquel on alerte
+}
 
+interface Commande {
+  id: string;
+  items: Array<{
+    nom: string;
+    prix: string;
+    quantité: number;
+  }>;
+  total: number;
+  clientNom: string;
+  clientPrenom: string;
+  localisation: string;
+  dateCommande: Timestamp;
+  statut: 'en_attente' | 'en_preparation' | 'prete' | 'livree';
+}
+
+interface MouvementStock {
+  id: string;
+  item: string;
+  type: 'entree' | 'sortie' | 'ajustement';
+  quantite: number;
+  unite: string;
+  stockAvant: number;
+  stockApres: number;
+  description: string;
+  date: Timestamp;
+  categorie: 'boissons' | 'plats';
+}
 // Convertir une URL Firebase Storage → chemin interne utilisable par ref()
 function getStoragePathFromUrl(url: string) {
   const match = url.match(/o\/(.*?)\?alt=media/);
   return match ? decodeURIComponent(match[1]) : "";
 }
 
+interface AdminPageProps {
+  userRole: 'admin' | 'employee'
+}
+
 export default function AdminPage({ userRole }: AdminPageProps) {
+  type PriceOption = { label: string; value: string; selected?: boolean };
   const [nom, setNom] = useState("");
   const [description, setDescription] = useState("");
   const [prix, setPrix] = useState<PriceOption[]>([]);
@@ -290,9 +330,6 @@ export default function AdminPage({ userRole }: AdminPageProps) {
               
               // Re-uploader les items avec normalisation et vérification des doublons
               const addedItems = new Set<string>(); // Prévenir les doublons
-              
-              // Les données menuItems et drinksItems sont maintenant dans types.ts
-              const { menuItems, drinksItems } = await import('./types');
               
               for (const item of menuItems) {
                 const itemKey = item.nom?.toLowerCase().trim();
