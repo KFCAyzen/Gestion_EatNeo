@@ -47,7 +47,12 @@ const ProfitAnalysis: React.FC = () => {
         const data = doc.data()
         const orderDate = data.dateCommande
         if (orderDate && orderDate >= start && orderDate <= end) {
-          totalRevenue += data.total || 0
+          // Convertir le total en nombre, qu'il soit string ou number
+          const orderTotal = typeof data.total === 'string' ? 
+            parseInt(data.total.replace(/[^\d]/g, '')) || 0 : 
+            (data.total || 0)
+          
+          totalRevenue += orderTotal
           ordersInPeriod++
           ordersDetails.push({
             id: doc.id,
@@ -55,7 +60,7 @@ const ProfitAnalysis: React.FC = () => {
             client: data.clientPrenom || 'Client',
             table: data.numeroTable || data.localisation || 'N/A',
             items: data.items || [],
-            total: data.total || 0
+            total: orderTotal
           })
         }
       })
@@ -71,14 +76,19 @@ const ProfitAnalysis: React.FC = () => {
         const data = doc.data()
         const expenseDate = data.date
         if (expenseDate && expenseDate >= start && expenseDate <= end) {
-          totalExpenses += data.montant || 0
+          // Convertir le montant en nombre, qu'il soit string ou number
+          const expenseAmount = typeof data.montant === 'string' ? 
+            parseInt(data.montant.replace(/[^\d]/g, '')) || 0 : 
+            (data.montant || 0)
+          
+          totalExpenses += expenseAmount
           expensesInPeriod++
           expensesDetails.push({
             id: doc.id,
             date: expenseDate,
             description: data.description || 'Dépense',
             categorie: data.categorie || 'autres',
-            montant: data.montant || 0
+            montant: expenseAmount
           })
         }
       })
@@ -104,7 +114,10 @@ const ProfitAnalysis: React.FC = () => {
   }
 
   const formatCurrency = (amount: number) => {
-    return amount.toLocaleString('fr-FR') + ' FCFA'
+    if (isNaN(amount) || amount === null || amount === undefined) {
+      return '0 FCFA'
+    }
+    return Math.round(amount).toLocaleString('fr-FR') + ' FCFA'
   }
 
 
