@@ -810,8 +810,17 @@ export default function AdminPage({ userRole }: AdminPageProps) {
     return timestamp.toDate().toLocaleString('fr-FR');
   }, []);
 
-  const formatPrixCommande = useCallback((valeur: number): string => {
-    return valeur.toLocaleString('fr-FR') + ' FCFA';
+  const formatPrixCommande = useCallback((valeur: number | string): string => {
+    if (valeur === null || valeur === undefined) {
+      return '0 FCFA';
+    }
+    const numValue = typeof valeur === 'string' ? 
+      parseInt(valeur.replace(/[^\d]/g, '')) || 0 : 
+      Number(valeur) || 0;
+    if (isNaN(numValue)) {
+      return '0 FCFA';
+    }
+    return Math.round(numValue).toLocaleString('fr-FR') + ' FCFA';
   }, []);
 
   const getStatutColor = (statut: string): string => {
