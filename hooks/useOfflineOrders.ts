@@ -2,16 +2,21 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useOfflineSync } from './useOfflineSync'
+import { parseTotal } from '@/utils/orderUtils'
 
 interface Order {
   id: string
   items: any[]
-  total: string
-  clientName: string
-  clientPhone: string
+  total: number
+  clientPrenom: string
+  clientNom: string
+  clientName?: string
+  clientPhone?: string
+  numeroTable: string
   localisation: string
-  status: string
+  statut: string
   timestamp: number
+  clientUid?: string
   offline?: boolean
 }
 
@@ -23,7 +28,22 @@ export function useOfflineOrders() {
   useEffect(() => {
     const stored = localStorage.getItem('offlineOrders')
     if (stored) {
-      setOrders(JSON.parse(stored))
+      const parsed = JSON.parse(stored) as Order[]
+      const normalized = parsed.map(order => {
+        const fullName = order.clientName || ''
+        const parts = fullName.trim().split(/\s+/).filter(Boolean)
+        const prenom = order.clientPrenom || parts[0] || 'Client'
+        const nom = order.clientNom || parts.slice(1).join(' ')
+
+        return {
+          ...order,
+          total: parseTotal(order.total),
+          clientPrenom: prenom,
+          clientNom: nom,
+          statut: order.statut || (order as any).status || 'en_attente'
+        }
+      })
+      setOrders(normalized)
     }
   }, [])
 
@@ -53,9 +73,9 @@ export function useOfflineOrders() {
   }, [orders, saveOrders, addOfflineData, isOnline])
 
   // Mettre à jour le statut d'une commande
-  const updateOrderStatus = useCallback((orderId: string, status: string) => {
+  const updateOrderStatus = useCallback((orderId: string, statut: string) => {
     const updatedOrders = orders.map(order => 
-      order.id === orderId ? { ...order, status } : order
+      order.id === orderId ? { ...order, statut } : order
     )
     saveOrders(updatedOrders)
 
@@ -64,7 +84,7 @@ export function useOfflineOrders() {
       action: 'Mise à jour statut commande',
       entity: 'commande',
       entityId: orderId,
-      details: `Statut changé vers: ${status}`,
+      details: `Statut changé vers: ${statut}`,
       user: 'Système',
       type: 'status_change'
     })

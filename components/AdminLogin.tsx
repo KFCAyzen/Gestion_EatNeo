@@ -3,7 +3,7 @@ import '@/styles/AdminLogin.css'
 import '@/styles/Auth.css' 
 
 interface AdminLoginProps {
-  onLogin: (username: string, password: string) => boolean
+  onLogin: (username: string, password: string) => Promise<boolean>
   onClose?: () => void
 }
 
@@ -12,11 +12,12 @@ export default function AdminLogin({ onLogin, onClose }: AdminLoginProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     
-    if (onLogin(username, password)) {
+    const ok = await onLogin(username, password)
+    if (ok) {
       // Connexion réussie
     } else {
       setError('Identifiants incorrects');
@@ -33,12 +34,12 @@ export default function AdminLogin({ onLogin, onClose }: AdminLoginProps) {
         
         <form onSubmit={handleLogin} className="admin-login-form">
           <div className="input-group">
-            <label htmlFor="username">Nom d'utilisateur</label>
+            <label htmlFor="username">Email (ou identifiant hors ligne)</label>
             <input
               id="username"
               value={username}
               onChange={e => setUsername(e.target.value)}
-              placeholder="admin ou user"
+              placeholder="admin@domaine.com"
               type="text"
               required
               className="form-input"

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useOfflineOrders } from '@/hooks/useOfflineOrders'
 import { useOfflineSync } from '@/hooks/useOfflineSync'
+import { formatPrice } from '@/components/utils'
 
 export default function OfflineAdmin() {
   const { orders, updateOrderStatus } = useOfflineOrders()
@@ -13,8 +14,8 @@ export default function OfflineAdmin() {
     return new Date(timestamp).toLocaleString('fr-FR')
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
+  const getStatusColor = (statut: string) => {
+    switch (statut) {
       case 'en_attente': return '#ff9800'
       case 'en_preparation': return '#2196f3'
       case 'prete': return '#4caf50'
@@ -92,15 +93,19 @@ export default function OfflineAdmin() {
                     marginBottom: '10px'
                   }}>
                     <div>
-                      <h4 style={{ margin: '0 0 5px 0' }}>{order.clientName}</h4>
+                      <h4 style={{ margin: '0 0 5px 0' }}>
+                        {order.clientPrenom || order.clientNom
+                          ? `${order.clientPrenom} ${order.clientNom}`.trim()
+                          : (order.clientName || 'Client')}
+                      </h4>
                       <p style={{ margin: '0', color: '#666', fontSize: '14px' }}>
-                        {formatDate(order.timestamp)} • {order.localisation}
+                        {formatDate(order.timestamp)} • {order.localisation || order.numeroTable}
                       </p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <span
                         style={{
-                          background: getStatusColor(order.status),
+                          background: getStatusColor(order.statut),
                           color: 'white',
                           padding: '4px 8px',
                           borderRadius: '12px',
@@ -109,9 +114,9 @@ export default function OfflineAdmin() {
                           marginBottom: '5px'
                         }}
                       >
-                        {order.status.replace('_', ' ')}
+                        {order.statut.replace('_', ' ')}
                       </span>
-                      <p style={{ margin: '0', fontWeight: 'bold' }}>{order.total}</p>
+                      <p style={{ margin: '0', fontWeight: 'bold' }}>{formatPrice(order.total)}</p>
                     </div>
                   </div>
 
@@ -129,14 +134,14 @@ export default function OfflineAdmin() {
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                     <button
                       onClick={() => updateOrderStatus(order.id, 'en_preparation')}
-                      disabled={order.status !== 'en_attente'}
+                      disabled={order.statut !== 'en_attente'}
                       style={{
                         padding: '5px 10px',
                         border: 'none',
                         borderRadius: '4px',
-                        background: order.status !== 'en_attente' ? '#ccc' : '#2196f3',
+                        background: order.statut !== 'en_attente' ? '#ccc' : '#2196f3',
                         color: 'white',
-                        cursor: order.status !== 'en_attente' ? 'not-allowed' : 'pointer',
+                        cursor: order.statut !== 'en_attente' ? 'not-allowed' : 'pointer',
                         fontSize: '12px'
                       }}
                     >
@@ -144,14 +149,14 @@ export default function OfflineAdmin() {
                     </button>
                     <button
                       onClick={() => updateOrderStatus(order.id, 'prete')}
-                      disabled={order.status !== 'en_preparation'}
+                      disabled={order.statut !== 'en_preparation'}
                       style={{
                         padding: '5px 10px',
                         border: 'none',
                         borderRadius: '4px',
-                        background: order.status !== 'en_preparation' ? '#ccc' : '#4caf50',
+                        background: order.statut !== 'en_preparation' ? '#ccc' : '#4caf50',
                         color: 'white',
-                        cursor: order.status !== 'en_preparation' ? 'not-allowed' : 'pointer',
+                        cursor: order.statut !== 'en_preparation' ? 'not-allowed' : 'pointer',
                         fontSize: '12px'
                       }}
                     >
@@ -159,14 +164,14 @@ export default function OfflineAdmin() {
                     </button>
                     <button
                       onClick={() => updateOrderStatus(order.id, 'livree')}
-                      disabled={order.status !== 'prete'}
+                      disabled={order.statut !== 'prete'}
                       style={{
                         padding: '5px 10px',
                         border: 'none',
                         borderRadius: '4px',
-                        background: order.status !== 'prete' ? '#ccc' : '#9e9e9e',
+                        background: order.statut !== 'prete' ? '#ccc' : '#9e9e9e',
                         color: 'white',
-                        cursor: order.status !== 'prete' ? 'not-allowed' : 'pointer',
+                        cursor: order.statut !== 'prete' ? 'not-allowed' : 'pointer',
                         fontSize: '12px'
                       }}
                     >

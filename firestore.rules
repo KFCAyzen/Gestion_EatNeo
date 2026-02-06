@@ -1,0 +1,106 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function hasRole(role) {
+      return isSignedIn() && userDoc().data.role == role;
+    }
+
+    function isStaff() {
+      return isSignedIn() && (userDoc().data.role == 'admin' || userDoc().data.role == 'employee');
+    }
+
+    function orderKeys() {
+      return [
+        'items',
+        'total',
+        'clientPrenom',
+        'clientNom',
+        'clientPhone',
+        'numeroTable',
+        'localisation',
+        'dateCommande',
+        'statut',
+        'clientUid',
+        'source',
+        'syncedAt'
+      ];
+    }
+
+    function isValidOrderCreate() {
+      return request.resource.data.keys().hasOnly(orderKeys())
+        && request.resource.data.items is list
+        && request.resource.data.total is number
+        && request.resource.data.clientPrenom is string
+        && request.resource.data.numeroTable is string
+        && request.resource.data.localisation is string
+        && request.resource.data.statut in ['en_attente', 'en_preparation', 'prete', 'livree']
+        && request.resource.data.dateCommande is timestamp
+        && (request.resource.data.clientUid is string || request.resource.data.clientUid == null);
+    }
+
+    function isValidOrderUpdate() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly(['statut'])
+        && request.resource.data.statut in ['en_attente', 'en_preparation', 'prete', 'livree'];
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && (userId == request.auth.uid || hasRole('admin'));
+      allow create: if isSignedIn() && userId == request.auth.uid;
+      allow update: if isSignedIn() && (hasRole('admin') || (userId == request.auth.uid && request.resource.data.role == resource.data.role));
+      allow delete: if hasRole('admin');
+    }
+
+    match /commandes/{orderId} {
+      allow create: if isSignedIn() && isValidOrderCreate() && (isStaff() || request.resource.data.clientUid == request.auth.uid);
+      allow read: if isSignedIn() && (isStaff() || resource.data.clientUid == request.auth.uid);
+      allow update: if isSignedIn() && isStaff() && isValidOrderUpdate();
+      allow delete: if hasRole('admin');
+    }
+
+    match /Plats/{docId} {
+      allow read: if true;
+      allow create, update: if isStaff();
+      allow delete: if hasRole('admin');
+    }
+
+    match /Boissons/{docId} {
+      allow read: if true;
+      allow create, update: if isStaff();
+      allow delete: if hasRole('admin');
+    }
+
+    match /ingredients/{docId} {
+      allow read: if isStaff();
+      allow create, update: if isStaff();
+      allow delete: if hasRole('admin');
+    }
+
+    match /mouvements_stock/{docId} {
+      allow read: if isStaff();
+      allow create: if isStaff();
+      allow update, delete: if hasRole('admin');
+    }
+
+    match /notifications/{docId} {
+      allow read, create, update: if isStaff();
+      allow delete: if hasRole('admin');
+    }
+
+    match /activity_logs/{docId} {
+      allow read, create: if isStaff();
+      allow update, delete: if hasRole('admin');
+    }
+
+    match /depenses/{docId} {
+      allow read, create, update, delete: if hasRole('admin');
+    }
+  }
+}

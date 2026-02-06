@@ -20,6 +20,7 @@ export default function RootLayout({
         <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
         <meta httpEquiv="Pragma" content="no-cache" />
         <meta httpEquiv="Expires" content="0" />
+        <meta name="app-version" content={process.env.NEXT_PUBLIC_APP_VERSION || 'dev'} />
         <script src="/force-update.js"></script>
         <script src="/legacy-check.js"></script>
         <link rel="manifest" href="/manifest.json" />

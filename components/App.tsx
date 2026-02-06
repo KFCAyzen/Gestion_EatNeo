@@ -12,6 +12,7 @@ import PWAInstaller from './PWAInstaller'
 import NotificationManager from './NotificationManager'
 import OfflineIndicator from './OfflineIndicator'
 import { useAuth } from '../hooks/useAuth'
+import { useFirebaseAnonAuth } from '../hooks/useFirebaseAnonAuth'
 import { useNotificationCount } from '../hooks/useNotificationCount'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
@@ -92,16 +93,17 @@ export default function AppContent() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { user, login, logout, isAdmin } = useAuth()
+  const { user, login, logout, isOnline } = useAuth()
+  useFirebaseAnonAuth()
   const { isDesktop } = usePWADetection()
-  const { newItemsCount, isOnline, syncMenu, cacheImage } = useMenuSync()
+  const { newItemsCount, isOnline: isMenuOnline, syncMenu, cacheImage } = useMenuSync()
   const [cartItems, setCartItems] = useState<MenuItem[]>([]);
   const [table, setTable] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [showScrollUp, setShowScrollUp] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
 
-  const notificationCount = useNotificationCount();
+  const notificationCount = useNotificationCount(!!user && isOnline);
 
   const getPageTitle = () => {
     switch (pathname) {
@@ -225,7 +227,7 @@ export default function AppContent() {
         user={user}
         onAdminClick={() => user ? router.push('/admin') : setShowLogin(true)}
         onLogout={() => {
-          logout()
+          void logout()
           router.push('/')
         }}
       />
@@ -247,9 +249,9 @@ export default function AppContent() {
           user={user}
           onAdminClick={() => user ? router.push('/admin') : setShowLogin(true)}
           onLogout={() => {
-            logout()
-            router.push('/')
-          }}
+          void logout()
+          router.push('/')
+        }}
         />
       )}
       
@@ -281,7 +283,7 @@ export default function AppContent() {
               <button 
                 className="logout-btn"
                 onClick={() => {
-                  logout()
+                  void logout()
                   router.push('/')
                 }}
               >
@@ -313,7 +315,7 @@ export default function AppContent() {
                   <button 
                     className="logout-btn"
                     onClick={() => {
-                      logout()
+                      void logout()
                       router.push('/')
                     }}
                   >
@@ -368,8 +370,9 @@ export default function AppContent() {
       {showLogin && (
         <div className="login-overlay">
           <AdminLogin 
-            onLogin={(username, password) => {
-              if (login(username, password)) {
+            onLogin={async (username, password) => {
+              const ok = await login(username, password)
+              if (ok) {
                 setShowLogin(false)
                 // Redirection vers admin après connexion réussie
                 router.push('/admin')
@@ -381,7 +384,15 @@ export default function AppContent() {
           />
         </div>
       )}
-      {pathname === '/historique' && <HistoriquePage />}
+      {pathname === '/historique' && (
+        user ? (
+          <HistoriquePage />
+        ) : (
+          <div style={{ padding: '2rem', textAlign: 'center' }}>
+            Accès réservé au personnel. Veuillez vous connecter.
+          </div>
+        )
+      )}
 
       {/* BOTTOM BAR */}
       {pathname !== '/admin' && <BottomBar cartItemsCount={cartItems.length} />}
@@ -414,7 +425,7 @@ export default function AppContent() {
       )}
       
       <PWAInstaller />
-      <NotificationManager />
+      {user && <NotificationManager />}
       <OfflineIndicator />
       <SyncStatus />
       
@@ -440,5 +451,3 @@ export default function AppContent() {
     </LegacySupport>
   );
 }
-
-

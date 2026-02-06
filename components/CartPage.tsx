@@ -10,9 +10,11 @@ import { images } from './imagesFallback'
 import { useNotifications } from '../hooks/useNotifications'
 import { useOfflineOrders } from '../hooks/useOfflineOrders'
 import { useOfflineSync } from '../hooks/useOfflineSync'
+import { useFirebaseAnonAuth } from '../hooks/useFirebaseAnonAuth'
 import { Toast } from './Toast'
 import { Modal } from './Modal'
 import { deductIngredientsFromOrder } from '../utils/stockUtils'
+import { normalizeOrder, type Order } from '../utils/orderUtils'
 
 type Props = {
   cartItems: MenuItem[];
@@ -32,38 +34,23 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
   // Système hors ligne
   const { createOrder } = useOfflineOrders();
   const { isOnline, pendingCount } = useOfflineSync();
-  interface Commande {
-    id: string;
-    items: Array<{
-      nom: string;
-      prix: string;
-      quantité: number;
-    }>;
-    total: number;
-    clientNom: string;
-    clientPrenom: string;
-    localisation: string;
-    dateCommande: any;
-    statut: 'en_attente' | 'en_preparation' | 'prete' | 'livree';
-  }
+  const { uid } = useFirebaseAnonAuth();
   
-  const [mesCommandes, setMesCommandes] = useState<Commande[]>([]);
+  const [mesCommandes, setMesCommandes] = useState<Order[]>([]);
 
 
   // Écouter les commandes du client
   useEffect(() => {
-    if (prenom.trim() && numeroTable.trim()) {
+    if (prenom.trim() && numeroTable.trim() && uid) {
       const q = query(
         collection(db, 'commandes'),
+        where('clientUid', '==', uid),
         where('clientPrenom', '==', prenom.trim()),
         where('numeroTable', '==', numeroTable.trim())
       );
       
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        const commandes = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Commande[];
+        const commandes = snapshot.docs.map(doc => normalizeOrder(doc.id, doc.data()));
         // Filtrer pour ne garder que les commandes non livrées et trier par date
         const commandesNonLivrees = commandes
           .filter(cmd => cmd.statut !== 'livree')
@@ -80,7 +67,7 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
     } else {
       setMesCommandes([]);
     }
-  }, [prenom, numeroTable]);
+  }, [prenom, numeroTable, uid]);
 
   // Récupère le prix réel d'un item (string ou tableau)
   const getPrixString = (item: MenuItem) => {
@@ -166,6 +153,11 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
     }
 
     try {
+      if (isOnline && !uid) {
+        showToast("Initialisation de la session... veuillez réessayer.", 'warning');
+        return;
+      }
+
       // Préparer les données de commande
       const commandeData = {
         items: cartItems.map(item => ({
@@ -173,11 +165,15 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
           prix: String(getPrixString(item) || ''),
           quantité: Number(item.quantité || 1)
         })),
-        total: String(formatPrix(totalPrix)),
-        clientName: String(prenom.trim() || 'Client'),
+        total: totalPrix,
+        clientPrenom: String(prenom.trim() || 'Client'),
+        clientNom: '',
         clientPhone: '',
-        localisation: String(numeroTable.trim()),
-        status: 'en_attente'
+        numeroTable: String(numeroTable.trim()),
+        localisation: localisation ? String(localisation) : `Table ${String(numeroTable.trim())}`,
+        statut: 'en_attente',
+        clientUid: uid || undefined,
+        source: isOnline ? 'online' : 'offline'
       };
 
       // Sauvegarder (en ligne ou hors ligne)
@@ -240,11 +236,15 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
             prix: String(getPrixString(item) || ''),
             quantité: Number(item.quantité || 1)
           })),
-          total: String(formatPrix(totalPrix)),
-          clientName: String(prenom.trim() || 'Client'),
+          total: totalPrix,
+          clientPrenom: String(prenom.trim() || 'Client'),
+          clientNom: '',
           clientPhone: '',
-          localisation: String(numeroTable.trim()),
-          status: 'en_attente'
+          numeroTable: String(numeroTable.trim()),
+          localisation: localisation ? String(localisation) : `Table ${String(numeroTable.trim())}`,
+          statut: 'en_attente',
+          clientUid: uid || undefined,
+          source: 'offline'
         };
         
         await createOrder(commandeData);

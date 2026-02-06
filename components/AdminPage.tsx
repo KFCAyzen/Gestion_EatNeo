@@ -23,6 +23,7 @@ import { LoadingSpinner, SearchIcon, EditIcon, DeleteIcon, EyeIcon, EyeOffIcon, 
 import '../styles/AdminPage.css'
 import { menuItems, drinksItems, dishRecipes } from "./types";
 import { findSimilarCategory, formatPrice } from './utils';
+import { normalizeOrder } from '../utils/orderUtils'
 
 
 
@@ -45,9 +46,12 @@ interface Commande {
   total: number;
   clientNom: string;
   clientPrenom: string;
+  clientPhone?: string;
+  numeroTable?: string;
   localisation: string;
   dateCommande: Timestamp;
   statut: 'en_attente' | 'en_preparation' | 'prete' | 'livree';
+  clientUid?: string;
 }
 
 interface MouvementStock {
@@ -60,7 +64,7 @@ interface MouvementStock {
   stockApres: number;
   description: string;
   date: Timestamp;
-  categorie: 'boissons' | 'plats';
+  categorie: 'boissons' | 'plats' | 'ingredients';
 }
 // Convertir une URL Firebase Storage → chemin interne utilisable par ref()
 function getStoragePathFromUrl(url: string) {
@@ -492,10 +496,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
     const q = query(collection(db, 'commandes'), orderBy('dateCommande', 'desc'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const commandesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Commande[];
+      const commandesData = snapshot.docs.map(doc => normalizeOrder(doc.id, doc.data())) as Commande[];
       
       setCommandes(commandesData);
     });
@@ -515,10 +516,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allCommandes = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Commande[];
+      const allCommandes = snapshot.docs.map(doc => normalizeOrder(doc.id, doc.data())) as Commande[];
       
       // Filtrer seulement les commandes livrées pour l'historique
       const commandesLivrees = allCommandes.filter(cmd => cmd.statut === 'livree');
@@ -1296,7 +1294,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
       "warning",
       async () => {
         try {
-          const collectionsToReset = ['commandes', 'mouvements_stock', 'ingredients', 'notifications', 'activities'];
+          const collectionsToReset = ['commandes', 'mouvements_stock', 'ingredients', 'notifications', 'activity_logs'];
           let totalDeleted = 0;
           
           for (const collectionName of collectionsToReset) {
@@ -1331,22 +1329,22 @@ export default function AdminPage({ userRole }: AdminPageProps) {
       // Commandes fictives
       const commandes = [
         {
-          clientNom: "Dupont", clientPrenom: "Jean", localisation: "Table 5",
+          clientNom: "Dupont", clientPrenom: "Jean", numeroTable: "5", localisation: "Table 5",
           items: [{ nom: "Ndolé", quantité: 2, prix: "2500 FCFA" }],
           total: 5000, statut: "livree", dateCommande: Timestamp.now()
         },
         {
-          clientNom: "Mballa", clientPrenom: "Marie", localisation: "Table 12",
+          clientNom: "Mballa", clientPrenom: "Marie", numeroTable: "12", localisation: "Table 12",
           items: [{ nom: "Poulet DG", quantité: 1, prix: "3000 FCFA" }],
           total: 3000, statut: "en_preparation", dateCommande: Timestamp.now()
         },
         {
-          clientNom: "Nkomo", clientPrenom: "Paul", localisation: "Table 3",
+          clientNom: "Nkomo", clientPrenom: "Paul", numeroTable: "3", localisation: "Table 3",
           items: [{ nom: "Koki", quantité: 1, prix: "1500 FCFA" }],
           total: 1500, statut: "prete", dateCommande: Timestamp.now()
         },
         {
-          clientNom: "Fotso", clientPrenom: "Claire", localisation: "Table 8",
+          clientNom: "Fotso", clientPrenom: "Claire", numeroTable: "8", localisation: "Table 8",
           items: [{ nom: "Eru", quantité: 1, prix: "2000 FCFA" }],
           total: 2000, statut: "en_attente", dateCommande: Timestamp.now()
         }

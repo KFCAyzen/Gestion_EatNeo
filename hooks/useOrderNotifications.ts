@@ -5,14 +5,13 @@ import { usePushNotifications } from './usePushNotifications';
 
 interface Order {
   id: string;
-  client: {
-    nom: string;
-    telephone: string;
-  };
+  clientPrenom?: string;
+  clientNom?: string;
+  clientPhone?: string;
   items: any[];
-  total: string;
-  status: 'en_attente' | 'en_preparation' | 'pret' | 'livre';
-  timestamp: any;
+  total: number | string;
+  statut: 'en_attente' | 'en_preparation' | 'prete' | 'livree';
+  dateCommande: any;
 }
 
 export function useOrderNotifications() {
@@ -24,7 +23,7 @@ export function useOrderNotifications() {
     // Écouter les nouvelles commandes
     const ordersQuery = query(
       collection(db, 'commandes'),
-      orderBy('timestamp', 'desc')
+      orderBy('dateCommande', 'desc')
     );
 
     const unsubscribe = onSnapshot(ordersQuery, (snapshot) => {
@@ -45,9 +44,10 @@ export function useOrderNotifications() {
   }, [permission, sendNotification]);
 
   const handleNewOrder = async (order: Order) => {
+    const clientName = `${order.clientPrenom || ''} ${order.clientNom || ''}`.trim() || 'Client'
     // Notification pour nouvelle commande
     sendNotification('Nouvelle commande reçue', {
-      body: `Commande de ${order.client.nom} - ${order.total}`,
+      body: `Commande de ${clientName} - ${order.total}`,
       tag: 'new-order',
       data: { orderId: order.id, type: 'new_order' }
     });
@@ -57,7 +57,7 @@ export function useOrderNotifications() {
       await addDoc(collection(db, 'notifications'), {
         type: 'new_order',
         title: 'Nouvelle commande',
-        message: `Commande de ${order.client.nom} pour ${order.total}`,
+        message: `Commande de ${clientName} pour ${order.total}`,
         orderId: order.id,
         read: false,
         priority: 'high',
@@ -69,30 +69,31 @@ export function useOrderNotifications() {
   };
 
   const handleOrderStatusChange = async (order: Order) => {
+    const clientName = `${order.clientPrenom || ''} ${order.clientNom || ''}`.trim() || 'Client'
     const statusMessages: Record<string, string> = {
       en_preparation: 'Commande en préparation',
-      pret: 'Commande prête',
-      livre: 'Commande livrée'
+      prete: 'Commande prête',
+      livree: 'Commande livrée'
     };
 
-    if (order.status in statusMessages) {
-      sendNotification(statusMessages[order.status], {
-        body: `Commande de ${order.client.nom}`,
+    if (order.statut in statusMessages) {
+      sendNotification(statusMessages[order.statut], {
+        body: `Commande de ${clientName}`,
         tag: 'order-status',
-        data: { orderId: order.id, type: 'status_change', status: order.status }
+        data: { orderId: order.id, type: 'status_change', status: order.statut }
       });
 
       // Créer une notification dans la base de données
       try {
-        await addDoc(collection(db, 'notifications'), {
-          type: 'order_status',
-          title: statusMessages[order.status],
-          message: `Commande de ${order.client.nom} - ${order.status.replace('_', ' ')}`,
-          orderId: order.id,
-          read: false,
-          priority: order.status === 'pret' ? 'high' : 'medium',
-          timestamp: serverTimestamp()
-        });
+      await addDoc(collection(db, 'notifications'), {
+        type: 'order_status',
+        title: statusMessages[order.statut],
+        message: `Commande de ${clientName} - ${order.statut.replace('_', ' ')}`,
+        orderId: order.id,
+        read: false,
+        priority: order.statut === 'prete' ? 'high' : 'medium',
+        timestamp: serverTimestamp()
+      });
       } catch (error) {
         console.error('Erreur lors de la création de la notification:', error);
       }

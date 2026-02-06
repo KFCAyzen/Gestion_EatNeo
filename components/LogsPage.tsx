@@ -5,6 +5,7 @@ import { collection, query, orderBy, onSnapshot, Timestamp } from 'firebase/fire
 import { db } from './firebase';
 import Link from 'next/link';
 import '../styles/LogsPage.css';
+import { useAuth } from '@/hooks/useAuth'
 
 interface ActivityLog {
   id: string;
@@ -24,10 +25,12 @@ const BackIcon = () => (
 );
 
 export default function LogsPage() {
+  const { user } = useAuth()
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [filter, setFilter] = useState<'all' | 'create' | 'update' | 'delete'>('all');
 
   useEffect(() => {
+    if (!user) return
     const q = query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -40,12 +43,30 @@ export default function LogsPage() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
   const filteredLogs = logs.filter(log => {
     if (filter === 'all') return true;
     return log.type === filter;
   });
+
+  if (!user) {
+    return (
+      <div className="logs-container">
+        <div className="logs-header">
+          <Link href="/admin" className="back-link">
+            <BackIcon />
+            Retour
+          </Link>
+          <h1>Logs d'Activités</h1>
+        </div>
+        <div className="empty-state">
+          <h3>Accès réservé au personnel</h3>
+          <p>Veuillez vous connecter pour accéder aux logs.</p>
+        </div>
+      </div>
+    );
+  }
 
   const getActionIcon = (type: string) => {
     switch (type) {

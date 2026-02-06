@@ -5,6 +5,7 @@ import { collection, query, orderBy, onSnapshot, Timestamp, deleteDoc, doc } fro
 import { db } from '../../components/firebase';
 import Link from 'next/link';
 import '../../styles/NotificationsPage.css';
+import { useAuth } from '@/hooks/useAuth'
 
 interface Notification {
   id: string;
@@ -34,6 +35,7 @@ const BackIcon = () => (
 );
 
 export default function NotificationsPage() {
+  const { user } = useAuth()
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [activeTab, setActiveTab] = useState<'notifications' | 'logs'>('notifications');
@@ -41,6 +43,7 @@ export default function NotificationsPage() {
   const [logFilter, setLogFilter] = useState<'all' | 'create' | 'update' | 'delete'>('all');
 
   useEffect(() => {
+    if (!user) return
     const notifQuery = query(collection(db, 'notifications'), orderBy('timestamp', 'desc'));
     const logsQuery = query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'));
     
@@ -64,10 +67,11 @@ export default function NotificationsPage() {
       unsubscribeNotif();
       unsubscribeLogs();
     };
-  }, []);
+  }, [user]);
 
   // Nettoyage automatique des logs anciens (31 jours)
   useEffect(() => {
+    if (!user) return
     const cleanupOldLogs = async () => {
       const thirtyOneDaysAgo = new Date();
       thirtyOneDaysAgo.setDate(thirtyOneDaysAgo.getDate() - 31);
@@ -99,7 +103,7 @@ export default function NotificationsPage() {
       cleanupOldLogs();
       localStorage.setItem('lastLogsCleanup', today);
     }
-  }, [logs]);
+  }, [logs, user]);
 
   const filteredNotifications = notifications.filter(notif => {
     if (filter === 'unread') return !notif.read;
@@ -202,6 +206,24 @@ export default function NotificationsPage() {
       default: return '#6b7280';
     }
   };
+
+  if (!user) {
+    return (
+      <div className="notifications-container">
+        <div className="notifications-header">
+          <Link href="/admin" className="back-link">
+            <BackIcon />
+            Retour
+          </Link>
+          <h1>Notifications & Logs</h1>
+        </div>
+        <div className="notifications-empty">
+          <h3>Accès réservé au personnel</h3>
+          <p>Veuillez vous connecter pour accéder aux notifications.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="notifications-container">

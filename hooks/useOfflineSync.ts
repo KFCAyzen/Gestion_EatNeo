@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { db } from '@/components/firebase'
+import { auth, db } from '@/components/firebase'
 import { collection, addDoc, Timestamp } from 'firebase/firestore'
+import { onAuthStateChanged } from 'firebase/auth'
+import { parseTotal } from '@/utils/orderUtils'
 
 interface OfflineData {
   id: string
@@ -78,9 +80,19 @@ export function useOfflineSync() {
         try {
           switch (item.type) {
             case 'order':
+              if (!auth.currentUser) {
+                console.warn('Auth requis pour synchroniser les commandes')
+                break
+              }
+
+              const { timestamp: _ts, status: _status, ...rest } = item.data || {}
+
               await addDoc(collection(db, 'commandes'), {
-                ...item.data,
-                timestamp: Timestamp.fromMillis(item.timestamp),
+                ...rest,
+                total: parseTotal(item.data?.total),
+                statut: item.data?.statut || item.data?.status || 'en_attente',
+                dateCommande: Timestamp.fromMillis(item.timestamp),
+                clientUid: item.data?.clientUid || auth.currentUser.uid,
                 syncedAt: Timestamp.now()
               })
               break
@@ -123,6 +135,17 @@ export function useOfflineSync() {
       const timer = setTimeout(syncData, 1000)
       return () => clearTimeout(timer)
     }
+  }, [isOnline, pendingSync.length, syncData])
+
+  // Relancer la sync quand l'utilisateur Firebase est prêt
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user && isOnline && pendingSync.length > 0) {
+        syncData()
+      }
+    })
+
+    return () => unsubscribe()
   }, [isOnline, pendingSync.length, syncData])
 
   return {

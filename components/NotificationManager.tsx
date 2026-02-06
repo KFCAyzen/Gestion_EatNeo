@@ -27,12 +27,14 @@ export default function NotificationManager() {
   useOrderNotifications();
 
   useEffect(() => {
+    if (!user) return
     if (user && permission === 'default') {
       requestPermission();
     }
   }, [user, permission, requestPermission]);
 
   useEffect(() => {
+    if (!user) return
     const notifQuery = query(
       collection(db, 'notifications'), 
       orderBy('timestamp', 'desc')
@@ -47,7 +49,7 @@ export default function NotificationManager() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (notifications.length > 0 && permission === 'granted') {

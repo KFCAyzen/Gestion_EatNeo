@@ -1,23 +1,27 @@
-// Force cache invalidation
-const CACHE_VERSION = Date.now();
-console.log('Cache version:', CACHE_VERSION);
+// Force cache invalidation based on a stable app version
+const meta = document.querySelector('meta[name="app-version"]');
+const APP_VERSION = (meta && meta.content) ? meta.content : 'dev';
 
-// Clear all caches
-if ('caches' in window) {
-  caches.keys().then(names => {
-    names.forEach(name => {
-      caches.delete(name);
-    });
-  });
-}
+// Skip force-update in dev to avoid reload loops
+if (APP_VERSION === 'dev') {
+  console.log('Force update disabled in dev mode.');
+} else {
+  const currentVersion = localStorage.getItem('app-version');
 
-// Force reload if version mismatch
-const currentVersion = localStorage.getItem('app-version');
-const newVersion = '1.0.' + CACHE_VERSION;
+  if (currentVersion !== APP_VERSION) {
+    localStorage.setItem('app-version', APP_VERSION);
 
-if (currentVersion !== newVersion) {
-  localStorage.setItem('app-version', newVersion);
-  if (currentVersion) {
-    window.location.reload(true);
+    // Clear all caches only when version changes
+    if ('caches' in window) {
+      caches.keys().then(names => {
+        names.forEach(name => {
+          caches.delete(name);
+        });
+      });
+    }
+
+    if (currentVersion) {
+      window.location.reload();
+    }
   }
 }

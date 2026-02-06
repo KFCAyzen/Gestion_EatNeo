@@ -6,26 +6,12 @@ import { db } from './firebase'
 import { images } from './imagesFallback'
 import { useOfflineOrders } from '../hooks/useOfflineOrders'
 import { useOfflineSync } from '../hooks/useOfflineSync'
+import { normalizeOrder, type Order } from '../utils/orderUtils'
 import jsPDF from 'jspdf'
 import '../styles/HistoriquePage.css'
 
-interface Commande {
-  id: string;
-  items: Array<{
-    nom: string;
-    prix: string;
-    quantité: number;
-  }>;
-  total: number;
-  clientNom: string;
-  clientPrenom: string;
-  localisation: string;
-  dateCommande: Timestamp;
-  statut: 'en_attente' | 'en_preparation' | 'prete' | 'livree';
-}
-
 const HistoriquePage: React.FC = () => {
-  const [commandes, setCommandes] = useState<Commande[]>([]);
+  const [commandes, setCommandes] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Données hors ligne
@@ -50,10 +36,7 @@ const HistoriquePage: React.FC = () => {
       );
       
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        const commandesData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Commande[];
+        const commandesData = snapshot.docs.map(doc => normalizeOrder(doc.id, doc.data()));
         
         // Filtrer seulement les commandes livrées
         const commandesLivrees = commandesData.filter(cmd => cmd.statut === 'livree');
@@ -64,17 +47,10 @@ const HistoriquePage: React.FC = () => {
       return () => unsubscribe();
     } else {
       // Mode hors ligne : utiliser les commandes locales
-      const localCommandes = offlineOrders.map(order => ({
-        id: order.id,
-        items: order.items,
-        total: typeof order.total === 'string' ? 
-          parseInt(order.total.replace(/[^\d]/g, '')) : order.total,
-        clientNom: order.clientName.split(' ').slice(1).join(' ') || '',
-        clientPrenom: order.clientName.split(' ')[0] || order.clientName,
-        localisation: order.localisation,
-        dateCommande: { toDate: () => new Date(order.timestamp) } as Timestamp,
-        statut: order.status as any
-      })) as Commande[];
+      const localCommandes = offlineOrders.map(order => normalizeOrder(order.id, {
+        ...order,
+        dateCommande: new Date(order.timestamp)
+      }));
       
       setCommandes(localCommandes);
       setLoading(false);
