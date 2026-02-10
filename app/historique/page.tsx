@@ -1,16 +1,18 @@
-'use client'
+export const dynamic = "force-dynamic"
 
-import { Suspense } from 'react'
-import AppContent from '@/components/App'
+import AppShell from '@/components/AppShell'
+import HistoriqueRouteClient from '@/components/routes/HistoriqueRouteClient'
 
-function AppWrapper() {
-  return <AppContent />
-}
-
-export default function HistoriquePage() {
+export default function HistoriqueRoutePage() {
   return (
-    <Suspense fallback={<div>Chargement...</div>}>
-      <AppWrapper />
-    </Suspense>
+    <AppShell
+      title="Historique"
+      showBackButton={true}
+      showSearch={false}
+      showBottomBar={true}
+      variant="public"
+    >
+      <HistoriqueRouteClient />
+    </AppShell>
   )
 }

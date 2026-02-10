@@ -1,16 +1,18 @@
-'use client'
+export const dynamic = "force-dynamic"
 
-import { Suspense } from 'react'
-import AppContent from '@/components/App'
+import AppShell from '@/components/AppShell'
+import PanierRouteClient from '@/components/routes/PanierRouteClient'
 
-function AppWrapper() {
-  return <AppContent />
-}
-
-export default function PanierPage() {
+export default function PanierRoutePage() {
   return (
-    <Suspense fallback={<div>Chargement...</div>}>
-      <AppWrapper />
-    </Suspense>
+    <AppShell
+      title="Panier"
+      showBackButton={true}
+      showSearch={false}
+      showBottomBar={true}
+      variant="public"
+    >
+      <PanierRouteClient />
+    </AppShell>
   )
 }

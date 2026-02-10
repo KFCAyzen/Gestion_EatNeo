@@ -1,23 +1,18 @@
-'use client'
+export const dynamic = "force-dynamic"
 
-import { useState, useEffect } from 'react'
-import AppContent from '@/components/App'
-import LoadingSpinner from '@/components/LoadingSpinner'
+import AppShell from '@/components/AppShell'
+import PlatsRouteClient from '@/components/routes/PlatsRouteClient'
 
 export default function HomePage() {
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 2300) // 2.3 secondes
-
-    return () => clearTimeout(timer)
-  }, [])
-
-  if (isLoading) {
-    return <LoadingSpinner />
-  }
-
-  return <AppContent />
+  return (
+    <AppShell
+      title="Plats"
+      showBackButton={false}
+      showSearch={true}
+      showBottomBar={true}
+      variant="public"
+    >
+      <PlatsRouteClient />
+    </AppShell>
+  )
 }

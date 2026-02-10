@@ -1,16 +1,18 @@
-'use client'
+export const dynamic = "force-dynamic"
 
-import { Suspense } from 'react'
-import AppContent from '@/components/App'
+import AppShell from '@/components/AppShell'
+import AdminRouteClient from '@/components/routes/AdminRouteClient'
 
-function AppWrapper() {
-  return <AppContent />
-}
-
-export default function AdminPage() {
+export default function AdminRoutePage() {
   return (
-    <Suspense fallback={<div>Chargement...</div>}>
-      <AppWrapper />
-    </Suspense>
+    <AppShell
+      title="Back Office"
+      showBackButton={true}
+      showSearch={false}
+      showBottomBar={false}
+      variant="admin"
+    >
+      <AdminRouteClient />
+    </AppShell>
   )
 }

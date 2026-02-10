@@ -1,16 +1,18 @@
-'use client'
+export const dynamic = "force-dynamic"
 
-import { Suspense } from 'react'
-import AppContent from '@/components/App'
+import AppShell from '@/components/AppShell'
+import BoissonsRouteClient from '@/components/routes/BoissonsRouteClient'
 
-function AppWrapper() {
-  return <AppContent />
-}
-
-export default function BoissonsPage() {
+export default function BoissonsRoutePage() {
   return (
-    <Suspense fallback={<div>Chargement...</div>}>
-      <AppWrapper />
-    </Suspense>
+    <AppShell
+      title="Boissons"
+      showBackButton={false}
+      showSearch={true}
+      showBottomBar={true}
+      variant="public"
+    >
+      <BoissonsRouteClient />
+    </AppShell>
   )
 }
