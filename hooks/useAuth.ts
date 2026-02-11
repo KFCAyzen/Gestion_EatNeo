@@ -1,7 +1,13 @@
 'use client'
 
 import { useState, useEffect, createContext, useContext } from 'react'
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth'
+import {
+  browserLocalPersistence,
+  onAuthStateChanged,
+  setPersistence,
+  signInWithEmailAndPassword,
+  signOut
+} from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '@/components/firebase'
 
@@ -24,6 +30,8 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
+const ONLINE_SESSION_KEY = 'currentUserOnline'
+const OFFLINE_SESSION_KEY = 'currentUserOffline'
 
 // Utilisateurs prédéfinis - FONCTIONNENT OFFLINE
 const offlineUsers = [
@@ -35,6 +43,26 @@ const offlineUsers = [
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null)
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true)
+
+  useEffect(() => {
+    if (!isOnline) return
+
+    let cancelled = false
+    const initPersistence = async () => {
+      try {
+        await setPersistence(auth, browserLocalPersistence)
+      } catch (error) {
+        if (!cancelled) {
+          console.warn('Auth: impossible de configurer la persistance locale', error)
+        }
+      }
+    }
+
+    void initPersistence()
+    return () => {
+      cancelled = true
+    }
+  }, [isOnline])
 
   // Détection connexion
   useEffect(() => {
@@ -55,12 +83,25 @@ export const useAuth = () => {
   // Restaurer session hors ligne uniquement
   useEffect(() => {
     if (isOnline) return
-    const savedUser = localStorage.getItem('currentUserOffline')
+    const savedUser = localStorage.getItem(OFFLINE_SESSION_KEY)
     if (savedUser) {
       const userData = JSON.parse(savedUser)
       setUser(userData)
     }
   }, [isOnline])
+
+  // Restauration session online (fallback UX, l'etat source reste Firebase Auth)
+  useEffect(() => {
+    if (!isOnline || user) return
+    const savedUser = localStorage.getItem(ONLINE_SESSION_KEY)
+    if (!savedUser) return
+    try {
+      const userData = JSON.parse(savedUser) as User
+      setUser(userData)
+    } catch {
+      localStorage.removeItem(ONLINE_SESSION_KEY)
+    }
+  }, [isOnline, user])
 
   // Synchronisation avec Firebase Auth (online)
   useEffect(() => {
@@ -69,7 +110,7 @@ export const useAuth = () => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!firebaseUser || firebaseUser.isAnonymous) {
         setUser(null)
-        localStorage.removeItem('currentUserOnline')
+        localStorage.removeItem(ONLINE_SESSION_KEY)
         return
       }
 
@@ -77,11 +118,13 @@ export const useAuth = () => {
         const userRef = doc(db, 'users', firebaseUser.uid)
         const snapshot = await getDoc(userRef)
         let role: UserRole = 'user'
+        let displayName = firebaseUser.displayName || ''
 
         if (!snapshot.exists()) {
           await setDoc(userRef, {
             uid: firebaseUser.uid,
             email: firebaseUser.email || '',
+            displayName,
             role: 'user',
             createdAt: serverTimestamp(),
             lastLoginAt: serverTimestamp()
@@ -89,19 +132,20 @@ export const useAuth = () => {
         } else {
           const rawRole = snapshot.data().role as string | undefined
           role = rawRole === 'employee' ? 'user' : (rawRole as UserRole) || 'user'
+          displayName = String(snapshot.data().displayName || firebaseUser.displayName || '')
           await setDoc(userRef, { lastLoginAt: serverTimestamp() }, { merge: true })
         }
 
         const userSession: User = {
           id: firebaseUser.uid,
-          username: firebaseUser.email || firebaseUser.displayName || 'Utilisateur',
+          username: displayName || firebaseUser.email || 'Utilisateur',
           role,
           isOffline: false,
           lastSync: new Date().toISOString()
         }
 
         setUser(userSession)
-        localStorage.setItem('currentUserOnline', JSON.stringify(userSession))
+        localStorage.setItem(ONLINE_SESSION_KEY, JSON.stringify(userSession))
       } catch (error) {
         console.warn('Auth: Erreur récupération profil utilisateur', error)
       }
@@ -113,6 +157,7 @@ export const useAuth = () => {
   const login = async (username: string, password: string): Promise<boolean> => {
     if (isOnline) {
       try {
+        await setPersistence(auth, browserLocalPersistence)
         await signInWithEmailAndPassword(auth, username, password)
 
         const loginActivity = {
@@ -148,7 +193,7 @@ export const useAuth = () => {
     }
 
     setUser(userSession)
-    localStorage.setItem('currentUserOffline', JSON.stringify(userSession))
+    localStorage.setItem(OFFLINE_SESSION_KEY, JSON.stringify(userSession))
 
     const loginActivity = {
       userId: userSession.id,
@@ -190,8 +235,8 @@ export const useAuth = () => {
     }
 
     setUser(null)
-    localStorage.removeItem('currentUserOffline')
-    localStorage.removeItem('currentUserOnline')
+    localStorage.removeItem(OFFLINE_SESSION_KEY)
+    localStorage.removeItem(ONLINE_SESSION_KEY)
 
     console.log('Auth: Déconnexion effectuée')
   }
