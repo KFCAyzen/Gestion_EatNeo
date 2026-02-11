@@ -36,16 +36,6 @@ const MenuPage: React.FC<Props> = ({
     return 0;
   };
 
-  // Function to truncate long names
-  const truncateName = (name: string): string => {
-    const words = name.split(' ');
-    if (words.length <= 2) return name;
-    if (words[0].length + words[1].length <= 20) {
-      return words[0] + ' ' + words[1] + '...';
-    }
-    return words[0] + '...';
-  };
-
   // Filter out hidden items and sort by price ascending
   // Only hide items that are explicitly marked as masque: true
   const visibleItems = items.filter(item => item.masque !== true);
@@ -191,7 +181,7 @@ const MenuPage: React.FC<Props> = ({
                   style={{ cursor: 'pointer' }}
                 >
                   {item.image && <ImageWithFallback src={item.image} alt={item.nom} />}
-                  <h3 title={item.nom}>{truncateName(item.nom)}</h3>
+                  <h3 title={item.nom}>{item.nom}</h3>
                   <p>
                     {Array.isArray(item.prix)
                       ? `À partir de ${Math.min(
