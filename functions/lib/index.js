@@ -38,19 +38,19 @@ const admin = __importStar(require("firebase-admin"));
 const functions = __importStar(require("firebase-functions"));
 admin.initializeApp();
 const db = admin.firestore();
-const assertAdmin = async (uid) => {
+const assertSuperAdmin = async (uid) => {
     if (!uid) {
         throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
     }
     const snap = await db.collection('users').doc(uid).get();
     const rawRole = snap.data()?.role;
     const role = rawRole === 'employee' ? 'user' : rawRole;
-    if (role !== 'admin' && role !== 'superadmin') {
-        throw new functions.https.HttpsError('permission-denied', 'Admin role required');
+    if (role !== 'superadmin') {
+        throw new functions.https.HttpsError('permission-denied', 'Superadmin role required');
     }
 };
 exports.listUsers = functions.https.onCall(async (_data, context) => {
-    await assertAdmin(context.auth?.uid);
+    await assertSuperAdmin(context.auth?.uid);
     const result = await admin.auth().listUsers(1000);
     const refs = result.users.map((u) => db.collection('users').doc(u.uid));
     const roleSnaps = refs.length > 0 ? await db.getAll(...refs) : [];
@@ -70,7 +70,7 @@ exports.listUsers = functions.https.onCall(async (_data, context) => {
     return { users };
 });
 exports.createUser = functions.https.onCall(async (data, context) => {
-    await assertAdmin(context.auth?.uid);
+    await assertSuperAdmin(context.auth?.uid);
     const email = String(data?.email || '').trim();
     const password = String(data?.password || '').trim();
     const role = (data?.role === 'superadmin'
@@ -99,7 +99,7 @@ exports.createUser = functions.https.onCall(async (data, context) => {
     return { uid: userRecord.uid };
 });
 exports.updateUser = functions.https.onCall(async (data, context) => {
-    await assertAdmin(context.auth?.uid);
+    await assertSuperAdmin(context.auth?.uid);
     const uid = String(data?.uid || '').trim();
     if (!uid) {
         throw new functions.https.HttpsError('invalid-argument', 'uid is required');
@@ -129,7 +129,7 @@ exports.updateUser = functions.https.onCall(async (data, context) => {
     return { ok: true };
 });
 exports.deleteUser = functions.https.onCall(async (data, context) => {
-    await assertAdmin(context.auth?.uid);
+    await assertSuperAdmin(context.auth?.uid);
     const uid = String(data?.uid || '').trim();
     if (!uid) {
         throw new functions.https.HttpsError('invalid-argument', 'uid is required');

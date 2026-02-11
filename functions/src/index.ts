@@ -7,7 +7,7 @@ const db = admin.firestore()
 
 type Role = 'superadmin' | 'admin' | 'user'
 
-const assertAdmin = async (uid?: string) => {
+const assertSuperAdmin = async (uid?: string) => {
   if (!uid) {
     throw new functions.https.HttpsError('unauthenticated', 'Authentication required')
   }
@@ -16,13 +16,13 @@ const assertAdmin = async (uid?: string) => {
   const rawRole = snap.data()?.role as string | undefined
   const role = rawRole === 'employee' ? 'user' : (rawRole as Role | undefined)
 
-  if (role !== 'admin' && role !== 'superadmin') {
-    throw new functions.https.HttpsError('permission-denied', 'Admin role required')
+  if (role !== 'superadmin') {
+    throw new functions.https.HttpsError('permission-denied', 'Superadmin role required')
   }
 }
 
 export const listUsers = functions.https.onCall(async (_data: unknown, context: functions.https.CallableContext) => {
-  await assertAdmin(context.auth?.uid)
+  await assertSuperAdmin(context.auth?.uid)
 
   const result = await admin.auth().listUsers(1000)
   const refs = result.users.map((u: admin.auth.UserRecord) => db.collection('users').doc(u.uid))
@@ -46,7 +46,7 @@ export const listUsers = functions.https.onCall(async (_data: unknown, context: 
 })
 
 export const createUser = functions.https.onCall(async (data: Record<string, unknown>, context: functions.https.CallableContext) => {
-  await assertAdmin(context.auth?.uid)
+  await assertSuperAdmin(context.auth?.uid)
 
   const email = String(data?.email || '').trim()
   const password = String(data?.password || '').trim()
@@ -81,7 +81,7 @@ export const createUser = functions.https.onCall(async (data: Record<string, unk
 })
 
 export const updateUser = functions.https.onCall(async (data: Record<string, unknown>, context: functions.https.CallableContext) => {
-  await assertAdmin(context.auth?.uid)
+  await assertSuperAdmin(context.auth?.uid)
 
   const uid = String(data?.uid || '').trim()
   if (!uid) {
@@ -114,7 +114,7 @@ export const updateUser = functions.https.onCall(async (data: Record<string, unk
 })
 
 export const deleteUser = functions.https.onCall(async (data: Record<string, unknown>, context: functions.https.CallableContext) => {
-  await assertAdmin(context.auth?.uid)
+  await assertSuperAdmin(context.auth?.uid)
 
   const uid = String(data?.uid || '').trim()
   if (!uid) {

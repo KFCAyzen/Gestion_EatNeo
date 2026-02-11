@@ -26,11 +26,12 @@ const BackIcon = () => (
 
 export default function LogsPage() {
   const { user } = useAuth()
+  const canAccess = user?.role === 'admin' || user?.role === 'superadmin'
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [filter, setFilter] = useState<'all' | 'create' | 'update' | 'delete'>('all');
 
   useEffect(() => {
-    if (!user) return
+    if (!canAccess) return
     const q = query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -43,14 +44,14 @@ export default function LogsPage() {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [canAccess]);
 
   const filteredLogs = logs.filter(log => {
     if (filter === 'all') return true;
     return log.type === filter;
   });
 
-  if (!user) {
+  if (!canAccess) {
     return (
       <div className="logs-container">
         <div className="logs-header">

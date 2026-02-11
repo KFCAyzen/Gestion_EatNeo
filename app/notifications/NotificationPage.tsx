@@ -36,6 +36,7 @@ const BackIcon = () => (
 
 export default function NotificationsPage() {
   const { user } = useAuth()
+  const canAccess = user?.role === 'admin' || user?.role === 'superadmin'
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [activeTab, setActiveTab] = useState<'notifications' | 'logs'>('notifications');
@@ -43,7 +44,7 @@ export default function NotificationsPage() {
   const [logFilter, setLogFilter] = useState<'all' | 'create' | 'update' | 'delete'>('all');
 
   useEffect(() => {
-    if (!user) return
+    if (!canAccess) return
     const notifQuery = query(collection(db, 'notifications'), orderBy('timestamp', 'desc'));
     const logsQuery = query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'));
     
@@ -67,11 +68,11 @@ export default function NotificationsPage() {
       unsubscribeNotif();
       unsubscribeLogs();
     };
-  }, [user]);
+  }, [canAccess]);
 
   // Nettoyage automatique des logs anciens (31 jours)
   useEffect(() => {
-    if (!user) return
+    if (!canAccess) return
     const cleanupOldLogs = async () => {
       const thirtyOneDaysAgo = new Date();
       thirtyOneDaysAgo.setDate(thirtyOneDaysAgo.getDate() - 31);
@@ -103,7 +104,7 @@ export default function NotificationsPage() {
       cleanupOldLogs();
       localStorage.setItem('lastLogsCleanup', today);
     }
-  }, [logs, user]);
+  }, [logs, canAccess]);
 
   const filteredNotifications = notifications.filter(notif => {
     if (filter === 'unread') return !notif.read;
@@ -207,7 +208,7 @@ export default function NotificationsPage() {
     }
   };
 
-  if (!user) {
+  if (!canAccess) {
     return (
       <div className="notifications-container">
         <div className="notifications-header">

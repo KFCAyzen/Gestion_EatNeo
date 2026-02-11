@@ -153,7 +153,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
   }, []);
 
   const loadUsers = async () => {
-    if (userRole !== 'admin' && userRole !== 'superadmin') return
+    if (userRole !== 'superadmin') return
     setUsersLoading(true)
     setUsersError(null)
     try {
@@ -169,10 +169,14 @@ export default function AdminPage({ userRole }: AdminPageProps) {
   }
 
   useEffect(() => {
+    if (activeTab === 'users' && userRole !== 'superadmin') {
+      setActiveTab('menu')
+      return
+    }
     if (activeTab === 'users') {
       loadUsers()
     }
-  }, [activeTab])
+  }, [activeTab, userRole])
   
 
   const [showAddBoisson, setShowAddBoisson] = useState(false);
@@ -1432,6 +1436,11 @@ export default function AdminPage({ userRole }: AdminPageProps) {
   };
 
   const handleCreateUser = async () => {
+    if (userRole !== 'superadmin') {
+      showToast('Accès refusé', 'error')
+      return
+    }
+
     if (!newUserEmail.trim() || !newUserPassword.trim()) {
       showToast('Email et mot de passe requis', 'warning')
       return
@@ -1457,6 +1466,11 @@ export default function AdminPage({ userRole }: AdminPageProps) {
   }
 
   const handleUpdateUser = async (uid: string, updates: Partial<ManagedUser> & { password?: string }) => {
+    if (userRole !== 'superadmin') {
+      showToast('Accès refusé', 'error')
+      return
+    }
+
     try {
       await updateUserFn({
         uid,
@@ -1475,6 +1489,11 @@ export default function AdminPage({ userRole }: AdminPageProps) {
   }
 
   const handleDeleteUser = async (uid: string) => {
+    if (userRole !== 'superadmin') {
+      showToast('Accès refusé', 'error')
+      return
+    }
+
     if (!window.confirm('Supprimer cet utilisateur ?')) return
     try {
       await deleteUserFn({ uid })
@@ -2295,7 +2314,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                   
                   {/* Contrôles de stock */}
                   <div className="stock-controls-complex">
-                    {userRole === 'admin' && (
+                    {(userRole === 'admin' || userRole === 'superadmin') && (
                       <button 
                         type="button"
                         onClick={() => {
@@ -2306,7 +2325,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                           }));
                         }}
                         className="stock-btn-minus-hover"
-                        title="Diminuer le stock (Admin seulement)"
+                        title="Diminuer le stock"
                       >
                         <MinusIcon />
                       </button>
@@ -2382,7 +2401,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
   )}
 
       {/* Contenu de l'onglet Utilisateurs - Admin seulement */}
-      {activeTab === 'users' && (userRole === 'admin' || userRole === 'superadmin') && (
+      {activeTab === 'users' && userRole === 'superadmin' && (
         <div style={{ marginTop: '1rem' }}>
           <h2>Gestion des utilisateurs</h2>
 
@@ -2537,12 +2556,12 @@ export default function AdminPage({ userRole }: AdminPageProps) {
       )}
 
       {/* Contenu de l'onglet Rentabilité - Admin seulement */}
-      {activeTab === 'rentabilite' && userRole === 'admin' && (
+      {activeTab === 'rentabilite' && (userRole === 'admin' || userRole === 'superadmin') && (
         <ProfitAnalysis />
       )}
 
       {/* Contenu de l'onglet Historique - Admin seulement */}
-      {activeTab === 'historique' && userRole === 'admin' && (
+      {activeTab === 'historique' && (userRole === 'admin' || userRole === 'superadmin') && (
         <div className="historique-section">
           <h2>Historique & Rapports</h2>
           

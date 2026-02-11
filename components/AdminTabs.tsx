@@ -31,14 +31,16 @@ export const AdminTabs = ({ activeTab, setActiveTab, commandesCount, userRole }:
         <StockIcon active={activeTab === 'stock'} />
         <span>Stock & Ingrédients</span>
       </button>
+      {userRole === 'superadmin' && (
+        <button 
+          onClick={() => setActiveTab('users')}
+          className={`admin-tab-btn ${activeTab === 'users' ? 'active' : ''} admin-tab-btn-flex`}
+        >
+          <span>Utilisateurs</span>
+        </button>
+      )}
       {(userRole === 'admin' || userRole === 'superadmin') && (
         <>
-          <button 
-            onClick={() => setActiveTab('users')}
-            className={`admin-tab-btn ${activeTab === 'users' ? 'active' : ''} admin-tab-btn-flex`}
-          >
-            <span>Utilisateurs</span>
-          </button>
           <button 
             onClick={() => setActiveTab('rentabilite')}
             className={`admin-tab-btn ${activeTab === 'rentabilite' ? 'active' : ''} admin-tab-btn-flex`}

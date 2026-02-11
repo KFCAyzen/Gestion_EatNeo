@@ -9,7 +9,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 
 import AdminLogin from './AdminLogin'
-import PWAInstaller from './PWAInstaller'
 import NotificationManager from './NotificationManager'
 import OfflineIndicator from './OfflineIndicator'
 import MobileHeader from './MobileHeader'
@@ -139,7 +138,8 @@ export default function AppShell({
 
   useFirebaseAnonAuth()
 
-  const notificationCount = useNotificationCount(!!user && isOnline)
+  const canAccessBackofficeNotifications = user?.role === 'admin' || user?.role === 'superadmin'
+  const notificationCount = useNotificationCount(!!canAccessBackofficeNotifications && isOnline)
 
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(cartItems))
@@ -265,7 +265,7 @@ export default function AppShell({
             title={title}
             showBackButton={showBackButton}
             onBack={handleBack}
-            showNotifications={true}
+            showNotifications={!!canAccessBackofficeNotifications}
             showAdmin={true}
             user={user}
             onAdminClick={() => user ? router.push('/admin') : setShowLogin(true)}
@@ -297,9 +297,11 @@ export default function AppShell({
               </div>
               <div className="title-right">
                 <DesktopMenu cartItemsCount={cartItems.length} />
-                <Link href="/notifications" className="notification-link">
-                  <NotificationIcon count={notificationCount} />
-                </Link>
+                {canAccessBackofficeNotifications ? (
+                  <Link href="/notifications" className="notification-link">
+                    <NotificationIcon count={notificationCount} />
+                  </Link>
+                ) : null}
                 <span className="user-name">{user?.username}</span>
                 <button
                   className="logout-btn"
@@ -321,9 +323,11 @@ export default function AppShell({
               </div>
               <div className="title-right">
                 <DesktopMenu cartItemsCount={cartItems.length} />
-                <Link href="/notifications" className="notification-link">
-                  <NotificationIcon count={notificationCount} />
-                </Link>
+                {canAccessBackofficeNotifications ? (
+                  <Link href="/notifications" className="notification-link">
+                    <NotificationIcon count={notificationCount} />
+                  </Link>
+                ) : null}
                 <button
                   onClick={() => user ? router.push('/admin') : setShowLogin(true)}
                   className="admin-link"
@@ -416,8 +420,7 @@ export default function AppShell({
           </div>
         )}
 
-        <PWAInstaller />
-        {user && <NotificationManager />}
+        {canAccessBackofficeNotifications ? <NotificationManager /> : null}
         <OfflineIndicator />
         <SyncStatus />
 
