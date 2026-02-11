@@ -1,5 +1,11 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import {
+  type Firestore,
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAuth } from "firebase/auth";
 import { getFunctions } from "firebase/functions";
@@ -19,7 +25,23 @@ const firebaseConfig = {
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
 // Services Firebase
-const db = getFirestore(app);
+let db: Firestore;
+try {
+  db = initializeFirestore(app, {
+    // Rend Firestore plus robuste sur réseaux/proxy instables
+    experimentalAutoDetectLongPolling: true,
+    ...(typeof window !== "undefined"
+      ? {
+          localCache: persistentLocalCache({
+            tabManager: persistentMultipleTabManager(),
+          }),
+        }
+      : {}),
+  });
+} catch {
+  // Si Firestore est déjà initialisé ailleurs, on récupère l'instance existante
+  db = getFirestore(app);
+}
 const storage = getStorage(app);
 const auth = getAuth(app);
 const functions = getFunctions(app);

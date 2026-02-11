@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { collection, query, orderBy, Timestamp, deleteDoc, doc, getDocs, limit } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp, deleteDoc, doc, getDocs, limit, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../components/firebase';
 import Link from 'next/link';
 import '../../styles/NotificationsPage.css';
@@ -10,12 +10,14 @@ import { useAuth } from '@/hooks/useAuth'
 
 interface Notification {
   id: string;
-  type: 'stock_low' | 'stock_out' | 'new_order' | 'order_ready';
+  type: 'stock_low' | 'stock_out' | 'new_order' | 'order_ready' | 'order_status';
   title: string;
   message: string;
   timestamp: Timestamp;
   read: boolean;
   priority: 'low' | 'medium' | 'high';
+  source?: string;
+  orderId?: string;
 }
 
 interface ActivityLog {
@@ -38,10 +40,12 @@ const fetchNotifications = async (): Promise<Notification[]> => {
     limit(LIST_LIMIT)
   );
   const snapshot = await getDocs(notifQuery);
-  return snapshot.docs.map((item) => ({
-    id: item.id,
-    ...item.data()
-  })) as Notification[];
+  return snapshot.docs
+    .filter((item) => item.id !== '__meta__')
+    .map((item) => ({
+      id: item.id,
+      ...item.data()
+    })) as Notification[];
 };
 
 const fetchActivityLogs = async (): Promise<ActivityLog[]> => {
@@ -71,6 +75,25 @@ export default function NotificationsPage() {
   const [filter, setFilter] = useState<'all' | 'unread' | 'high'>('all');
   const [logFilter, setLogFilter] = useState<'all' | 'create' | 'update' | 'delete'>('all');
 
+  // Recrée implicitement la collection "notifications" si elle a été supprimée.
+  useEffect(() => {
+    if (!canAccess) return;
+    void setDoc(
+      doc(db, 'notifications', '__meta__'),
+      {
+        source: 'system:collection-bootstrap',
+        title: 'meta',
+        message: 'meta',
+        read: true,
+        priority: 'low',
+        type: 'order_status',
+        updatedAt: serverTimestamp(),
+        timestamp: serverTimestamp()
+      },
+      { merge: true }
+    );
+  }, [canAccess]);
+
   const { data: notifications = [], isPending: notificationsPending, error: notificationsError } = useQuery({
     queryKey: ['notifications'],
     queryFn: fetchNotifications,
@@ -91,6 +114,15 @@ export default function NotificationsPage() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['activity_logs'] });
+    }
+  });
+
+  const { mutateAsync: runNotificationsCleanup } = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map((id) => deleteDoc(doc(db, 'notifications', id))));
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }
   });
 
@@ -130,6 +162,54 @@ export default function NotificationsPage() {
       localStorage.setItem('lastLogsCleanup', today);
     }
   }, [logs, canAccess, runLogsCleanup]);
+
+  // Nettoyage des notifs legacy (sans source) + doublons commandes
+  useEffect(() => {
+    if (!canAccess || notifications.length === 0) return;
+
+    const cleanupLegacyNotifications = async () => {
+      const legacyIds = notifications
+        .filter((notif) => !notif.source)
+        .map((notif) => notif.id);
+
+      const orderNotifications = notifications
+        .filter((notif) => (notif.type === 'new_order' || notif.type === 'order_status') && !!notif.orderId)
+        .slice()
+        .sort((a, b) => {
+          const aMs = a.timestamp?.toDate ? a.timestamp.toDate().getTime() : 0;
+          const bMs = b.timestamp?.toDate ? b.timestamp.toDate().getTime() : 0;
+          return bMs - aMs;
+        });
+
+      const seen = new Set<string>();
+      const duplicateIds: string[] = [];
+      for (const notif of orderNotifications) {
+        const key = `${notif.type}|${notif.orderId}|${notif.title}`;
+        if (seen.has(key)) {
+          duplicateIds.push(notif.id);
+        } else {
+          seen.add(key);
+        }
+      }
+
+      const idsToDelete = Array.from(new Set([...legacyIds, ...duplicateIds]));
+      if (idsToDelete.length > 0) {
+        try {
+          await runNotificationsCleanup(idsToDelete);
+          console.log(`${idsToDelete.length} notification(s) legacy/doublon supprimée(s)`);
+        } catch (error) {
+          console.error('Erreur lors du nettoyage des notifications:', error);
+        }
+      }
+    };
+
+    const today = new Date().toDateString();
+    const lastCleanup = localStorage.getItem('lastNotificationSourceCleanup');
+    if (lastCleanup !== today) {
+      void cleanupLegacyNotifications();
+      localStorage.setItem('lastNotificationSourceCleanup', today);
+    }
+  }, [canAccess, notifications, runNotificationsCleanup]);
 
   const filteredNotifications = notifications.filter(notif => {
     if (filter === 'unread') return !notif.read;
@@ -183,6 +263,21 @@ export default function NotificationsPage() {
       case 'medium': return '#f59e0b';
       case 'low': return '#10b981';
       default: return '#6b7280';
+    }
+  };
+
+  const getSourceLabel = (source?: string) => {
+    switch (source) {
+      case 'useOrderNotifications:new_order':
+        return 'Commandes (création)';
+      case 'useOrderNotifications:status_change':
+        return 'Commandes (statut)';
+      case 'useActivityLogger':
+        return 'Journal activité';
+      case 'useOfflineSync':
+        return 'Synchronisation offline';
+      default:
+        return source ? source : 'Origine inconnue (legacy)';
     }
   };
 
@@ -409,6 +504,9 @@ export default function NotificationsPage() {
                     </div>
                   </div>
                   <p>{notification.message}</p>
+                  <div className="log-footer">
+                    <span>Source: {getSourceLabel(notification.source)}</span>
+                  </div>
                   <span className="notification-time">
                     {notification.timestamp?.toDate().toLocaleString('fr-FR')}
                   </span>

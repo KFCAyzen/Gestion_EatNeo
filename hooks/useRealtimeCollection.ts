@@ -92,11 +92,10 @@ export function useRealtimeCollection(collectionName: string) {
   }, [collectionName, collectionRef]);
 
   // Optimisation: Mémoriser les items triés
-  const sortedItems = useMemo(() => 
-    items.sort((a, b) => (a.nom || '').localeCompare(b.nom || '')), 
+  const sortedItems = useMemo(
+    () => [...items].sort((a, b) => (a.nom || '').localeCompare(b.nom || '')),
     [items]
   );
 
   return { items: sortedItems, loading, error } as const;
 }
-

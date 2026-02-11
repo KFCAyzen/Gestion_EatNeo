@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { auth, db } from '@/components/firebase'
-import { collection, addDoc, Timestamp } from 'firebase/firestore'
+import { collection, addDoc, Timestamp, doc, setDoc } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 import { parseTotal } from '@/utils/orderUtils'
 
@@ -97,8 +97,9 @@ export function useOfflineSync() {
               })
               break
             case 'notification':
-              await addDoc(collection(db, 'notifications'), {
+              await setDoc(doc(collection(db, 'notifications')), {
                 ...item.data,
+                source: item.data?.source || 'useOfflineSync',
                 timestamp: Timestamp.fromMillis(item.timestamp)
               })
               break

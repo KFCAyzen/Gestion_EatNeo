@@ -1,4 +1,4 @@
-import { addDoc, collection, Timestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, setDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../components/firebase';
 
 interface LogActivity {
@@ -29,10 +29,12 @@ export function useActivityLogger() {
     priority: 'low' | 'medium' | 'high' = 'medium'
   ) => {
     try {
-      await addDoc(collection(db, 'notifications'), {
+      const notifRef = doc(collection(db, 'notifications'));
+      await setDoc(notifRef, {
         type,
         title,
         message,
+        source: 'useActivityLogger',
         priority,
         read: false,
         timestamp: Timestamp.now()

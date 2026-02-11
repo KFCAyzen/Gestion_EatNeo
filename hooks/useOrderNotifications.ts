@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect } from 'react';
-import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useEffect, useRef } from 'react';
+import { collection, query, where, orderBy, onSnapshot, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/components/firebase';
 import { usePushNotifications } from './usePushNotifications';
 
@@ -18,9 +18,11 @@ interface Order {
 
 export function useOrderNotifications() {
   const { sendNotification, permission } = usePushNotifications();
+  const isInitialSnapshot = useRef(true);
 
   useEffect(() => {
     if (permission !== 'granted') return;
+    isInitialSnapshot.current = true;
 
     // Écouter les nouvelles commandes
     const ordersQuery = query(
@@ -29,6 +31,12 @@ export function useOrderNotifications() {
     );
 
     const unsubscribe = onSnapshot(ordersQuery, (snapshot) => {
+      // Evite d'inonder les notifs au montage (premier snapshot = historique complet).
+      if (isInitialSnapshot.current) {
+        isInitialSnapshot.current = false;
+        return;
+      }
+
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
           const order = { id: change.doc.id, ...change.doc.data() } as Order;
@@ -56,11 +64,14 @@ export function useOrderNotifications() {
 
     // Créer une notification dans la base de données
     try {
-      await addDoc(collection(db, 'notifications'), {
+      // ID déterministe: un seul événement "nouvelle commande" par commande.
+      const notifRef = doc(db, 'notifications', `order_new_${order.id}`);
+      await setDoc(notifRef, {
         type: 'new_order',
         title: 'Nouvelle commande',
         message: `Commande de ${clientName} pour ${order.total}`,
         orderId: order.id,
+        source: 'useOrderNotifications:new_order',
         read: false,
         priority: 'high',
         timestamp: serverTimestamp()
@@ -87,15 +98,18 @@ export function useOrderNotifications() {
 
       // Créer une notification dans la base de données
       try {
-      await addDoc(collection(db, 'notifications'), {
-        type: 'order_status',
-        title: statusMessages[order.statut],
-        message: `Commande de ${clientName} - ${order.statut.replace('_', ' ')}`,
-        orderId: order.id,
-        read: false,
-        priority: order.statut === 'prete' ? 'high' : 'medium',
-        timestamp: serverTimestamp()
-      });
+        // ID déterministe: une notif max par statut et par commande.
+        const notifRef = doc(db, 'notifications', `order_status_${order.id}_${order.statut}`);
+        await setDoc(notifRef, {
+          type: 'order_status',
+          title: statusMessages[order.statut],
+          message: `Commande de ${clientName} - ${order.statut.replace('_', ' ')}`,
+          orderId: order.id,
+          source: 'useOrderNotifications:status_change',
+          read: false,
+          priority: order.statut === 'prete' ? 'high' : 'medium',
+          timestamp: serverTimestamp()
+        });
       } catch (error) {
         console.error('Erreur lors de la création de la notification:', error);
       }
