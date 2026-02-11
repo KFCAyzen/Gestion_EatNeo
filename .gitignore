@@ -47,6 +47,7 @@ firebase-debug.log
 # Temporary folders
 tmp/
 temp/
+.next_broken_*/
 
 # PDF files
 *.pdf
