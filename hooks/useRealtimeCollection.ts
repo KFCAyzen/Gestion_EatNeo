@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useState, useMemo } from "react";
 import { db } from '@/components/firebase'
 import { collection, onSnapshot } from 'firebase/firestore'
@@ -97,5 +99,4 @@ export function useRealtimeCollection(collectionName: string) {
 
   return { items: sortedItems, loading, error } as const;
 }
-
 

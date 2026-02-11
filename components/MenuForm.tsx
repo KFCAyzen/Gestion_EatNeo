@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react';
 import { UploadIcon, MinusIcon, Spinner, PlusIcon } from './Icons';
 import { findSimilarCategory, formatPrice } from './utils';

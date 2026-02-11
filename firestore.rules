@@ -13,8 +13,16 @@ service cloud.firestore {
       return isSignedIn() && userDoc().data.role == role;
     }
 
+    function isAdmin() {
+      return isSignedIn() && (userDoc().data.role == 'admin' || userDoc().data.role == 'superadmin');
+    }
+
     function isStaff() {
-      return isSignedIn() && (userDoc().data.role == 'admin' || userDoc().data.role == 'employee');
+      return isSignedIn()
+        && (userDoc().data.role == 'admin'
+          || userDoc().data.role == 'superadmin'
+          || userDoc().data.role == 'user'
+          || userDoc().data.role == 'employee');
     }
 
     function orderKeys() {
@@ -52,55 +60,55 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isSignedIn() && (userId == request.auth.uid || hasRole('admin'));
+      allow read: if isSignedIn() && (userId == request.auth.uid || isAdmin());
       allow create: if isSignedIn() && userId == request.auth.uid;
-      allow update: if isSignedIn() && (hasRole('admin') || (userId == request.auth.uid && request.resource.data.role == resource.data.role));
-      allow delete: if hasRole('admin');
+      allow update: if isSignedIn() && (isAdmin() || (userId == request.auth.uid && request.resource.data.role == resource.data.role));
+      allow delete: if isAdmin();
     }
 
     match /commandes/{orderId} {
       allow create: if isSignedIn() && isValidOrderCreate() && (isStaff() || request.resource.data.clientUid == request.auth.uid);
       allow read: if isSignedIn() && (isStaff() || resource.data.clientUid == request.auth.uid);
       allow update: if isSignedIn() && isStaff() && isValidOrderUpdate();
-      allow delete: if hasRole('admin');
+      allow delete: if isAdmin();
     }
 
     match /Plats/{docId} {
       allow read: if true;
       allow create, update: if isStaff();
-      allow delete: if hasRole('admin');
+      allow delete: if isAdmin();
     }
 
     match /Boissons/{docId} {
       allow read: if true;
       allow create, update: if isStaff();
-      allow delete: if hasRole('admin');
+      allow delete: if isAdmin();
     }
 
     match /ingredients/{docId} {
       allow read: if isStaff();
       allow create, update: if isStaff();
-      allow delete: if hasRole('admin');
+      allow delete: if isAdmin();
     }
 
     match /mouvements_stock/{docId} {
       allow read: if isStaff();
       allow create: if isStaff();
-      allow update, delete: if hasRole('admin');
+      allow update, delete: if isAdmin();
     }
 
     match /notifications/{docId} {
       allow read, create, update: if isStaff();
-      allow delete: if hasRole('admin');
+      allow delete: if isAdmin();
     }
 
     match /activity_logs/{docId} {
       allow read, create: if isStaff();
-      allow update, delete: if hasRole('admin');
+      allow update, delete: if isAdmin();
     }
 
     match /depenses/{docId} {
-      allow read, create, update, delete: if hasRole('admin');
+      allow read, create, update, delete: if isAdmin();
     }
   }
 }

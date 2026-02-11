@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect } from 'react';
 import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/components/firebase';

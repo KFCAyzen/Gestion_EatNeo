@@ -1,8 +1,8 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAuth } from "firebase/auth";
+import { getFunctions } from "firebase/functions";
 
 // Configuration Firebase avec variables d'environnement
 const firebaseConfig = {
@@ -19,10 +19,10 @@ const firebaseConfig = {
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
 // Services Firebase
-const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
 const db = getFirestore(app);
 const storage = getStorage(app);
 const auth = getAuth(app);
+const functions = getFunctions(app);
 
-export { app, analytics, db, storage, auth };
+export { app, db, storage, auth, functions };
 export default app;

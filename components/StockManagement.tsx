@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react';
 import { PlusIcon, SearchIcon, DownloadIcon } from './Icons';
 

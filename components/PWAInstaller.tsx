@@ -13,6 +13,26 @@ export default function PWAInstaller() {
   const [isPWA, setIsPWA] = useState(false)
 
   useEffect(() => {
+    const isDev = process.env.NODE_ENV !== 'production' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+
+    // En dev, on supprime tout SW/caches existants pour eviter les chunks Next obsoletes.
+    if (isDev) {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations()
+          .then((regs) => Promise.all(regs.map((reg) => reg.unregister())))
+          .catch(() => {})
+      }
+
+      if ('caches' in window) {
+        caches.keys()
+          .then((names) => Promise.all(names.map((name) => caches.delete(name))))
+          .catch(() => {})
+      }
+
+      setShowInstallButton(false)
+      return
+    }
+
     // Détecter si l'app est déjà installée (PWA)
     const checkPWA = () => {
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches
@@ -33,7 +53,7 @@ export default function PWAInstaller() {
 
     window.addEventListener('beforeinstallprompt', handler)
 
-    // Enregistrer le service worker
+    // Enregistrer le service worker (production uniquement)
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
         .then(() => console.log('Service Worker enregistré'))

@@ -5,7 +5,7 @@ import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebas
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '@/components/firebase'
 
-export type UserRole = 'admin' | 'employee'
+export type UserRole = 'superadmin' | 'admin' | 'user'
 
 export interface User {
   id: string
@@ -27,8 +27,9 @@ const AuthContext = createContext<AuthContextType | null>(null)
 
 // Utilisateurs prédéfinis - FONCTIONNENT OFFLINE
 const offlineUsers = [
-  { id: '1', username: 'admin', password: 'admin123', role: 'admin' as UserRole },
-  { id: '2', username: 'user', password: 'eatneo123#', role: 'employee' as UserRole }
+  { id: '1', username: 'superadmin', password: 'superadmin123', role: 'superadmin' as UserRole },
+  { id: '2', username: 'admin', password: 'admin123', role: 'admin' as UserRole },
+  { id: '3', username: 'user', password: 'eatneo123#', role: 'user' as UserRole }
 ]
 
 export const useAuth = () => {
@@ -75,18 +76,19 @@ export const useAuth = () => {
       try {
         const userRef = doc(db, 'users', firebaseUser.uid)
         const snapshot = await getDoc(userRef)
-        let role: UserRole = 'employee'
+        let role: UserRole = 'user'
 
         if (!snapshot.exists()) {
           await setDoc(userRef, {
             uid: firebaseUser.uid,
             email: firebaseUser.email || '',
-            role: 'employee',
+            role: 'user',
             createdAt: serverTimestamp(),
             lastLoginAt: serverTimestamp()
           })
         } else {
-          role = (snapshot.data().role as UserRole) || 'employee'
+          const rawRole = snapshot.data().role as string | undefined
+          role = rawRole === 'employee' ? 'user' : (rawRole as UserRole) || 'user'
           await setDoc(userRef, { lastLoginAt: serverTimestamp() }, { merge: true })
         }
 
@@ -195,7 +197,7 @@ export const useAuth = () => {
   }
 
   const isAdmin = (): boolean => {
-    return user?.role === 'admin'
+    return user?.role === 'admin' || user?.role === 'superadmin'
   }
 
   return { user, login, logout, isAdmin, isOnline }

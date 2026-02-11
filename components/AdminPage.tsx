@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { db, storage } from "./firebase";
+import { db, storage, functions } from "./firebase";
 import { collection, addDoc, doc, deleteDoc, getDoc, getDocs, setDoc, updateDoc, query, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
 import { ref, deleteObject } from "firebase/storage";
 import { uploadImageFromBrowser } from "./upLoadFirebase";
 import type { MenuItem } from "./types";
@@ -66,6 +67,14 @@ interface MouvementStock {
   date: Timestamp;
   categorie: 'boissons' | 'plats' | 'ingredients';
 }
+
+interface ManagedUser {
+  uid: string;
+  email: string;
+  displayName: string;
+  disabled: boolean;
+  role: 'superadmin' | 'admin' | 'user';
+}
 // Convertir une URL Firebase Storage → chemin interne utilisable par ref()
 function getStoragePathFromUrl(url: string) {
   const match = url.match(/o\/(.*?)\?alt=media/);
@@ -73,7 +82,7 @@ function getStoragePathFromUrl(url: string) {
 }
 
 interface AdminPageProps {
-  userRole: 'admin' | 'employee'
+  userRole: 'superadmin' | 'admin' | 'user'
 }
 
 export default function AdminPage({ userRole }: AdminPageProps) {
@@ -89,7 +98,7 @@ export default function AdminPage({ userRole }: AdminPageProps) {
   const [editId, setEditId] = useState<string | null>(null);
   const [editingCollection, setEditingCollection] = useState<"Plats" | "Boissons" | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<'menu' | 'commandes' | 'stock' | 'historique' | 'rentabilite'>('menu');
+  const [activeTab, setActiveTab] = useState<'menu' | 'commandes' | 'stock' | 'historique' | 'rentabilite' | 'users'>('menu');
   const [stockView, setStockView] = useState<'boissons' | 'ingredients'>('boissons');
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out' | 'ok'>('all');
   const [historiqueView, setHistoriqueView] = useState<'commandes' | 'mouvements'>('commandes');
@@ -103,6 +112,16 @@ export default function AdminPage({ userRole }: AdminPageProps) {
   const [isResetting, setIsResetting] = useState(false);
   const [recipeIngredients, setRecipeIngredients] = useState<{nom: string, quantite: number}[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+
+  // Gestion des utilisateurs (admin)
+  const [users, setUsers] = useState<ManagedUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState<string | null>(null);
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserDisplayName, setNewUserDisplayName] = useState('');
+  const [newUserRole, setNewUserRole] = useState<'superadmin' | 'admin' | 'user'>('user');
+  const [userEdits, setUserEdits] = useState<Record<string, { email?: string; displayName?: string; password?: string; role?: 'superadmin' | 'admin' | 'user'; disabled?: boolean }>>({});
   
   // Système de notifications
   const { toasts, modal, showToast, removeToast, showModal, closeModal } = useNotifications();
@@ -110,6 +129,12 @@ export default function AdminPage({ userRole }: AdminPageProps) {
   
   // Système hors ligne
   const { isOnline } = useOfflineSync();
+
+  // Fonctions Cloud pour gestion utilisateurs
+  const listUsersFn = httpsCallable(functions, 'listUsers');
+  const createUserFn = httpsCallable(functions, 'createUser');
+  const updateUserFn = httpsCallable(functions, 'updateUser');
+  const deleteUserFn = httpsCallable(functions, 'deleteUser');
   
   // Récupération des ingrédients
   useEffect(() => {
@@ -126,6 +151,28 @@ export default function AdminPage({ userRole }: AdminPageProps) {
 
     return () => unsubscribe();
   }, []);
+
+  const loadUsers = async () => {
+    if (userRole !== 'admin' && userRole !== 'superadmin') return
+    setUsersLoading(true)
+    setUsersError(null)
+    try {
+      const res = await listUsersFn()
+      const data = res.data as { users: ManagedUser[] }
+      setUsers(data?.users || [])
+    } catch (error) {
+      console.error('Erreur chargement utilisateurs:', error)
+      setUsersError('Impossible de charger les utilisateurs')
+    } finally {
+      setUsersLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'users') {
+      loadUsers()
+    }
+  }, [activeTab])
   
 
   const [showAddBoisson, setShowAddBoisson] = useState(false);
@@ -1384,6 +1431,61 @@ export default function AdminPage({ userRole }: AdminPageProps) {
     }
   };
 
+  const handleCreateUser = async () => {
+    if (!newUserEmail.trim() || !newUserPassword.trim()) {
+      showToast('Email et mot de passe requis', 'warning')
+      return
+    }
+
+    try {
+      await createUserFn({
+        email: newUserEmail.trim(),
+        password: newUserPassword.trim(),
+        role: newUserRole,
+        displayName: newUserDisplayName.trim()
+      })
+      showToast('Utilisateur créé', 'success')
+      setNewUserEmail('')
+      setNewUserPassword('')
+      setNewUserDisplayName('')
+      setNewUserRole('user')
+      loadUsers()
+    } catch (error) {
+      console.error('Erreur création utilisateur:', error)
+      showToast('Erreur lors de la création', 'error')
+    }
+  }
+
+  const handleUpdateUser = async (uid: string, updates: Partial<ManagedUser> & { password?: string }) => {
+    try {
+      await updateUserFn({
+        uid,
+        email: updates.email,
+        password: (updates as any).password,
+        displayName: updates.displayName,
+        disabled: updates.disabled,
+        role: updates.role
+      })
+      showToast('Utilisateur mis à jour', 'success')
+      loadUsers()
+    } catch (error) {
+      console.error('Erreur mise à jour utilisateur:', error)
+      showToast('Erreur lors de la mise à jour', 'error')
+    }
+  }
+
+  const handleDeleteUser = async (uid: string) => {
+    if (!window.confirm('Supprimer cet utilisateur ?')) return
+    try {
+      await deleteUserFn({ uid })
+      showToast('Utilisateur supprimé', 'success')
+      loadUsers()
+    } catch (error) {
+      console.error('Erreur suppression utilisateur:', error)
+      showToast('Erreur lors de la suppression', 'error')
+    }
+  }
+
   // Récupération des mouvements de stock
   useEffect(() => {
     const q = query(collection(db, 'mouvements_stock'), orderBy('date', 'desc'));
@@ -2278,6 +2380,161 @@ export default function AdminPage({ userRole }: AdminPageProps) {
           )}
     </div>
   )}
+
+      {/* Contenu de l'onglet Utilisateurs - Admin seulement */}
+      {activeTab === 'users' && (userRole === 'admin' || userRole === 'superadmin') && (
+        <div style={{ marginTop: '1rem' }}>
+          <h2>Gestion des utilisateurs</h2>
+
+          <div style={{ display: 'grid', gap: '0.75rem', maxWidth: '700px' }}>
+            <input
+              type="text"
+              placeholder="Nom affiché"
+              value={newUserDisplayName}
+              onChange={(e) => setNewUserDisplayName(e.target.value)}
+              className="form-input"
+            />
+            <input
+              type="email"
+              placeholder="Email"
+              value={newUserEmail}
+              onChange={(e) => setNewUserEmail(e.target.value)}
+              className="form-input"
+            />
+            <input
+              type="password"
+              placeholder="Mot de passe"
+              value={newUserPassword}
+              onChange={(e) => setNewUserPassword(e.target.value)}
+              className="form-input"
+            />
+            <select
+              value={newUserRole}
+              onChange={(e) => setNewUserRole(e.target.value as 'superadmin' | 'admin' | 'user')}
+              className="filter-select"
+            >
+              <option value="user">Utilisateur</option>
+              <option value="admin">Admin</option>
+              <option value="superadmin">Superadmin</option>
+            </select>
+            <button
+              onClick={handleCreateUser}
+              className="action-btn"
+              style={{ width: 'fit-content' }}
+            >
+              Créer l'utilisateur
+            </button>
+          </div>
+
+          <div style={{ marginTop: '1.5rem' }}>
+            <h3>Utilisateurs</h3>
+            {usersLoading && <p>Chargement...</p>}
+            {usersError && <p style={{ color: '#ef4444' }}>{usersError}</p>}
+            {!usersLoading && users.length === 0 && <p>Aucun utilisateur.</p>}
+
+            {users.length > 0 && (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: 'left', padding: '8px' }}>Email</th>
+                      <th style={{ textAlign: 'left', padding: '8px' }}>Nom</th>
+                      <th style={{ textAlign: 'left', padding: '8px' }}>Rôle</th>
+                      <th style={{ textAlign: 'left', padding: '8px' }}>Désactivé</th>
+                      <th style={{ textAlign: 'left', padding: '8px' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((u) => {
+                      const edit = userEdits[u.uid] || {}
+                      return (
+                        <tr key={u.uid} style={{ borderTop: '1px solid #eee' }}>
+                          <td style={{ padding: '8px' }}>
+                            <input
+                              type="email"
+                              defaultValue={u.email}
+                              onChange={(e) => setUserEdits(prev => ({
+                                ...prev,
+                                [u.uid]: { ...prev[u.uid], email: e.target.value }
+                              }))}
+                              className="form-input"
+                            />
+                          </td>
+                          <td style={{ padding: '8px' }}>
+                            <input
+                              type="text"
+                              defaultValue={u.displayName}
+                              onChange={(e) => setUserEdits(prev => ({
+                                ...prev,
+                                [u.uid]: { ...prev[u.uid], displayName: e.target.value }
+                              }))}
+                              className="form-input"
+                            />
+                            <input
+                              type="password"
+                              placeholder="Nouveau mot de passe (optionnel)"
+                              onChange={(e) => setUserEdits(prev => ({
+                                ...prev,
+                                [u.uid]: { ...prev[u.uid], password: e.target.value }
+                              }))}
+                              className="form-input"
+                              style={{ marginTop: '6px' }}
+                            />
+                          </td>
+                          <td style={{ padding: '8px' }}>
+                            <select
+                              value={edit.role ?? u.role}
+                              onChange={(e) => setUserEdits(prev => ({
+                                ...prev,
+                                [u.uid]: { ...prev[u.uid], role: e.target.value as 'superadmin' | 'admin' | 'user' }
+                              }))}
+                              className="filter-select"
+                            >
+                              <option value="user">Utilisateur</option>
+                              <option value="admin">Admin</option>
+                              <option value="superadmin">Superadmin</option>
+                            </select>
+                          </td>
+                          <td style={{ padding: '8px' }}>
+                            <input
+                              type="checkbox"
+                              checked={edit.disabled ?? u.disabled}
+                              onChange={(e) => setUserEdits(prev => ({
+                                ...prev,
+                                [u.uid]: { ...prev[u.uid], disabled: e.target.checked }
+                              }))}
+                            />
+                          </td>
+                          <td style={{ padding: '8px', display: 'flex', gap: '8px' }}>
+                            <button
+                              className="action-btn"
+                              onClick={() => handleUpdateUser(u.uid, {
+                                email: edit.email ?? u.email,
+                                displayName: edit.displayName ?? u.displayName,
+                                password: edit.password,
+                                role: edit.role ?? u.role,
+                                disabled: edit.disabled ?? u.disabled
+                              })}
+                            >
+                              Enregistrer
+                            </button>
+                            <button
+                              className="action-btn delete"
+                              onClick={() => handleDeleteUser(u.uid)}
+                            >
+                              Supprimer
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Contenu de l'onglet Rentabilité - Admin seulement */}
       {activeTab === 'rentabilite' && userRole === 'admin' && (

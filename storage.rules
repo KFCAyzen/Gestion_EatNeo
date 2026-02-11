@@ -10,7 +10,11 @@ service firebase.storage {
     }
 
     function isStaff() {
-      return isSignedIn() && (userDoc().data.role == 'admin' || userDoc().data.role == 'employee');
+      return isSignedIn()
+        && (userDoc().data.role == 'admin'
+          || userDoc().data.role == 'superadmin'
+          || userDoc().data.role == 'user'
+          || userDoc().data.role == 'employee');
     }
 
     match /images/{allPaths=**} {

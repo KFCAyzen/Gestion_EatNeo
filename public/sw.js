@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eatneo-complete-v1.2';
+const CACHE_NAME = 'eatneo-complete-v1.3';
 
 // Ressources essentielles pour fonctionnement complet offline
 const ESSENTIAL_RESOURCES = [
@@ -117,6 +117,12 @@ self.addEventListener('fetch', event => {
   }
   
   if (url.origin !== self.location.origin) return;
+
+  // Ne jamais intercepter les assets Next.js versionnes.
+  // Sinon, un ancien cache peut casser les chunks (404 main-app.js/page.js/layout.css).
+  if (url.pathname.startsWith('/_next/')) {
+    return;
+  }
   
   event.respondWith(
     caches.match(event.request)

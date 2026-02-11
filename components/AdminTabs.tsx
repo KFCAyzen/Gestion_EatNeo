@@ -1,10 +1,10 @@
 import { MenuIcon, OrdersIcon, StockIcon, HistoryIcon, TrendingUpIcon } from './Icons';
 
 interface AdminTabsProps {
-  activeTab: 'menu' | 'commandes' | 'stock' | 'historique' | 'rentabilite';
-  setActiveTab: (tab: 'menu' | 'commandes' | 'stock' | 'historique' | 'rentabilite') => void;
+  activeTab: 'menu' | 'commandes' | 'stock' | 'historique' | 'rentabilite' | 'users';
+  setActiveTab: (tab: 'menu' | 'commandes' | 'stock' | 'historique' | 'rentabilite' | 'users') => void;
   commandesCount: number;
-  userRole: 'admin' | 'employee';
+  userRole: 'superadmin' | 'admin' | 'user';
 }
 
 export const AdminTabs = ({ activeTab, setActiveTab, commandesCount, userRole }: AdminTabsProps) => {
@@ -31,8 +31,14 @@ export const AdminTabs = ({ activeTab, setActiveTab, commandesCount, userRole }:
         <StockIcon active={activeTab === 'stock'} />
         <span>Stock & Ingrédients</span>
       </button>
-      {userRole === 'admin' && (
+      {(userRole === 'admin' || userRole === 'superadmin') && (
         <>
+          <button 
+            onClick={() => setActiveTab('users')}
+            className={`admin-tab-btn ${activeTab === 'users' ? 'active' : ''} admin-tab-btn-flex`}
+          >
+            <span>Utilisateurs</span>
+          </button>
           <button 
             onClick={() => setActiveTab('rentabilite')}
             className={`admin-tab-btn ${activeTab === 'rentabilite' ? 'active' : ''} admin-tab-btn-flex`}
