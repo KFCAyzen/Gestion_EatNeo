@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { db, storage, functions } from "./firebase";
-import { collection, addDoc, doc, deleteDoc, getDoc, getDocs, setDoc, updateDoc, query, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
+import { collection, addDoc, doc, deleteDoc, getDoc, getDocs, setDoc, updateDoc, query, orderBy, onSnapshot, Timestamp, limit } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { ref, deleteObject } from "firebase/storage";
 import { uploadImageFromBrowser } from "./upLoadFirebase";
@@ -86,6 +86,8 @@ interface AdminPageProps {
 }
 
 export default function AdminPage({ userRole }: AdminPageProps) {
+  const COMMANDES_REALTIME_LIMIT = 300;
+  const MOUVEMENTS_REALTIME_LIMIT = 400;
   type PriceOption = { label: string; value: string; selected?: boolean };
   const [nom, setNom] = useState("");
   const [description, setDescription] = useState("");
@@ -544,7 +546,11 @@ export default function AdminPage({ userRole }: AdminPageProps) {
 
   // Récupération temps réel des commandes
   useEffect(() => {
-    const q = query(collection(db, 'commandes'), orderBy('dateCommande', 'desc'));
+    const q = query(
+      collection(db, 'commandes'),
+      orderBy('dateCommande', 'desc'),
+      limit(COMMANDES_REALTIME_LIMIT)
+    );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const commandesData = snapshot.docs.map(doc => normalizeOrder(doc.id, doc.data())) as Commande[];
@@ -555,27 +561,11 @@ export default function AdminPage({ userRole }: AdminPageProps) {
     return () => unsubscribe();
   }, []);
 
-
-
-  // Récupération de l'historique des commandes (commandes livrées)
-  const [historique, setHistorique] = useState<Commande[]>([]);
-  
-  useEffect(() => {
-    const q = query(
-      collection(db, 'commandes'), 
-      orderBy('dateCommande', 'desc')
-    );
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allCommandes = snapshot.docs.map(doc => normalizeOrder(doc.id, doc.data())) as Commande[];
-      
-      // Filtrer seulement les commandes livrées pour l'historique
-      const commandesLivrees = allCommandes.filter(cmd => cmd.statut === 'livree');
-      setHistorique(commandesLivrees);
-    });
-
-    return () => unsubscribe();
-  }, []);
+  // Historique dérivé localement pour éviter un 2e listener Firestore sur "commandes"
+  const historique = useMemo(
+    () => commandes.filter((cmd) => cmd.statut === 'livree'),
+    [commandes]
+  );
 
   /* Upload fichier */
   const uploadFile = async (file: File) => {
@@ -1507,7 +1497,11 @@ export default function AdminPage({ userRole }: AdminPageProps) {
 
   // Récupération des mouvements de stock
   useEffect(() => {
-    const q = query(collection(db, 'mouvements_stock'), orderBy('date', 'desc'));
+    const q = query(
+      collection(db, 'mouvements_stock'),
+      orderBy('date', 'desc'),
+      limit(MOUVEMENTS_REALTIME_LIMIT)
+    );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const mouvementsData = snapshot.docs.map(doc => ({

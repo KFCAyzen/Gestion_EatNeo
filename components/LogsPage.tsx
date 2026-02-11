@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { collection, query, orderBy, Timestamp, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp, getDocs, limit } from 'firebase/firestore';
 import { db } from './firebase';
 import Link from 'next/link';
 import '../styles/LogsPage.css';
@@ -20,7 +20,11 @@ interface ActivityLog {
 }
 
 const fetchActivityLogs = async (): Promise<ActivityLog[]> => {
-  const logsQuery = query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'));
+  const logsQuery = query(
+    collection(db, 'activity_logs'),
+    orderBy('timestamp', 'desc'),
+    limit(200)
+  );
   const snapshot = await getDocs(logsQuery);
   return snapshot.docs.map((item) => ({
     id: item.id,

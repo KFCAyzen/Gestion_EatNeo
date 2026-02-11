@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { collection, query, orderBy, Timestamp, deleteDoc, doc, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp, deleteDoc, doc, getDocs, limit } from 'firebase/firestore';
 import { db } from '../../components/firebase';
 import Link from 'next/link';
 import '../../styles/NotificationsPage.css';
@@ -29,8 +29,14 @@ interface ActivityLog {
   type: 'create' | 'update' | 'delete' | 'status_change';
 }
 
+const LIST_LIMIT = 200;
+
 const fetchNotifications = async (): Promise<Notification[]> => {
-  const notifQuery = query(collection(db, 'notifications'), orderBy('timestamp', 'desc'));
+  const notifQuery = query(
+    collection(db, 'notifications'),
+    orderBy('timestamp', 'desc'),
+    limit(LIST_LIMIT)
+  );
   const snapshot = await getDocs(notifQuery);
   return snapshot.docs.map((item) => ({
     id: item.id,
@@ -39,7 +45,11 @@ const fetchNotifications = async (): Promise<Notification[]> => {
 };
 
 const fetchActivityLogs = async (): Promise<ActivityLog[]> => {
-  const logsQuery = query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'));
+  const logsQuery = query(
+    collection(db, 'activity_logs'),
+    orderBy('timestamp', 'desc'),
+    limit(LIST_LIMIT)
+  );
   const snapshot = await getDocs(logsQuery);
   return snapshot.docs.map((item) => ({
     id: item.id,

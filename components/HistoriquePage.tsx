@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { collection, query, orderBy, onSnapshot, Timestamp } from 'firebase/firestore'
+import { collection, query, orderBy, onSnapshot, Timestamp, limit } from 'firebase/firestore'
 import { db } from './firebase'
 import { images } from './imagesFallback'
 import { useOfflineOrders } from '../hooks/useOfflineOrders'
@@ -11,6 +11,7 @@ import jsPDF from 'jspdf'
 import '../styles/HistoriquePage.css'
 
 const HistoriquePage: React.FC = () => {
+  const HISTORIQUE_LIMIT = 300;
   const [commandes, setCommandes] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -32,7 +33,8 @@ const HistoriquePage: React.FC = () => {
     if (isOnline) {
       const q = query(
         collection(db, 'commandes'), 
-        orderBy('dateCommande', 'desc')
+        orderBy('dateCommande', 'desc'),
+        limit(HISTORIQUE_LIMIT)
       );
       
       const unsubscribe = onSnapshot(q, (snapshot) => {
