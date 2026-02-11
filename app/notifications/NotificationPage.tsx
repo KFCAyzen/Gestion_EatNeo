@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { collection, query, orderBy, Timestamp, deleteDoc, doc, getDocs, limit, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { collection, query, orderBy, Timestamp, deleteDoc, doc, getDocs, limit, setDoc, serverTimestamp, startAfter, type DocumentData, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from '../../components/firebase';
 import Link from 'next/link';
 import '../../styles/NotificationsPage.css';
@@ -31,35 +31,54 @@ interface ActivityLog {
   type: 'create' | 'update' | 'delete' | 'status_change';
 }
 
-const LIST_LIMIT = 200;
+const LIST_LIMIT = 50;
 const NOTIFICATIONS_META_DOC_ID = 'meta_config';
 
-const fetchNotifications = async (): Promise<Notification[]> => {
-  const notifQuery = query(
-    collection(db, 'notifications'),
-    orderBy('timestamp', 'desc'),
-    limit(LIST_LIMIT)
-  );
-  const snapshot = await getDocs(notifQuery);
-  return snapshot.docs
-    .filter((item) => item.id !== NOTIFICATIONS_META_DOC_ID)
-    .map((item) => ({
-      id: item.id,
-      ...item.data()
-    })) as Notification[];
+type PageResult<T> = {
+  items: T[];
+  nextCursor: QueryDocumentSnapshot<DocumentData> | null;
 };
 
-const fetchActivityLogs = async (): Promise<ActivityLog[]> => {
-  const logsQuery = query(
+const fetchNotificationsPage = async (
+  cursor: QueryDocumentSnapshot<DocumentData> | null = null
+): Promise<PageResult<Notification>> => {
+  const baseQuery = query(
+    collection(db, 'notifications'),
+    orderBy('timestamp', 'desc'),
+    ...(cursor ? [startAfter(cursor)] : []),
+    limit(LIST_LIMIT + 1)
+  );
+  const snapshot = await getDocs(baseQuery);
+  const docs = snapshot.docs;
+  const hasMore = docs.length > LIST_LIMIT;
+  const pageDocs = hasMore ? docs.slice(0, LIST_LIMIT) : docs;
+
+  return {
+    items: pageDocs
+      .filter((item) => item.id !== NOTIFICATIONS_META_DOC_ID)
+      .map((item) => ({ id: item.id, ...item.data() })) as Notification[],
+    nextCursor: hasMore ? pageDocs[pageDocs.length - 1] : null
+  };
+};
+
+const fetchActivityLogsPage = async (
+  cursor: QueryDocumentSnapshot<DocumentData> | null = null
+): Promise<PageResult<ActivityLog>> => {
+  const baseQuery = query(
     collection(db, 'activity_logs'),
     orderBy('timestamp', 'desc'),
-    limit(LIST_LIMIT)
+    ...(cursor ? [startAfter(cursor)] : []),
+    limit(LIST_LIMIT + 1)
   );
-  const snapshot = await getDocs(logsQuery);
-  return snapshot.docs.map((item) => ({
-    id: item.id,
-    ...item.data()
-  })) as ActivityLog[];
+  const snapshot = await getDocs(baseQuery);
+  const docs = snapshot.docs;
+  const hasMore = docs.length > LIST_LIMIT;
+  const pageDocs = hasMore ? docs.slice(0, LIST_LIMIT) : docs;
+
+  return {
+    items: pageDocs.map((item) => ({ id: item.id, ...item.data() })) as ActivityLog[],
+    nextCursor: hasMore ? pageDocs[pageDocs.length - 1] : null
+  };
 };
 
 const BackIcon = () => (
@@ -95,19 +114,40 @@ export default function NotificationsPage() {
     );
   }, [canAccess]);
 
-  const { data: notifications = [], isPending: notificationsPending, error: notificationsError } = useQuery({
+  const {
+    data: notificationsPages,
+    isPending: notificationsPending,
+    error: notificationsError,
+    fetchNextPage: fetchMoreNotifications,
+    hasNextPage: hasMoreNotifications,
+    isFetchingNextPage: notificationsFetchingMore
+  } = useInfiniteQuery({
     queryKey: ['notifications'],
-    queryFn: fetchNotifications,
+    queryFn: ({ pageParam }) => fetchNotificationsPage(pageParam || null),
+    initialPageParam: null as QueryDocumentSnapshot<DocumentData> | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
     enabled: canAccess,
     staleTime: 15 * 1000
   });
 
-  const { data: logs = [], isPending: logsPending, error: logsError } = useQuery({
+  const {
+    data: logsPages,
+    isPending: logsPending,
+    error: logsError,
+    fetchNextPage: fetchMoreLogs,
+    hasNextPage: hasMoreLogs,
+    isFetchingNextPage: logsFetchingMore
+  } = useInfiniteQuery({
     queryKey: ['activity_logs'],
-    queryFn: fetchActivityLogs,
+    queryFn: ({ pageParam }) => fetchActivityLogsPage(pageParam || null),
+    initialPageParam: null as QueryDocumentSnapshot<DocumentData> | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
     enabled: canAccess,
     staleTime: 15 * 1000
   });
+
+  const notifications = notificationsPages?.pages.flatMap((page) => page.items) ?? [];
+  const logs = logsPages?.pages.flatMap((page) => page.items) ?? [];
 
   const { mutateAsync: runLogsCleanup } = useMutation({
     mutationFn: async (ids: string[]) => {
@@ -522,34 +562,45 @@ export default function NotificationsPage() {
               <p>Vous êtes à jour !</p>
             </div>
           ) : (
-            filteredNotifications.map((notification) => (
-              <div 
-                key={notification.id} 
-                className={`notification-card ${!notification.read ? 'unread' : ''}`}
-              >
-                <div className="notification-icon">
-                  {getNotificationIcon(notification.type)}
-                </div>
-                <div className="notification-content">
-                  <div className="notification-header">
-                    <h4>{notification.title}</h4>
-                    <div 
-                      className="priority-badge"
-                      style={{ backgroundColor: getPriorityColor(notification.priority) }}
-                    >
-                      {notification.priority}
+            <>
+              {filteredNotifications.map((notification) => (
+                <div 
+                  key={notification.id} 
+                  className={`notification-card ${!notification.read ? 'unread' : ''}`}
+                >
+                  <div className="notification-icon">
+                    {getNotificationIcon(notification.type)}
+                  </div>
+                  <div className="notification-content">
+                    <div className="notification-header">
+                      <h4>{notification.title}</h4>
+                      <div 
+                        className="priority-badge"
+                        style={{ backgroundColor: getPriorityColor(notification.priority) }}
+                      >
+                        {notification.priority}
+                      </div>
                     </div>
+                    <p>{notification.message}</p>
+                    <div className="log-footer">
+                      <span>Source: {getSourceLabel(notification.source)}</span>
+                    </div>
+                    <span className="notification-time">
+                      {notification.timestamp?.toDate().toLocaleString('fr-FR')}
+                    </span>
                   </div>
-                  <p>{notification.message}</p>
-                  <div className="log-footer">
-                    <span>Source: {getSourceLabel(notification.source)}</span>
-                  </div>
-                  <span className="notification-time">
-                    {notification.timestamp?.toDate().toLocaleString('fr-FR')}
-                  </span>
                 </div>
-              </div>
-            ))
+              ))}
+              {hasMoreNotifications ? (
+                <button
+                  className="filter-btn"
+                  onClick={() => void fetchMoreNotifications()}
+                  disabled={notificationsFetchingMore}
+                >
+                  {notificationsFetchingMore ? 'Chargement...' : 'Charger plus'}
+                </button>
+              ) : null}
+            </>
           )}
         </div>
       )}
@@ -568,31 +619,42 @@ export default function NotificationsPage() {
               <p>Les actions effectuées apparaîtront ici</p>
             </div>
           ) : (
-            filteredLogs.map((log) => (
-              <div key={log.id} className="notification-card">
-                <div 
-                  className="notification-icon"
-                  style={{ backgroundColor: getActionColor(log.type) }}
-                >
-                  {getActionIcon(log.type)}
-                </div>
-                <div className="notification-content">
-                  <div className="notification-header">
-                    <h4>{log.action}</h4>
-                    <div className="priority-badge" style={{ backgroundColor: '#f0f0f0', color: '#666' }}>
-                      {log.entity}
+            <>
+              {filteredLogs.map((log) => (
+                <div key={log.id} className="notification-card">
+                  <div 
+                    className="notification-icon"
+                    style={{ backgroundColor: getActionColor(log.type) }}
+                  >
+                    {getActionIcon(log.type)}
+                  </div>
+                  <div className="notification-content">
+                    <div className="notification-header">
+                      <h4>{log.action}</h4>
+                      <div className="priority-badge" style={{ backgroundColor: '#f0f0f0', color: '#666' }}>
+                        {log.entity}
+                      </div>
+                    </div>
+                    <p>{log.details}</p>
+                    <div className="log-footer">
+                      <span>Par: {log.user}</span>
+                      <span className="notification-time">
+                        {log.timestamp?.toDate().toLocaleString('fr-FR')}
+                      </span>
                     </div>
                   </div>
-                  <p>{log.details}</p>
-                  <div className="log-footer">
-                    <span>Par: {log.user}</span>
-                    <span className="notification-time">
-                      {log.timestamp?.toDate().toLocaleString('fr-FR')}
-                    </span>
-                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+              {hasMoreLogs ? (
+                <button
+                  className="filter-btn"
+                  onClick={() => void fetchMoreLogs()}
+                  disabled={logsFetchingMore}
+                >
+                  {logsFetchingMore ? 'Chargement...' : 'Charger plus'}
+                </button>
+              ) : null}
+            </>
           )}
         </div>
       )}
