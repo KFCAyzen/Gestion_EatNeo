@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { collection, query, orderBy, Timestamp, getDocs } from 'firebase/firestore';
 import { db } from './firebase';
 import Link from 'next/link';
 import '../styles/LogsPage.css';
@@ -18,6 +19,15 @@ interface ActivityLog {
   type: 'create' | 'update' | 'delete' | 'status_change';
 }
 
+const fetchActivityLogs = async (): Promise<ActivityLog[]> => {
+  const logsQuery = query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'));
+  const snapshot = await getDocs(logsQuery);
+  return snapshot.docs.map((item) => ({
+    id: item.id,
+    ...item.data()
+  })) as ActivityLog[];
+};
+
 const BackIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
     <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -27,24 +37,14 @@ const BackIcon = () => (
 export default function LogsPage() {
   const { user } = useAuth()
   const canAccess = user?.role === 'admin' || user?.role === 'superadmin'
-  const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [filter, setFilter] = useState<'all' | 'create' | 'update' | 'delete'>('all');
 
-  useEffect(() => {
-    if (!canAccess) return
-    const q = query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'));
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const logsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as ActivityLog[];
-      
-      setLogs(logsData);
-    });
-
-    return () => unsubscribe();
-  }, [canAccess]);
+  const { data: logs = [], isPending, error } = useQuery({
+    queryKey: ['activity_logs'],
+    queryFn: fetchActivityLogs,
+    enabled: canAccess,
+    staleTime: 15 * 1000
+  });
 
   const filteredLogs = logs.filter(log => {
     if (filter === 'all') return true;
@@ -64,6 +64,42 @@ export default function LogsPage() {
         <div className="empty-state">
           <h3>Accès réservé au personnel</h3>
           <p>Veuillez vous connecter pour accéder aux logs.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isPending) {
+    return (
+      <div className="logs-container">
+        <div className="logs-header">
+          <Link href="/admin" className="back-link">
+            <BackIcon />
+            Retour
+          </Link>
+          <h1>Logs d'Activités</h1>
+        </div>
+        <div className="empty-state">
+          <h3>Chargement...</h3>
+          <p>Récupération des logs en cours.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="logs-container">
+        <div className="logs-header">
+          <Link href="/admin" className="back-link">
+            <BackIcon />
+            Retour
+          </Link>
+          <h1>Logs d'Activités</h1>
+        </div>
+        <div className="empty-state">
+          <h3>Erreur de chargement</h3>
+          <p>{String((error as Error).message || 'Une erreur est survenue')}</p>
         </div>
       </div>
     );

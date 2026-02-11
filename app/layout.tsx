@@ -2,6 +2,7 @@ import { SpeedInsights } from '@vercel/speed-insights/react'
 import { Analytics } from '@vercel/analytics/react'
 import { metadata } from './metadata'
 import SplashScreen from '@/components/SplashScreen'
+import Providers from './providers'
 import '@/styles/index.css'
 import '@/styles/App.css'
 import '@/styles/SplashScreen.css'
@@ -37,10 +38,12 @@ export default function RootLayout({
 
       </head>
       <body>
-        <SplashScreen />
-        {children}
-        <SpeedInsights />
-        <Analytics />
+        <Providers>
+          <SplashScreen />
+          {children}
+          <SpeedInsights />
+          <Analytics />
+        </Providers>
       </body>
     </html>
   )

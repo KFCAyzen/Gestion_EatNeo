@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, Timestamp, deleteDoc, doc } from 'firebase/firestore';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { collection, query, orderBy, Timestamp, deleteDoc, doc, getDocs } from 'firebase/firestore';
 import { db } from '../../components/firebase';
 import Link from 'next/link';
 import '../../styles/NotificationsPage.css';
@@ -28,6 +29,24 @@ interface ActivityLog {
   type: 'create' | 'update' | 'delete' | 'status_change';
 }
 
+const fetchNotifications = async (): Promise<Notification[]> => {
+  const notifQuery = query(collection(db, 'notifications'), orderBy('timestamp', 'desc'));
+  const snapshot = await getDocs(notifQuery);
+  return snapshot.docs.map((item) => ({
+    id: item.id,
+    ...item.data()
+  })) as Notification[];
+};
+
+const fetchActivityLogs = async (): Promise<ActivityLog[]> => {
+  const logsQuery = query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'));
+  const snapshot = await getDocs(logsQuery);
+  return snapshot.docs.map((item) => ({
+    id: item.id,
+    ...item.data()
+  })) as ActivityLog[];
+};
+
 const BackIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
     <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -37,38 +56,33 @@ const BackIcon = () => (
 export default function NotificationsPage() {
   const { user } = useAuth()
   const canAccess = user?.role === 'admin' || user?.role === 'superadmin'
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'notifications' | 'logs'>('notifications');
   const [filter, setFilter] = useState<'all' | 'unread' | 'high'>('all');
   const [logFilter, setLogFilter] = useState<'all' | 'create' | 'update' | 'delete'>('all');
 
-  useEffect(() => {
-    if (!canAccess) return
-    const notifQuery = query(collection(db, 'notifications'), orderBy('timestamp', 'desc'));
-    const logsQuery = query(collection(db, 'activity_logs'), orderBy('timestamp', 'desc'));
-    
-    const unsubscribeNotif = onSnapshot(notifQuery, (snapshot) => {
-      const notificationsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Notification[];
-      setNotifications(notificationsData);
-    });
+  const { data: notifications = [], isPending: notificationsPending, error: notificationsError } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: fetchNotifications,
+    enabled: canAccess,
+    staleTime: 15 * 1000
+  });
 
-    const unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
-      const logsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as ActivityLog[];
-      setLogs(logsData);
-    });
+  const { data: logs = [], isPending: logsPending, error: logsError } = useQuery({
+    queryKey: ['activity_logs'],
+    queryFn: fetchActivityLogs,
+    enabled: canAccess,
+    staleTime: 15 * 1000
+  });
 
-    return () => {
-      unsubscribeNotif();
-      unsubscribeLogs();
-    };
-  }, [canAccess]);
+  const { mutateAsync: runLogsCleanup } = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map((id) => deleteDoc(doc(db, 'activity_logs', id))));
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['activity_logs'] });
+    }
+  });
 
   // Nettoyage automatique des logs anciens (31 jours)
   useEffect(() => {
@@ -83,9 +97,10 @@ export default function NotificationsPage() {
         return logDate < thirtyOneDaysAgo;
       });
 
-      for (const log of oldLogs) {
+      const ids = oldLogs.map((log) => log.id);
+      if (ids.length > 0) {
         try {
-          await deleteDoc(doc(db, 'activity_logs', log.id));
+          await runLogsCleanup(ids);
         } catch (error) {
           console.error('Erreur lors de la suppression du log:', error);
         }
@@ -104,7 +119,7 @@ export default function NotificationsPage() {
       cleanupOldLogs();
       localStorage.setItem('lastLogsCleanup', today);
     }
-  }, [logs, canAccess]);
+  }, [logs, canAccess, runLogsCleanup]);
 
   const filteredNotifications = notifications.filter(notif => {
     if (filter === 'unread') return !notif.read;
@@ -224,6 +239,48 @@ export default function NotificationsPage() {
         </div>
       </div>
     )
+  }
+
+  if (notificationsPending || logsPending) {
+    return (
+      <div className="notifications-container">
+        <div className="notifications-header">
+          <Link href="/admin" className="back-link">
+            <BackIcon />
+            Retour
+          </Link>
+          <h1>Notifications & Logs</h1>
+        </div>
+        <div className="notifications-empty">
+          <h3>Chargement...</h3>
+          <p>Récupération des données en cours.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (notificationsError || logsError) {
+    return (
+      <div className="notifications-container">
+        <div className="notifications-header">
+          <Link href="/admin" className="back-link">
+            <BackIcon />
+            Retour
+          </Link>
+          <h1>Notifications & Logs</h1>
+        </div>
+        <div className="notifications-empty">
+          <h3>Erreur de chargement</h3>
+          <p>
+            {String(
+              (notificationsError as Error)?.message ||
+                (logsError as Error)?.message ||
+                'Une erreur est survenue'
+            )}
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
