@@ -32,13 +32,6 @@ export type AuthStoreState = {
 }
 
 const ONLINE_SESSION_KEY = 'currentUserOnline'
-const OFFLINE_SESSION_KEY = 'currentUserOffline'
-
-const offlineUsers = [
-  { id: '1', username: 'superadmin', password: 'superadmin123', role: 'superadmin' as UserRole },
-  { id: '2', username: 'admin', password: 'admin123', role: 'admin' as UserRole },
-  { id: '3', username: 'user', password: 'eatneo123#', role: 'user' as UserRole }
-]
 
 let authUnsubscribe: (() => void) | null = null
 let listenersAttached = false
@@ -71,13 +64,16 @@ const pushAuthActivity = (activity: {
 }
 
 const hydrateSessionFromStorage = (isOnline: boolean): User | null => {
-  const key = isOnline ? ONLINE_SESSION_KEY : OFFLINE_SESSION_KEY
-  const savedUser = localStorage.getItem(key)
+  const savedUser = localStorage.getItem(ONLINE_SESSION_KEY)
   if (!savedUser) return null
   try {
-    return JSON.parse(savedUser) as User
+    const parsed = JSON.parse(savedUser) as User
+    return {
+      ...parsed,
+      isOffline: !isOnline
+    }
   } catch {
-    localStorage.removeItem(key)
+    localStorage.removeItem(ONLINE_SESSION_KEY)
     return null
   }
 }
@@ -193,30 +189,8 @@ export const useAuthStore = create<AuthStoreState>((
       }
     }
 
-    const foundUser = offlineUsers.find(u => u.username === username && u.password === password)
-    if (!foundUser) return false
-
-    const userSession: User = {
-      id: foundUser.id,
-      username: foundUser.username,
-      role: foundUser.role,
-      isOffline: true,
-      lastSync: undefined
-    }
-
-    set({ user: userSession })
-    localStorage.setItem(OFFLINE_SESSION_KEY, JSON.stringify(userSession))
-
-    pushAuthActivity({
-      userId: userSession.id,
-      username: userSession.username,
-      timestamp: new Date().toISOString(),
-      type: 'login',
-      mode: 'offline'
-    })
-
-    console.log(`Auth: Connexion offline réussie pour ${username}`)
-    return true
+    console.warn('Auth: connexion impossible hors ligne sans session validée au préalable')
+    return false
   },
 
   logout: async () => {
@@ -242,7 +216,6 @@ export const useAuthStore = create<AuthStoreState>((
     }
 
     set({ user: null })
-    localStorage.removeItem(OFFLINE_SESSION_KEY)
     localStorage.removeItem(ONLINE_SESSION_KEY)
 
     console.log('Auth: Déconnexion effectuée')
