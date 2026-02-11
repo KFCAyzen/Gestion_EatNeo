@@ -3,7 +3,7 @@
 import '@/styles/App.css'
 import '@/styles/Auth.css'
 
-import { useState, useEffect, useCallback, useMemo, createContext, useContext } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -24,6 +24,7 @@ import { useNotificationCount } from '../hooks/useNotificationCount'
 import { usePWADetection } from '../hooks/usePWADetection'
 import { useMenuSync } from '../hooks/useMenuSync'
 import { useFirebaseAnonAuth } from '../hooks/useFirebaseAnonAuth'
+import { useAppShellStore } from '@/stores/appShellStore'
 
 import type { MenuItem } from './types'
 import { images } from './imagesFallback'
@@ -94,14 +95,26 @@ export type AppShellContextValue = {
   requestAdminLogin: () => void
 }
 
-const AppShellContext = createContext<AppShellContextValue | null>(null)
-
 export const useAppShell = () => {
-  const ctx = useContext(AppShellContext)
-  if (!ctx) {
-    throw new Error('useAppShell must be used within AppShell')
+  const { user } = useAuth()
+  const cartItems = useAppShellStore((state) => state.cartItems)
+  const setCartItems = useAppShellStore((state) => state.setCartItems)
+  const onAddToCart = useAppShellStore((state) => state.onAddToCart)
+  const searchTerm = useAppShellStore((state) => state.searchTerm)
+  const setSearchTerm = useAppShellStore((state) => state.setSearchTerm)
+  const table = useAppShellStore((state) => state.table)
+  const requestAdminLogin = useAppShellStore((state) => state.requestAdminLogin)
+
+  return {
+    user,
+    cartItems,
+    setCartItems,
+    onAddToCart,
+    searchTerm,
+    setSearchTerm,
+    table,
+    requestAdminLogin
   }
-  return ctx
 }
 
 type AppShellProps = {
@@ -125,16 +138,19 @@ export default function AppShell({
   const router = useRouter()
   const { user, login, logout, isOnline } = useAuth()
   const { isDesktop } = usePWADetection()
-  const { newItemsCount, isOnline: isMenuOnline, syncMenu, cacheImage } = useMenuSync()
-  const [cartItems, setCartItems] = useState<MenuItem[]>(() => {
-    if (typeof window === 'undefined') return []
-    const storedCart = localStorage.getItem('cart')
-    return storedCart ? JSON.parse(storedCart) : []
-  })
-  const [table, setTable] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState<string>('')
+  const { newItemsCount } = useMenuSync()
+  const initializeShell = useAppShellStore((state) => state.initialize)
+  const cartItems = useAppShellStore((state) => state.cartItems)
+  const setCartItems = useAppShellStore((state) => state.setCartItems)
+  const onAddToCart = useAppShellStore((state) => state.onAddToCart)
+  const searchTerm = useAppShellStore((state) => state.searchTerm)
+  const setSearchTerm = useAppShellStore((state) => state.setSearchTerm)
+  const table = useAppShellStore((state) => state.table)
+  const setTable = useAppShellStore((state) => state.setTable)
+  const showLogin = useAppShellStore((state) => state.showLogin)
+  const requestAdminLogin = useAppShellStore((state) => state.requestAdminLogin)
+  const closeAdminLogin = useAppShellStore((state) => state.closeAdminLogin)
   const [showScrollUp, setShowScrollUp] = useState(false)
-  const [showLogin, setShowLogin] = useState(false)
 
   useFirebaseAnonAuth()
 
@@ -142,23 +158,28 @@ export default function AppShell({
   const notificationCount = useNotificationCount(!!canAccessBackofficeNotifications && isOnline)
 
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cartItems))
-  }, [cartItems])
+    initializeShell()
+  }, [initializeShell])
 
-  const tableValue = useMemo(() => {
+  useEffect(() => {
     const tableParam = searchParams.get('table')
     const chambreParam = searchParams.get('chambre')
     const hp03Param = searchParams.get('HP03')
 
-    if (tableParam) return `Table ${tableParam}`
-    if (chambreParam) return `Chambre ${chambreParam}`
-    if (hp03Param !== null) return 'HP03'
-    return null
-  }, [searchParams])
-
-  useEffect(() => {
-    setTable(tableValue)
-  }, [tableValue])
+    if (tableParam) {
+      setTable(`Table ${tableParam}`)
+      return
+    }
+    if (chambreParam) {
+      setTable(`Chambre ${chambreParam}`)
+      return
+    }
+    if (hp03Param !== null) {
+      setTable('HP03')
+      return
+    }
+    setTable(null)
+  }, [searchParams, setTable])
 
   useEffect(() => {
     let ticking = false
@@ -174,45 +195,6 @@ export default function AppShell({
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
-
-  const prixToString = useCallback((
-    prix: string | { label: string; value: string; selected?: boolean }[]
-  ): string => {
-    if (typeof prix === 'string') return prix
-    if (Array.isArray(prix)) {
-      const selected = prix.find((p) => p.selected)
-      return selected ? selected.value : prix[0].value
-    }
-    return ''
-  }, [])
-
-  const cartItemsIndex = useMemo(() => {
-    const index = new Map<string, number>()
-    cartItems.forEach((item, idx) => {
-      const key = `${item.id}-${prixToString(item.prix)}`
-      index.set(key, idx)
-    })
-    return index
-  }, [cartItems, prixToString])
-
-  const handleAddToCart = useCallback((item: MenuItem) => {
-    const prixStr = prixToString(item.prix)
-    const uniqueKey = `${item.id}-${prixStr}`
-    const existingIndex = cartItemsIndex.get(uniqueKey)
-
-    if (existingIndex !== undefined) {
-      setCartItems(prev => {
-        const newItems = [...prev]
-        newItems[existingIndex] = {
-          ...newItems[existingIndex],
-          quantité: (newItems[existingIndex].quantité ?? 0) + 1
-        }
-        return newItems
-      })
-    } else {
-      setCartItems(prev => [...prev, { ...item, prix: prixStr, quantité: 1 }])
-    }
-  }, [prixToString, cartItemsIndex])
 
   useEffect(() => {
     if (variant === 'admin') {
@@ -235,24 +217,24 @@ export default function AppShell({
     user,
     cartItems,
     setCartItems,
-    onAddToCart: handleAddToCart,
+    onAddToCart,
     searchTerm,
     setSearchTerm,
     table,
-    requestAdminLogin: () => setShowLogin(true)
+    requestAdminLogin
   }
 
   return (
     <LegacySupport>
       <OfflinePreloader>
-        <AppShellContext.Provider value={contextValue}>
+        {/* Keep local variable to preserve compatibility with existing route hooks */}
         {/* PWA DESKTOP/TABLET HEADER */}
         <UniversalHeader
           title={title}
           showBackButton={showBackButton}
           onBack={handleBack}
           user={user}
-          onAdminClick={() => user ? router.push('/admin') : setShowLogin(true)}
+          onAdminClick={() => user ? router.push('/admin') : requestAdminLogin()}
           onLogout={() => {
             void logout()
             router.push('/')
@@ -268,7 +250,7 @@ export default function AppShell({
             showNotifications={!!canAccessBackofficeNotifications}
             showAdmin={true}
             user={user}
-            onAdminClick={() => user ? router.push('/admin') : setShowLogin(true)}
+            onAdminClick={() => user ? router.push('/admin') : requestAdminLogin()}
             onLogout={() => {
               void logout()
               router.push('/')
@@ -329,7 +311,7 @@ export default function AppShell({
                   </Link>
                 ) : null}
                 <button
-                  onClick={() => user ? router.push('/admin') : setShowLogin(true)}
+                  onClick={() => user ? router.push('/admin') : requestAdminLogin()}
                   className="admin-link"
                 >
                   <AdminIcon />
@@ -379,13 +361,13 @@ export default function AppShell({
               onLogin={async (username, password) => {
                 const ok = await login(username, password)
                 if (ok) {
-                  setShowLogin(false)
+                  closeAdminLogin()
                   router.push('/admin')
                   return true
                 }
                 return false
               }}
-              onClose={() => setShowLogin(false)}
+              onClose={closeAdminLogin}
             />
           </div>
         )}
@@ -442,7 +424,6 @@ export default function AppShell({
             {newItemsCount} nouvelles images mises en cache
           </div>
         )}
-        </AppShellContext.Provider>
       </OfflinePreloader>
     </LegacySupport>
   )
