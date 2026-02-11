@@ -11,38 +11,42 @@
   z-index: 99998;
 }
 
-.modal {
+.modal-overlay .modal {
   background: white;
   padding: 24px;
   border-radius: 12px;
   max-width: 400px;
   width: 90%;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
 }
 
-.modal-warning { border-left: 4px solid #f59e0b; }
-.modal-error { border-left: 4px solid #ef4444; }
-.modal-info { border-left: 4px solid #3b82f6; }
+.modal-overlay .modal-warning { border-left: 4px solid #f59e0b; }
+.modal-overlay .modal-error { border-left: 4px solid #ef4444; }
+.modal-overlay .modal-info { border-left: 4px solid #3b82f6; }
 
-.modal-title {
+.modal-overlay .modal-title {
   margin: 0 0 12px 0;
   font-size: 18px;
   font-weight: 600;
 }
 
-.modal-message {
+.modal-overlay .modal-message {
   margin: 0 0 20px 0;
   color: #666;
   line-height: 1.5;
 }
 
-.modal-actions {
+.modal-overlay .modal-actions {
   display: flex;
   gap: 12px;
   justify-content: flex-end;
 }
 
-.modal-btn-confirm, .modal-btn-cancel {
+.modal-overlay .modal-btn-confirm, .modal-overlay .modal-btn-cancel {
   padding: 8px 16px;
   border: none;
   border-radius: 6px;
@@ -50,18 +54,18 @@
   font-weight: 500;
 }
 
-.modal-btn-confirm {
+.modal-overlay .modal-btn-confirm {
   background: #ef4444;
   color: white;
 }
 
-.modal-btn-cancel {
+.modal-overlay .modal-btn-cancel {
   background: #f3f4f6;
   color: #374151;
 }
 
 @media (max-width: 480px) {
-  .modal {
+  .modal-overlay .modal {
     width: 65%;
     max-width: 280px;
     padding: 20px;
@@ -70,21 +74,21 @@
     overflow-y: auto;
   }
 
-  .modal-title {
+  .modal-overlay .modal-title {
     font-size: 16px;
   }
 
-  .modal-message {
+  .modal-overlay .modal-message {
     font-size: 14px;
   }
 
-  .modal-actions {
+  .modal-overlay .modal-actions {
     flex-direction: column;
     gap: 8px;
   }
 
-  .modal-btn-confirm,
-  .modal-btn-cancel {
+  .modal-overlay .modal-btn-confirm,
+  .modal-overlay .modal-btn-cancel {
     width: 100%;
   }
 }

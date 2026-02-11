@@ -85,7 +85,7 @@
 .date-filters {
   display: flex;
   gap: 1.5rem;
-  align-items: end;
+  align-items: flex-end;
   justify-content: center;
   margin-bottom: 2rem;
   flex-wrap: wrap;

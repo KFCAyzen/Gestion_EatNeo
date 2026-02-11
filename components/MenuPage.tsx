@@ -211,12 +211,10 @@ const MenuPage: React.FC<Props> = ({
       {selectedItem && (
         <>
           <div 
-            className="overlay" 
+            className="menu-modal-overlay"
             onClick={() => setSelectedItem(null)}
-            onTouchStart={(e) => e.preventDefault()}
-            onScroll={(e) => e.preventDefault()}
           ></div>
-          <div className="modal">
+          <div className="menu-modal">
             <h2>{selectedItem.nom}</h2>
             {selectedItem.image && <ImageWithFallback src={selectedItem.image} alt={selectedItem.nom} />}
             <p><strong>Description :</strong> {selectedItem.description}</p>
@@ -225,7 +223,7 @@ const MenuPage: React.FC<Props> = ({
               <div>
                 <p><strong>Choisissez une option :</strong></p>
                 {selectedItem.prix.map((opt, idx) => (
-                  <div className='choise' key={idx}>
+                  <div className='menu-modal-choice' key={idx}>
                     <input
                       type="radio"
                       id={`price-${idx}`}
@@ -242,9 +240,9 @@ const MenuPage: React.FC<Props> = ({
               <p><strong>Prix :</strong> {selectedItem.prix}</p>
             )}
 
-            <div className="buttons">
+            <div className="menu-modal-buttons">
               <button
-                className="addBtn"
+                className="menu-modal-add"
                 onClick={() => {
                   if (Array.isArray(selectedItem.prix)) {
                     const selectedOption = selectedItem.prix.find(opt => opt.value === selectedPrice);
@@ -272,7 +270,7 @@ const MenuPage: React.FC<Props> = ({
               >
                 Ajouter au panier
               </button>
-              <button className="close" onClick={() => setSelectedItem(null)}>Fermer</button>
+              <button className="menu-modal-close" onClick={() => setSelectedItem(null)}>Fermer</button>
             </div>
           </div>
         </>
