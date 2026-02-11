@@ -32,6 +32,7 @@ interface ActivityLog {
 }
 
 const LIST_LIMIT = 200;
+const NOTIFICATIONS_META_DOC_ID = 'meta_config';
 
 const fetchNotifications = async (): Promise<Notification[]> => {
   const notifQuery = query(
@@ -41,7 +42,7 @@ const fetchNotifications = async (): Promise<Notification[]> => {
   );
   const snapshot = await getDocs(notifQuery);
   return snapshot.docs
-    .filter((item) => item.id !== '__meta__')
+    .filter((item) => item.id !== NOTIFICATIONS_META_DOC_ID)
     .map((item) => ({
       id: item.id,
       ...item.data()
@@ -79,7 +80,7 @@ export default function NotificationsPage() {
   useEffect(() => {
     if (!canAccess) return;
     void setDoc(
-      doc(db, 'notifications', '__meta__'),
+      doc(db, 'notifications', NOTIFICATIONS_META_DOC_ID),
       {
         source: 'system:collection-bootstrap',
         title: 'meta',
@@ -120,6 +121,24 @@ export default function NotificationsPage() {
   const { mutateAsync: runNotificationsCleanup } = useMutation({
     mutationFn: async (ids: string[]) => {
       await Promise.all(ids.map((id) => deleteDoc(doc(db, 'notifications', id))));
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    }
+  });
+
+  const { mutateAsync: runNotificationsHardReset, isPending: hardResetPending } = useMutation({
+    mutationFn: async () => {
+      const batchSize = 200;
+      const colRef = collection(db, 'notifications');
+
+      while (true) {
+        const pageQuery = query(colRef, limit(batchSize));
+        const snapshot = await getDocs(pageQuery);
+        if (snapshot.empty) break;
+
+        await Promise.all(snapshot.docs.map((item) => deleteDoc(doc(db, 'notifications', item.id))));
+      }
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['notifications'] });
@@ -216,6 +235,16 @@ export default function NotificationsPage() {
     if (filter === 'high') return notif.priority === 'high';
     return true;
   });
+
+  const handleHardResetNotifications = async () => {
+    const ok = window.confirm('Supprimer toutes les notifications actuelles ?');
+    if (!ok) return;
+    try {
+      await runNotificationsHardReset();
+    } catch (error) {
+      console.error('Erreur suppression totale notifications:', error);
+    }
+  };
 
   const filteredLogs = logs.filter(log => {
     if (logFilter === 'all') return true;
@@ -422,6 +451,14 @@ export default function NotificationsPage() {
 
       {activeTab === 'notifications' && (
         <div className="notifications-filters">
+          <button
+            onClick={handleHardResetNotifications}
+            className="filter-btn"
+            disabled={hardResetPending}
+            title="Supprime toutes les notifications actuelles"
+          >
+            {hardResetPending ? 'Suppression...' : 'Vider notifications'}
+          </button>
           <button 
             onClick={() => setFilter('all')}
             className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
