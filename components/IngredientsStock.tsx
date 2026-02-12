@@ -1,10 +1,11 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { collection, addDoc, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore'
+import { collection, addDoc, onSnapshot, updateDoc, doc } from 'firebase/firestore'
 import { db } from './firebase'
 import { Ingredient, initialIngredients } from './types'
 import { PlusIcon, MinusIcon } from './Icons'
+import { deleteDocWithRetry, getDeleteErrorMessage } from '@/utils/firestoreDelete'
 
 const IngredientsStock: React.FC = () => {
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
@@ -50,7 +51,12 @@ const IngredientsStock: React.FC = () => {
 
   const deleteIngredient = async (id: string) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer cet ingrédient ?')) {
-      await deleteDoc(doc(db, 'ingredients', id))
+      const result = await deleteDocWithRetry(doc(db, 'ingredients', id), {
+        isOnline: typeof navigator === 'undefined' ? true : navigator.onLine
+      })
+      if (!result.ok) {
+        alert(getDeleteErrorMessage(result))
+      }
     }
   }
 

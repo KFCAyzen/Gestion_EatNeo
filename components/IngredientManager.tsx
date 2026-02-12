@@ -1,13 +1,14 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, onSnapshot, Timestamp } from 'firebase/firestore'
+import { collection, addDoc, getDocs, doc, updateDoc, onSnapshot, Timestamp } from 'firebase/firestore'
 import { db } from './firebase'
 import { Ingredient, initialIngredients } from './types'
 import { useNotifications } from '../hooks/useNotifications'
 import { Toast } from './Toast'
 import { Modal } from './Modal'
 import { PlusIcon, MinusIcon, EditIcon, DeleteIcon } from './Icons'
+import { deleteDocWithRetry, getDeleteErrorMessage } from '@/utils/firestoreDelete'
 
 const IngredientManager: React.FC = () => {
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
@@ -100,13 +101,14 @@ const IngredientManager: React.FC = () => {
       "Êtes-vous sûr de vouloir supprimer cet ingrédient ?",
       "warning",
       async () => {
-        try {
-          await deleteDoc(doc(db, 'ingredients', id))
-          showToast('Ingrédient supprimé !', 'success')
-        } catch (error) {
-          console.error('Erreur:', error)
-          showToast('Erreur lors de la suppression', 'error')
+        const result = await deleteDocWithRetry(doc(db, 'ingredients', id), {
+          isOnline: typeof navigator === 'undefined' ? true : navigator.onLine
+        })
+        if (!result.ok) {
+          showToast(getDeleteErrorMessage(result), 'error')
+          return
         }
+        showToast('Ingrédient supprimé !', 'success')
       },
       closeModal
     )

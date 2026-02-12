@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { collection, query, orderBy, Timestamp, deleteDoc, doc, getDocs, limit, setDoc, serverTimestamp, startAfter, type DocumentData, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, Timestamp, doc, getDocs, limit, setDoc, serverTimestamp, startAfter, type DocumentData, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from '../../components/firebase';
 import Link from 'next/link';
 import '../../styles/NotificationsPage.css';
 import { useAuth } from '@/hooks/useAuth'
+import { deleteDocWithRetry, getDeleteErrorMessage } from '@/utils/firestoreDelete';
 
 interface Notification {
   id: string;
@@ -88,7 +89,7 @@ const BackIcon = () => (
 );
 
 export default function NotificationsPage() {
-  const { user } = useAuth()
+  const { user, isOnline } = useAuth()
   const canAccess = user?.role === 'admin' || user?.role === 'superadmin'
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'notifications' | 'logs'>('notifications');
@@ -151,7 +152,11 @@ export default function NotificationsPage() {
 
   const { mutateAsync: runLogsCleanup } = useMutation({
     mutationFn: async (ids: string[]) => {
-      await Promise.all(ids.map((id) => deleteDoc(doc(db, 'activity_logs', id))));
+      const results = await Promise.all(
+        ids.map((id) => deleteDocWithRetry(doc(db, 'activity_logs', id), { isOnline }))
+      );
+      const failure = results.find((result) => !result.ok);
+      if (failure) throw new Error(getDeleteErrorMessage(failure));
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['activity_logs'] });
@@ -160,7 +165,11 @@ export default function NotificationsPage() {
 
   const { mutateAsync: runNotificationsCleanup } = useMutation({
     mutationFn: async (ids: string[]) => {
-      await Promise.all(ids.map((id) => deleteDoc(doc(db, 'notifications', id))));
+      const results = await Promise.all(
+        ids.map((id) => deleteDocWithRetry(doc(db, 'notifications', id), { isOnline }))
+      );
+      const failure = results.find((result) => !result.ok);
+      if (failure) throw new Error(getDeleteErrorMessage(failure));
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['notifications'] });
@@ -177,7 +186,11 @@ export default function NotificationsPage() {
         const snapshot = await getDocs(pageQuery);
         if (snapshot.empty) break;
 
-        await Promise.all(snapshot.docs.map((item) => deleteDoc(doc(db, 'notifications', item.id))));
+        const results = await Promise.all(
+          snapshot.docs.map((item) => deleteDocWithRetry(doc(db, 'notifications', item.id), { isOnline }))
+        );
+        const failure = results.find((result) => !result.ok);
+        if (failure) throw new Error(getDeleteErrorMessage(failure));
       }
     },
     onSuccess: async () => {

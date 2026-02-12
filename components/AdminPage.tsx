@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { db, storage, functions } from "./firebase";
-import { collection, addDoc, doc, deleteDoc, getDoc, getDocs, setDoc, updateDoc, query, orderBy, onSnapshot, Timestamp, limit } from "firebase/firestore";
+import { collection, addDoc, doc, getDoc, getDocs, setDoc, updateDoc, query, orderBy, onSnapshot, Timestamp, limit } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { ref, deleteObject } from "firebase/storage";
 import { uploadImageFromBrowser } from "./upLoadFirebase";
@@ -25,6 +25,7 @@ import '../styles/AdminPage.css'
 import { menuItems, drinksItems, dishRecipes } from "./types";
 import { findSimilarCategory, formatPrice } from './utils';
 import { normalizeOrder } from '../utils/orderUtils'
+import { deleteDocWithRetry, getDeleteErrorMessage } from '@/utils/firestoreDelete'
 
 
 
@@ -290,7 +291,8 @@ export default function AdminPage({ userRole }: AdminPageProps) {
             for (const collectionName of collections) {
               const snapshot = await getDocs(collection(db, collectionName));
               for (const docSnapshot of snapshot.docs) {
-                await deleteDoc(doc(db, collectionName, docSnapshot.id));
+                const result = await deleteDocWithRetry(doc(db, collectionName, docSnapshot.id), { isOnline });
+                if (!result.ok) throw new Error(getDeleteErrorMessage(result));
               }
             }
             
@@ -378,7 +380,8 @@ export default function AdminPage({ userRole }: AdminPageProps) {
               for (const collectionName of collections) {
                 const snapshot = await getDocs(collection(db, collectionName));
                 for (const docSnapshot of snapshot.docs) {
-                  await deleteDoc(doc(db, collectionName, docSnapshot.id));
+                  const result = await deleteDocWithRetry(doc(db, collectionName, docSnapshot.id), { isOnline });
+                  if (!result.ok) throw new Error(getDeleteErrorMessage(result));
                 }
               }
               
@@ -730,7 +733,12 @@ export default function AdminPage({ userRole }: AdminPageProps) {
               if (path) await deleteObject(ref(storage, path));
             }
           }
-          await deleteDoc(doc(db, collectionName, id));
+          const result = await deleteDocWithRetry(doc(db, collectionName, id), { isOnline });
+          if (!result.ok) {
+            showToast(getDeleteErrorMessage(result), 'error');
+            closeModal();
+            return;
+          }
           showToast("Item supprimé avec succès !", 'success');
         } catch (err) {
           console.error(err);
@@ -830,11 +838,23 @@ export default function AdminPage({ userRole }: AdminPageProps) {
       "Êtes-vous sûr de vouloir supprimer cette commande ?",
       "warning",
       async () => {
+        if (!isOnline) {
+          showToast('Suppression impossible hors ligne. Reconnectez-vous puis réessayez.', 'error');
+          closeModal();
+          return;
+        }
+
         try {
-          await deleteDoc(doc(db, 'commandes', commandeId));
+          const result = await deleteDocWithRetry(doc(db, 'commandes', commandeId), { isOnline });
+          if (!result.ok) {
+            showToast(getDeleteErrorMessage(result), 'error');
+            closeModal();
+            return;
+          }
+
           showToast('Commande supprimée avec succès !', 'success');
           closeModal();
-        } catch (error) {
+        } catch (error: any) {
           console.error('Erreur lors de la suppression:', error);
           showToast('Erreur lors de la suppression', 'error');
           closeModal();
@@ -1335,6 +1355,11 @@ export default function AdminPage({ userRole }: AdminPageProps) {
       "warning",
       async () => {
         try {
+          if (!isOnline) {
+            showToast('Suppression impossible hors ligne. Reconnectez-vous puis réessayez.', 'error');
+            closeModal();
+            return;
+          }
           const collectionsToReset = ['commandes', 'mouvements_stock', 'ingredients', 'notifications', 'activity_logs'];
           let totalDeleted = 0;
           
@@ -1342,7 +1367,8 @@ export default function AdminPage({ userRole }: AdminPageProps) {
             try {
               const snapshot = await getDocs(collection(db, collectionName));
               for (const docSnapshot of snapshot.docs) {
-                await deleteDoc(doc(db, collectionName, docSnapshot.id));
+                const result = await deleteDocWithRetry(doc(db, collectionName, docSnapshot.id), { isOnline });
+                if (!result.ok) throw new Error(getDeleteErrorMessage(result));
                 totalDeleted++;
               }
             } catch (error) {

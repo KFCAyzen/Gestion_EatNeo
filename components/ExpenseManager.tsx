@@ -1,12 +1,13 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, onSnapshot, Timestamp } from 'firebase/firestore'
+import { collection, addDoc, getDocs, doc, query, orderBy, onSnapshot, Timestamp } from 'firebase/firestore'
 import { db } from './firebase'
 import { Icons } from './Icons'
 import { useNotifications } from '../hooks/useNotifications'
 import { Toast } from './Toast'
 import { Modal } from './Modal'
+import { deleteDocWithRetry, getDeleteErrorMessage } from '@/utils/firestoreDelete'
 import '../styles/ExpenseManager.css'
 
 interface Expense {
@@ -78,13 +79,14 @@ const ExpenseManager: React.FC = () => {
       "Êtes-vous sûr de vouloir supprimer cette dépense ?",
       "warning",
       async () => {
-        try {
-          await deleteDoc(doc(db, 'depenses', id))
-          showToast('Dépense supprimée !', 'success')
-        } catch (error) {
-          console.error('Erreur:', error)
-          showToast('Erreur lors de la suppression', 'error')
+        const result = await deleteDocWithRetry(doc(db, 'depenses', id), {
+          isOnline: typeof navigator === 'undefined' ? true : navigator.onLine
+        })
+        if (!result.ok) {
+          showToast(getDeleteErrorMessage(result), 'error')
+          return
         }
+        showToast('Dépense supprimée !', 'success')
       },
       closeModal
     )

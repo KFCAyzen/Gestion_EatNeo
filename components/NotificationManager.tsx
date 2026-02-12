@@ -5,8 +5,9 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useAuth } from '@/hooks/useAuth';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { useOrderNotifications } from '@/hooks/useOrderNotifications';
-import { collection, query, orderBy, onSnapshot, where, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, where, doc, Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
+import { deleteDocWithRetry } from '@/utils/firestoreDelete';
 
 interface Notification {
   id: string;
@@ -87,7 +88,7 @@ export default function NotificationManager() {
 
       for (const notif of oldNotifications) {
         try {
-          await deleteDoc(doc(db, 'notifications', notif.id));
+          await deleteDocWithRetry(doc(db, 'notifications', notif.id), { isOnline });
         } catch (error) {
           console.error('Erreur lors de la suppression de la notification:', error);
         }
