@@ -89,6 +89,7 @@ interface AdminPageProps {
 export default function AdminPage({ userRole }: AdminPageProps) {
   const COMMANDES_REALTIME_LIMIT = 300;
   const MOUVEMENTS_REALTIME_LIMIT = 400;
+  const canDeleteData = userRole === 'admin' || userRole === 'superadmin';
   type PriceOption = { label: string; value: string; selected?: boolean };
   const [nom, setNom] = useState("");
   const [description, setDescription] = useState("");
@@ -719,6 +720,11 @@ export default function AdminPage({ userRole }: AdminPageProps) {
 
   /* Suppression Firestore + Storage */
   const handleDelete = async (collectionName: "Plats" | "Boissons", id: string) => {
+    if (!canDeleteData) {
+      showToast('Accès refusé: suppression réservée aux admins.', 'error');
+      return;
+    }
+
     showModal(
       "Confirmer la suppression",
       "Êtes-vous sûr de vouloir supprimer cet item ? Cette action est irréversible.",
@@ -833,6 +839,11 @@ export default function AdminPage({ userRole }: AdminPageProps) {
   };
 
   const deleteCommande = async (commandeId: string) => {
+    if (!canDeleteData) {
+      showToast('Accès refusé: suppression réservée aux admins.', 'error');
+      return;
+    }
+
     showModal(
       "Supprimer la commande",
       "Êtes-vous sûr de vouloir supprimer cette commande ?",
@@ -2083,13 +2094,15 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                 {item.masque ? <EyeIcon /> : <EyeOffIcon />}
                 {item.masque ? 'Afficher' : 'Masquer'}
               </button>
-              <button
-                className="delete-button"
-                onClick={() => handleDelete("Plats", String(item.id))}
-              >
-                <DeleteIcon />
-                Supprimer
-              </button>
+              {canDeleteData && (
+                <button
+                  className="delete-button"
+                  onClick={() => handleDelete("Plats", String(item.id))}
+                >
+                  <DeleteIcon />
+                  Supprimer
+                </button>
+              )}
             </div>
           </li>
         ))}
@@ -2141,13 +2154,15 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                 {item.masque ? <EyeIcon /> : <EyeOffIcon />}
                 {item.masque ? 'Afficher' : 'Masquer'}
               </button>
-              <button
-                className="delete-button"
-                onClick={() => handleDelete("Boissons", String(item.id))}
-              >
-                <DeleteIcon />
-                Supprimer
-              </button>
+              {canDeleteData && (
+                <button
+                  className="delete-button"
+                  onClick={() => handleDelete("Boissons", String(item.id))}
+                >
+                  <DeleteIcon />
+                  Supprimer
+                </button>
+              )}
             </div>
           </li>
         ))}
@@ -2210,12 +2225,14 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                       </select>
                     </div>
                     
-                    <button
-                      onClick={() => deleteCommande(commande.id)}
-                      className="commande-delete-btn"
-                    >
-                      Supprimer
-                    </button>
+                    {canDeleteData && (
+                      <button
+                        onClick={() => deleteCommande(commande.id)}
+                        className="commande-delete-btn"
+                      >
+                        Supprimer
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -2399,12 +2416,14 @@ export default function AdminPage({ userRole }: AdminPageProps) {
                         Confirmer
                       </button>
                     )}
-                    <button
-                      onClick={() => handleDelete("Boissons", String(item.id))}
-                      className="ingredient-btn-delete"
-                    >
-                      Supprimer
-                    </button>
+                    {canDeleteData && (
+                      <button
+                        onClick={() => handleDelete("Boissons", String(item.id))}
+                        className="ingredient-btn-delete"
+                      >
+                        Supprimer
+                      </button>
+                    )}
                   </div>
                 </div>
               );
