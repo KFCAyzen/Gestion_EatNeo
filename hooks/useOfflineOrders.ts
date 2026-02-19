@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useOfflineSync } from './useOfflineSync'
 import { parseTotal } from '@/utils/orderUtils'
+import { orderWriteSchema } from '@/schemas/firestore'
 
 interface Order {
   id: string
@@ -55,8 +56,15 @@ export function useOfflineOrders() {
 
   // Créer une nouvelle commande
   const createOrder = useCallback(async (orderData: Omit<Order, 'id' | 'timestamp' | 'offline'>) => {
-    const newOrder: Order = {
+    const parsedOrder = orderWriteSchema.parse({
       ...orderData,
+      total: orderData.total,
+      statut: orderData.statut || 'en_attente',
+      source: isOnline ? 'online' : 'offline'
+    })
+
+    const newOrder: Order = {
+      ...parsedOrder,
       id: `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       timestamp: Date.now(),
       offline: !isOnline

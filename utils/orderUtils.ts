@@ -1,6 +1,7 @@
 import { Timestamp } from 'firebase/firestore'
+import { orderStatusSchema, orderWriteSchema, type OrderWriteInput } from '@/schemas/firestore'
 
-export type OrderStatus = 'en_attente' | 'en_preparation' | 'prete' | 'livree'
+export type OrderStatus = ReturnType<typeof orderStatusSchema.parse>
 
 export type OrderItem = {
   nom: string
@@ -8,18 +9,8 @@ export type OrderItem = {
   quantité: number
 }
 
-export type OrderData = {
-  items: OrderItem[]
-  total: number
-  clientPrenom: string
-  clientNom: string
-  clientPhone?: string
-  numeroTable: string
-  localisation: string
+export type OrderData = OrderWriteInput & {
   dateCommande: Timestamp
-  statut: OrderStatus
-  clientUid?: string
-  source?: 'online' | 'offline'
 }
 
 export type Order = OrderData & { id: string }
@@ -82,8 +73,7 @@ export const normalizeOrder = (id: string, data: any): Order => {
   const numeroTable = String(data?.numeroTable ?? '')
   const localisation = String(data?.localisation ?? (numeroTable ? `Table ${numeroTable}` : ''))
 
-  return {
-    id,
+  const parsed = orderWriteSchema.safeParse({
     items: normalizeItems(data?.items),
     total: parseTotal(data?.total),
     clientPrenom,
@@ -91,9 +81,25 @@ export const normalizeOrder = (id: string, data: any): Order => {
     clientPhone: data?.clientPhone ? String(data.clientPhone) : undefined,
     numeroTable,
     localisation,
-    dateCommande: toTimestamp(data?.dateCommande ?? data?.timestamp ?? data?.createdAt),
     statut: normalizeStatus(data?.statut ?? data?.status),
     clientUid: data?.clientUid ? String(data.clientUid) : undefined,
     source: data?.source === 'offline' ? 'offline' : 'online'
+  })
+
+  const fallback: OrderWriteInput = {
+    items: [],
+    total: 0,
+    clientPrenom: 'Client',
+    clientNom: '',
+    numeroTable: '',
+    localisation: '',
+    statut: 'en_attente',
+    source: 'online'
+  }
+
+  return {
+    id,
+    ...(parsed.success ? parsed.data : fallback),
+    dateCommande: toTimestamp(data?.dateCommande ?? data?.timestamp ?? data?.createdAt)
   }
 }

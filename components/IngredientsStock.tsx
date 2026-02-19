@@ -6,6 +6,7 @@ import { db } from './firebase'
 import { Ingredient, initialIngredients } from './types'
 import { PlusIcon, MinusIcon } from './Icons'
 import { deleteDocWithRetry, getDeleteErrorMessage } from '@/utils/firestoreDelete'
+import { ingredientWriteSchema } from '@/schemas/firestore'
 
 const IngredientsStock: React.FC = () => {
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
@@ -27,7 +28,8 @@ const IngredientsStock: React.FC = () => {
   const initializeIngredients = async () => {
     for (const ingredient of initialIngredients) {
       const { id, ...ingredientData } = ingredient
-      await addDoc(collection(db, 'ingredients'), ingredientData)
+      const parsedIngredient = ingredientWriteSchema.parse(ingredientData)
+      await addDoc(collection(db, 'ingredients'), parsedIngredient)
     }
   }
 
@@ -44,7 +46,8 @@ const IngredientsStock: React.FC = () => {
       // Vérifier si l'ingrédient existe déjà
       const exists = ingredients.some(existing => existing.nom === ingredient.nom)
       if (!exists) {
-        await addDoc(collection(db, 'ingredients'), ingredient)
+        const parsedIngredient = ingredientWriteSchema.parse(ingredient)
+        await addDoc(collection(db, 'ingredients'), parsedIngredient)
       }
     }
   }

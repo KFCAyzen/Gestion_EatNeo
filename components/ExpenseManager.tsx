@@ -8,6 +8,7 @@ import { useNotifications } from '../hooks/useNotifications'
 import { Toast } from './Toast'
 import { Modal } from './Modal'
 import { deleteDocWithRetry, getDeleteErrorMessage } from '@/utils/firestoreDelete'
+import { expenseWriteSchema } from '@/schemas/firestore'
 import '../styles/ExpenseManager.css'
 
 interface Expense {
@@ -55,10 +56,9 @@ const ExpenseManager: React.FC = () => {
 
     setLoading(true)
     try {
+      const parsedExpense = expenseWriteSchema.parse(newExpense)
       await addDoc(collection(db, 'depenses'), {
-        description: newExpense.description,
-        montant: newExpense.montant,
-        categorie: newExpense.categorie,
+        ...parsedExpense,
         date: Timestamp.now()
       })
 

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { auth, db } from '@/components/firebase'
 import { collection, addDoc, Timestamp, doc, setDoc } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
-import { parseTotal } from '@/utils/orderUtils'
+import { orderWriteSchema, notificationWriteSchema, activityLogWriteSchema } from '@/schemas/firestore'
 
 interface OfflineData {
   id: string
@@ -86,26 +86,37 @@ export function useOfflineSync() {
               }
 
               const { timestamp: _ts, status: _status, ...rest } = item.data || {}
+              const parsedOrder = orderWriteSchema.parse({
+                ...rest,
+                total: item.data?.total,
+                statut: item.data?.statut || item.data?.status || 'en_attente',
+                clientUid: item.data?.clientUid || auth.currentUser.uid,
+                source: item.data?.source || 'offline'
+              })
 
               await addDoc(collection(db, 'commandes'), {
-                ...rest,
-                total: parseTotal(item.data?.total),
-                statut: item.data?.statut || item.data?.status || 'en_attente',
+                ...parsedOrder,
                 dateCommande: Timestamp.fromMillis(item.timestamp),
-                clientUid: item.data?.clientUid || auth.currentUser.uid,
                 syncedAt: Timestamp.now()
               })
               break
             case 'notification':
-              await setDoc(doc(collection(db, 'notifications')), {
+              const parsedNotification = notificationWriteSchema.parse({
                 ...item.data,
-                source: item.data?.source || 'useOfflineSync',
+                source: item.data?.source || 'useOfflineSync'
+              })
+              await setDoc(doc(collection(db, 'notifications')), {
+                ...parsedNotification,
                 timestamp: Timestamp.fromMillis(item.timestamp)
               })
               break
             case 'activity':
-              await addDoc(collection(db, 'activity_logs'), {
+              const parsedActivity = activityLogWriteSchema.parse({
                 ...item.data,
+                user: item.data?.user || 'Système'
+              })
+              await addDoc(collection(db, 'activity_logs'), {
+                ...parsedActivity,
                 timestamp: Timestamp.fromMillis(item.timestamp)
               })
               break

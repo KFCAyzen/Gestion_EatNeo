@@ -1,5 +1,6 @@
 import { addDoc, collection, doc, setDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../components/firebase';
+import { activityLogWriteSchema, notificationWriteSchema } from '@/schemas/firestore';
 
 interface LogActivity {
   action: string;
@@ -12,9 +13,12 @@ interface LogActivity {
 export function useActivityLogger() {
   const logActivity = async (activity: LogActivity) => {
     try {
-      await addDoc(collection(db, 'activity_logs'), {
+      const parsed = activityLogWriteSchema.parse({
         ...activity,
-        user: 'Admin',
+        user: 'Admin'
+      })
+      await addDoc(collection(db, 'activity_logs'), {
+        ...parsed,
         timestamp: Timestamp.now()
       });
     } catch (error) {
@@ -29,14 +33,17 @@ export function useActivityLogger() {
     priority: 'low' | 'medium' | 'high' = 'medium'
   ) => {
     try {
-      const notifRef = doc(collection(db, 'notifications'));
-      await setDoc(notifRef, {
+      const parsed = notificationWriteSchema.parse({
         type,
         title,
         message,
         source: 'useActivityLogger',
         priority,
-        read: false,
+        read: false
+      })
+      const notifRef = doc(collection(db, 'notifications'));
+      await setDoc(notifRef, {
+        ...parsed,
         timestamp: Timestamp.now()
       });
     } catch (error) {

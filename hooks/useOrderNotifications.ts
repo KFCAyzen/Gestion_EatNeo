@@ -4,17 +4,8 @@ import { useEffect, useRef } from 'react';
 import { collection, query, where, orderBy, onSnapshot, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/components/firebase';
 import { usePushNotifications } from './usePushNotifications';
-
-interface Order {
-  id: string;
-  clientPrenom?: string;
-  clientNom?: string;
-  clientPhone?: string;
-  items: any[];
-  total: number | string;
-  statut: 'en_attente' | 'en_preparation' | 'prete' | 'livree';
-  dateCommande: any;
-}
+import { normalizeOrder, type Order } from '@/utils/orderUtils';
+import { notificationWriteSchema } from '@/schemas/firestore';
 
 export function useOrderNotifications() {
   const { sendNotification, permission } = usePushNotifications();
@@ -39,12 +30,12 @@ export function useOrderNotifications() {
 
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
-          const order = { id: change.doc.id, ...change.doc.data() } as Order;
+          const order = normalizeOrder(change.doc.id, change.doc.data());
           handleNewOrder(order);
         }
         
         if (change.type === 'modified') {
-          const order = { id: change.doc.id, ...change.doc.data() } as Order;
+          const order = normalizeOrder(change.doc.id, change.doc.data());
           handleOrderStatusChange(order);
         }
       });
@@ -66,14 +57,17 @@ export function useOrderNotifications() {
     try {
       // ID déterministe: un seul événement "nouvelle commande" par commande.
       const notifRef = doc(db, 'notifications', `order_new_${order.id}`);
-      await setDoc(notifRef, {
+      const parsed = notificationWriteSchema.parse({
         type: 'new_order',
         title: 'Nouvelle commande',
         message: `Commande de ${clientName} pour ${order.total}`,
         orderId: order.id,
         source: 'useOrderNotifications:new_order',
         read: false,
-        priority: 'high',
+        priority: 'high'
+      })
+      await setDoc(notifRef, {
+        ...parsed,
         timestamp: serverTimestamp()
       });
     } catch (error) {
@@ -100,14 +94,17 @@ export function useOrderNotifications() {
       try {
         // ID déterministe: une notif max par statut et par commande.
         const notifRef = doc(db, 'notifications', `order_status_${order.id}_${order.statut}`);
-        await setDoc(notifRef, {
+        const parsed = notificationWriteSchema.parse({
           type: 'order_status',
           title: statusMessages[order.statut],
           message: `Commande de ${clientName} - ${order.statut.replace('_', ' ')}`,
           orderId: order.id,
           source: 'useOrderNotifications:status_change',
           read: false,
-          priority: order.statut === 'prete' ? 'high' : 'medium',
+          priority: order.statut === 'prete' ? 'high' : 'medium'
+        })
+        await setDoc(notifRef, {
+          ...parsed,
           timestamp: serverTimestamp()
         });
       } catch (error) {

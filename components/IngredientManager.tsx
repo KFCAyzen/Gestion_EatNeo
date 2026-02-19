@@ -9,6 +9,7 @@ import { Toast } from './Toast'
 import { Modal } from './Modal'
 import { PlusIcon, MinusIcon, EditIcon, DeleteIcon } from './Icons'
 import { deleteDocWithRetry, getDeleteErrorMessage } from '@/utils/firestoreDelete'
+import { ingredientWriteSchema } from '@/schemas/firestore'
 
 const IngredientManager: React.FC = () => {
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
@@ -67,12 +68,13 @@ const IngredientManager: React.FC = () => {
     }
 
     try {
+      const parsedIngredient = ingredientWriteSchema.parse(newIngredient)
       if (editingId) {
-        await updateDoc(doc(db, 'ingredients', editingId), newIngredient)
+        await updateDoc(doc(db, 'ingredients', editingId), parsedIngredient)
         showToast('Ingrédient modifié !', 'success')
         setEditingId(null)
       } else {
-        await addDoc(collection(db, 'ingredients'), newIngredient)
+        await addDoc(collection(db, 'ingredients'), parsedIngredient)
         showToast('Ingrédient ajouté !', 'success')
       }
       

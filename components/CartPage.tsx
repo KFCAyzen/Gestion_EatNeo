@@ -15,6 +15,7 @@ import { Toast } from './Toast'
 import { Modal } from './Modal'
 import { deductIngredientsFromOrder } from '../utils/stockUtils'
 import { normalizeOrder, type Order } from '../utils/orderUtils'
+import { orderWriteSchema } from '@/schemas/firestore'
 
 type Props = {
   cartItems: MenuItem[];
@@ -159,7 +160,7 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
       }
 
       // Préparer les données de commande
-      const commandeData = {
+      const commandeData = orderWriteSchema.parse({
         items: cartItems.map(item => ({
           nom: String(item.nom || ''),
           prix: String(getPrixString(item) || ''),
@@ -174,7 +175,7 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
         statut: 'en_attente',
         clientUid: uid || undefined,
         source: isOnline ? 'online' : 'offline'
-      };
+      });
 
       // Sauvegarder (en ligne ou hors ligne)
       if (isOnline) {
@@ -230,7 +231,7 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
       
       // Fallback: sauvegarder hors ligne même en cas d'erreur
       try {
-        const commandeData = {
+        const commandeData = orderWriteSchema.parse({
           items: cartItems.map(item => ({
             nom: String(item.nom || ''),
             prix: String(getPrixString(item) || ''),
@@ -245,7 +246,7 @@ const CartPage: React.FC<Props> = ({ cartItems, setCartItems, localisation }) =>
           statut: 'en_attente',
           clientUid: uid || undefined,
           source: 'offline'
-        };
+        });
         
         await createOrder(commandeData);
         showToast("Commande sauvegardée hors ligne en raison d'un problème de connexion.", 'warning');

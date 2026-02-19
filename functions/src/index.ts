@@ -1,11 +1,11 @@
 import * as admin from 'firebase-admin'
 import * as functions from 'firebase-functions'
+import { ZodError } from 'zod'
+import { createUserInputSchema, deleteUserInputSchema, roleSchema, updateUserInputSchema, type Role } from './schemas'
 
 admin.initializeApp()
 
 const db = admin.firestore()
-
-type Role = 'superadmin' | 'admin' | 'user'
 
 const assertSuperAdmin = async (uid?: string) => {
   if (!uid) {
@@ -14,7 +14,8 @@ const assertSuperAdmin = async (uid?: string) => {
 
   const snap = await db.collection('users').doc(uid).get()
   const rawRole = snap.data()?.role as string | undefined
-  const role = rawRole === 'employee' ? 'user' : (rawRole as Role | undefined)
+  const parsedRole = roleSchema.safeParse(rawRole)
+  const role = parsedRole.success ? parsedRole.data : undefined
 
   if (role !== 'superadmin') {
     throw new functions.https.HttpsError('permission-denied', 'Superadmin role required')
@@ -30,8 +31,8 @@ export const listUsers = functions.https.onCall(async (_data: unknown, context: 
   const rolesByUid = new Map<string, Role>()
 
   roleSnaps.forEach((snap: admin.firestore.DocumentSnapshot) => {
-    const role = snap.data()?.role as Role | undefined
-    if (role) rolesByUid.set(snap.id, role)
+    const parsedRole = roleSchema.safeParse(snap.data()?.role)
+    if (parsedRole.success) rolesByUid.set(snap.id, parsedRole.data)
   })
 
   const users = result.users.map((u: admin.auth.UserRecord) => ({
@@ -48,32 +49,27 @@ export const listUsers = functions.https.onCall(async (_data: unknown, context: 
 export const createUser = functions.https.onCall(async (data: Record<string, unknown>, context: functions.https.CallableContext) => {
   await assertSuperAdmin(context.auth?.uid)
 
-  const email = String(data?.email || '').trim()
-  const password = String(data?.password || '').trim()
-  const role = (data?.role === 'superadmin'
-    ? 'superadmin'
-    : data?.role === 'admin'
-      ? 'admin'
-      : data?.role === 'user' || data?.role === 'employee'
-        ? 'user'
-        : 'user') as Role
-  const displayName = String(data?.displayName || '').trim()
-
-  if (!email || !password) {
-    throw new functions.https.HttpsError('invalid-argument', 'Email and password are required')
+  let payload: ReturnType<typeof createUserInputSchema.parse>
+  try {
+    payload = createUserInputSchema.parse(data)
+  } catch (error) {
+    if (error instanceof ZodError) {
+      throw new functions.https.HttpsError('invalid-argument', error.issues.map((issue) => issue.message).join(', '))
+    }
+    throw error
   }
 
   const userRecord = await admin.auth().createUser({
-    email,
-    password,
-    displayName: displayName || undefined
+    email: payload.email,
+    password: payload.password,
+    displayName: payload.displayName || undefined
   })
 
   await db.collection('users').doc(userRecord.uid).set({
     uid: userRecord.uid,
-    email,
-    role,
-    displayName: displayName || '',
+    email: payload.email,
+    role: payload.role,
+    displayName: payload.displayName || '',
     createdAt: admin.firestore.FieldValue.serverTimestamp()
   })
 
@@ -83,31 +79,30 @@ export const createUser = functions.https.onCall(async (data: Record<string, unk
 export const updateUser = functions.https.onCall(async (data: Record<string, unknown>, context: functions.https.CallableContext) => {
   await assertSuperAdmin(context.auth?.uid)
 
-  const uid = String(data?.uid || '').trim()
-  if (!uid) {
-    throw new functions.https.HttpsError('invalid-argument', 'uid is required')
+  let payload: ReturnType<typeof updateUserInputSchema.parse>
+  try {
+    payload = updateUserInputSchema.parse(data)
+  } catch (error) {
+    if (error instanceof ZodError) {
+      throw new functions.https.HttpsError('invalid-argument', error.issues.map((issue) => issue.message).join(', '))
+    }
+    throw error
   }
 
+  const uid = payload.uid
+
   const authUpdates: admin.auth.UpdateRequest = {}
-  if (data?.email) authUpdates.email = String(data.email).trim()
-  if (data?.password) authUpdates.password = String(data.password).trim()
-  if (data?.displayName !== undefined) authUpdates.displayName = String(data.displayName).trim()
-  if (data?.disabled !== undefined) authUpdates.disabled = !!data.disabled
+  if (payload.email) authUpdates.email = payload.email
+  if (payload.password) authUpdates.password = payload.password
+  if (payload.displayName !== undefined) authUpdates.displayName = payload.displayName
+  if (payload.disabled !== undefined) authUpdates.disabled = payload.disabled
 
   if (Object.keys(authUpdates).length > 0) {
     await admin.auth().updateUser(uid, authUpdates)
   }
 
-  if (data?.role) {
-    const role =
-      data.role === 'superadmin'
-        ? 'superadmin'
-        : data.role === 'admin'
-          ? 'admin'
-          : data.role === 'user' || data.role === 'employee'
-            ? 'user'
-            : 'user'
-    await db.collection('users').doc(uid).set({ role }, { merge: true })
+  if (payload.role) {
+    await db.collection('users').doc(uid).set({ role: payload.role }, { merge: true })
   }
 
   return { ok: true }
@@ -116,10 +111,17 @@ export const updateUser = functions.https.onCall(async (data: Record<string, unk
 export const deleteUser = functions.https.onCall(async (data: Record<string, unknown>, context: functions.https.CallableContext) => {
   await assertSuperAdmin(context.auth?.uid)
 
-  const uid = String(data?.uid || '').trim()
-  if (!uid) {
-    throw new functions.https.HttpsError('invalid-argument', 'uid is required')
+  let payload: ReturnType<typeof deleteUserInputSchema.parse>
+  try {
+    payload = deleteUserInputSchema.parse(data)
+  } catch (error) {
+    if (error instanceof ZodError) {
+      throw new functions.https.HttpsError('invalid-argument', error.issues.map((issue) => issue.message).join(', '))
+    }
+    throw error
   }
+
+  const uid = payload.uid
 
   await admin.auth().deleteUser(uid)
   await db.collection('users').doc(uid).delete()

@@ -36,6 +36,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteUser = exports.updateUser = exports.createUser = exports.listUsers = void 0;
 const admin = __importStar(require("firebase-admin"));
 const functions = __importStar(require("firebase-functions"));
+const zod_1 = require("zod");
+const schemas_1 = require("./schemas");
 admin.initializeApp();
 const db = admin.firestore();
 const assertSuperAdmin = async (uid) => {
@@ -44,7 +46,8 @@ const assertSuperAdmin = async (uid) => {
     }
     const snap = await db.collection('users').doc(uid).get();
     const rawRole = snap.data()?.role;
-    const role = rawRole === 'employee' ? 'user' : rawRole;
+    const parsedRole = schemas_1.roleSchema.safeParse(rawRole);
+    const role = parsedRole.success ? parsedRole.data : undefined;
     if (role !== 'superadmin') {
         throw new functions.https.HttpsError('permission-denied', 'Superadmin role required');
     }
@@ -56,9 +59,9 @@ exports.listUsers = functions.https.onCall(async (_data, context) => {
     const roleSnaps = refs.length > 0 ? await db.getAll(...refs) : [];
     const rolesByUid = new Map();
     roleSnaps.forEach((snap) => {
-        const role = snap.data()?.role;
-        if (role)
-            rolesByUid.set(snap.id, role);
+        const parsedRole = schemas_1.roleSchema.safeParse(snap.data()?.role);
+        if (parsedRole.success)
+            rolesByUid.set(snap.id, parsedRole.data);
     });
     const users = result.users.map((u) => ({
         uid: u.uid,
@@ -71,69 +74,73 @@ exports.listUsers = functions.https.onCall(async (_data, context) => {
 });
 exports.createUser = functions.https.onCall(async (data, context) => {
     await assertSuperAdmin(context.auth?.uid);
-    const email = String(data?.email || '').trim();
-    const password = String(data?.password || '').trim();
-    const role = (data?.role === 'superadmin'
-        ? 'superadmin'
-        : data?.role === 'admin'
-            ? 'admin'
-            : data?.role === 'user' || data?.role === 'employee'
-                ? 'user'
-                : 'user');
-    const displayName = String(data?.displayName || '').trim();
-    if (!email || !password) {
-        throw new functions.https.HttpsError('invalid-argument', 'Email and password are required');
+    let payload;
+    try {
+        payload = schemas_1.createUserInputSchema.parse(data);
+    }
+    catch (error) {
+        if (error instanceof zod_1.ZodError) {
+            throw new functions.https.HttpsError('invalid-argument', error.issues.map((issue) => issue.message).join(', '));
+        }
+        throw error;
     }
     const userRecord = await admin.auth().createUser({
-        email,
-        password,
-        displayName: displayName || undefined
+        email: payload.email,
+        password: payload.password,
+        displayName: payload.displayName || undefined
     });
     await db.collection('users').doc(userRecord.uid).set({
         uid: userRecord.uid,
-        email,
-        role,
-        displayName: displayName || '',
+        email: payload.email,
+        role: payload.role,
+        displayName: payload.displayName || '',
         createdAt: admin.firestore.FieldValue.serverTimestamp()
     });
     return { uid: userRecord.uid };
 });
 exports.updateUser = functions.https.onCall(async (data, context) => {
     await assertSuperAdmin(context.auth?.uid);
-    const uid = String(data?.uid || '').trim();
-    if (!uid) {
-        throw new functions.https.HttpsError('invalid-argument', 'uid is required');
+    let payload;
+    try {
+        payload = schemas_1.updateUserInputSchema.parse(data);
     }
+    catch (error) {
+        if (error instanceof zod_1.ZodError) {
+            throw new functions.https.HttpsError('invalid-argument', error.issues.map((issue) => issue.message).join(', '));
+        }
+        throw error;
+    }
+    const uid = payload.uid;
     const authUpdates = {};
-    if (data?.email)
-        authUpdates.email = String(data.email).trim();
-    if (data?.password)
-        authUpdates.password = String(data.password).trim();
-    if (data?.displayName !== undefined)
-        authUpdates.displayName = String(data.displayName).trim();
-    if (data?.disabled !== undefined)
-        authUpdates.disabled = !!data.disabled;
+    if (payload.email)
+        authUpdates.email = payload.email;
+    if (payload.password)
+        authUpdates.password = payload.password;
+    if (payload.displayName !== undefined)
+        authUpdates.displayName = payload.displayName;
+    if (payload.disabled !== undefined)
+        authUpdates.disabled = payload.disabled;
     if (Object.keys(authUpdates).length > 0) {
         await admin.auth().updateUser(uid, authUpdates);
     }
-    if (data?.role) {
-        const role = data.role === 'superadmin'
-            ? 'superadmin'
-            : data.role === 'admin'
-                ? 'admin'
-                : data.role === 'user' || data.role === 'employee'
-                    ? 'user'
-                    : 'user';
-        await db.collection('users').doc(uid).set({ role }, { merge: true });
+    if (payload.role) {
+        await db.collection('users').doc(uid).set({ role: payload.role }, { merge: true });
     }
     return { ok: true };
 });
 exports.deleteUser = functions.https.onCall(async (data, context) => {
     await assertSuperAdmin(context.auth?.uid);
-    const uid = String(data?.uid || '').trim();
-    if (!uid) {
-        throw new functions.https.HttpsError('invalid-argument', 'uid is required');
+    let payload;
+    try {
+        payload = schemas_1.deleteUserInputSchema.parse(data);
     }
+    catch (error) {
+        if (error instanceof zod_1.ZodError) {
+            throw new functions.https.HttpsError('invalid-argument', error.issues.map((issue) => issue.message).join(', '));
+        }
+        throw error;
+    }
+    const uid = payload.uid;
     await admin.auth().deleteUser(uid);
     await db.collection('users').doc(uid).delete();
     return { ok: true };

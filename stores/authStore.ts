@@ -10,6 +10,7 @@ import {
 } from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '@/components/firebase'
+import { userRoleSchema } from '@/schemas/firestore'
 
 export type UserRole = 'superadmin' | 'admin' | 'user'
 
@@ -108,7 +109,10 @@ const startAuthListener = (set: (partial: Partial<AuthStoreState>) => void) => {
         })
       } else {
         const rawRole = snapshot.data().role as string | undefined
-        role = rawRole === 'employee' ? 'user' : (rawRole as UserRole) || 'user'
+        const normalizedRole = rawRole === 'employee' ? 'user' : rawRole
+        role = userRoleSchema.safeParse(normalizedRole).success
+          ? (normalizedRole as UserRole)
+          : 'user'
         displayName = String(snapshot.data().displayName || firebaseUser.displayName || '')
         await setDoc(userRef, { lastLoginAt: serverTimestamp() }, { merge: true })
       }
