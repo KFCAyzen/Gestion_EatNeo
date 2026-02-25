@@ -199,12 +199,11 @@ const MenuPage: React.FC<Props> = ({
 
       {/* --- Modal --- */}
       {selectedItem && (
-        <>
-          <div 
-            className="menu-modal-overlay"
-            onClick={() => setSelectedItem(null)}
-          ></div>
-          <div className="menu-modal">
+        <div
+          className="menu-modal-overlay"
+          onClick={() => setSelectedItem(null)}
+        >
+          <div className="menu-modal" onClick={(e) => e.stopPropagation()}>
             <h2>{selectedItem.nom}</h2>
             {selectedItem.image && <ImageWithFallback src={selectedItem.image} alt={selectedItem.nom} />}
             <p><strong>Description :</strong> {selectedItem.description}</p>
@@ -263,7 +262,7 @@ const MenuPage: React.FC<Props> = ({
               <button className="menu-modal-close" onClick={() => setSelectedItem(null)}>Fermer</button>
             </div>
           </div>
-        </>
+        </div>
       )}
 
 
